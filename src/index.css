@@ -1,0 +1,45 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg-page: #F7F4EA;
+    --card-bg: #FFFFFF;
+    --card-border: #E8E4D5;
+    --text-main: #202724;
+    --text-muted: #5E6963;
+    --color-emerald-deep: #075C45;
+    --color-emerald-main: #16A66A;
+    --color-emerald-light: #78D9A6;
+    --color-gold: #D6A84B;
+    --color-champagne: #F2D58A;
+    --color-cream: #F7F4EA;
+    --color-graphite: #202724;
+  }
+
+  .dark {
+    --bg-page: #101614;
+    --card-bg: #18211D;
+    --card-border: #24312B;
+    --text-main: #F7F4EA;
+    --text-muted: #95A39B;
+    --color-emerald-deep: #0B7357;
+    --color-emerald-main: #16A66A;
+    --color-emerald-light: #78D9A6;
+    --color-gold: #E5B95C;
+    --color-champagne: #F2D58A;
+    --color-cream: #18211D;
+    --color-graphite: #F7F4EA;
+  }
+
+  body {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    background-color: var(--bg-page);
+    color: var(--text-main);
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+
+  h1, h2, h3, .font-display {
+    font-family: 'Space Grotesk', 'Plus Jakarta Sans', sans-serif;
+  }
+}
+

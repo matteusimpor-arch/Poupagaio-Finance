@@ -1,0 +1,17 @@
+{
+  "name": "Poupagaio Finance",
+  "short_name": "Poupagaio",
+  "description": "Organize hoje. Voe mais longe.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F7F4EA",
+  "theme_color": "#075C45",
+  "icons": [
+    {
+      "src": "/mascot.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ]
+}
