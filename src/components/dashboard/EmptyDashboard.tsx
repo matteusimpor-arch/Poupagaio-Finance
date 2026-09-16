@@ -21,16 +21,14 @@ export function EmptyDashboard() {
         <div className="flex items-center gap-2 text-xs font-medium text-[#075C45] dark:text-[#78D9A6]">
           <Database className="w-3.5 h-3.5" />
           <span>
-            {isConnected
-              ? isSchemaPending
-                ? 'Conexão Supabase: Ativa (Aguardando criação das tabelas no SQL Editor)'
-                : 'Conexão Supabase: Ativa e Sincronizada'
-              : 'Ambiente Local Seguro: Supabase Auth & RLS simulados com persistência'}
+            {isSchemaPending
+              ? 'Conectado ao Supabase (Aguardando criação das tabelas no SQL Editor)'
+              : 'Conectado ao Supabase • Sessão Autenticada'}
           </span>
         </div>
         <Badge variant={isSchemaPending ? 'gold' : 'success'} className="text-[11px] gap-1">
           <CheckCircle2 className="w-3 h-3" />
-          {isSchemaPending ? 'Configuração Pendente' : 'Etapa 1 Concluída'}
+          {isSchemaPending ? 'Configuração Pendente' : 'Sessão Ativa'}
         </Badge>
       </div>
 

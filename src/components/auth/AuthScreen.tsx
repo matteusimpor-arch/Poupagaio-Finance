@@ -55,7 +55,7 @@ export function AuthScreen() {
       return;
     }
 
-    const { error } = await signUp({
+    const { error, needsEmailConfirmation } = await signUp({
       fullName: fullName.trim(),
       email: email.trim(),
       password,
@@ -63,6 +63,12 @@ export function AuthScreen() {
 
     if (error) {
       setErrorMessage(error.message);
+    } else if (needsEmailConfirmation) {
+      setSuccessMessage(
+        'Conta criada! Enviamos um link de confirmação para seu e-mail. Confirme seu endereço para acessar o Poupagaio.'
+      );
+    } else {
+      setSuccessMessage('Conta criada com sucesso!');
     }
   };
 

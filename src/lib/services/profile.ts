@@ -1,5 +1,4 @@
-import { supabase, isSupabaseConfigured } from '../supabase';
-import { mockSupabase } from '../mock-supabase';
+import { supabase } from '../supabase';
 import { Profile } from '../../types';
 
 // Global listener for schema pending status (when tables are not yet created in Supabase)
@@ -37,30 +36,27 @@ export function isTableMissingError(error: any): boolean {
 export const profileService = {
   async getProfile(userId: string): Promise<Profile | null> {
     try {
-      if (isSupabaseConfigured() && supabase) {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', userId)
-          .single();
+      if (!supabase) return null;
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
 
-        if (error) {
-          if (error.code === 'PGRST116') return null; // record does not exist yet
+      if (error) {
+        if (error.code === 'PGRST116') return null; // record does not exist yet
 
-          if (isTableMissingError(error)) {
-            notifySchemaPending(true, 'Tabelas do Supabase ainda não foram criadas no SQL Editor.');
-            return null;
-          }
-
-          console.warn('Erro ao consultar perfil no Supabase:', error.message || error);
+        if (isTableMissingError(error)) {
+          notifySchemaPending(true, 'Tabelas do Supabase ainda não foram criadas no SQL Editor.');
           return null;
         }
 
-        notifySchemaPending(false);
-        return data as Profile;
+        console.warn('Erro ao consultar perfil no Supabase:', error.message || error);
+        return null;
       }
 
-      return await mockSupabase.db.getProfile(userId);
+      notifySchemaPending(false);
+      return data as Profile;
     } catch (err: any) {
       if (isTableMissingError(err)) {
         notifySchemaPending(true);
@@ -77,37 +73,27 @@ export const profileService = {
   ): Promise<Profile | null> {
     try {
       const now = new Date().toISOString();
-      if (isSupabaseConfigured() && supabase) {
-        const { data, error } = await supabase
-          .from('profiles')
-          .update({
-            ...updates,
-            updated_at: now,
-          })
-          .eq('id', userId)
-          .select()
-          .single();
+      if (!supabase) return null;
+      const { data, error } = await supabase
+        .from('profiles')
+        .update({
+          ...updates,
+          updated_at: now,
+        })
+        .eq('id', userId)
+        .select()
+        .single();
 
-        if (error) {
-          if (isTableMissingError(error)) {
-            notifySchemaPending(true);
-            return null;
-          }
-          throw error;
+      if (error) {
+        if (isTableMissingError(error)) {
+          notifySchemaPending(true);
+          return null;
         }
-
-        notifySchemaPending(false);
-        return data as Profile;
+        throw error;
       }
 
-      const existing = await mockSupabase.db.getProfile(userId);
-      if (!existing) return null;
-      const updated: Profile = {
-        ...existing,
-        ...updates,
-        updated_at: now,
-      };
-      return await mockSupabase.db.saveProfile(updated);
+      notifySchemaPending(false);
+      return data as Profile;
     } catch (err: any) {
       if (isTableMissingError(err)) {
         notifySchemaPending(true);
@@ -132,31 +118,28 @@ export const profileService = {
         updated_at: now,
       };
 
-      if (isSupabaseConfigured() && supabase) {
-        const { data, error } = await supabase
-          .from('profiles')
-          .upsert(newProfile)
-          .select()
-          .single();
+      if (!supabase) return null;
+      const { data, error } = await supabase
+        .from('profiles')
+        .upsert(newProfile)
+        .select()
+        .single();
 
-        if (error) {
-          if (isTableMissingError(error)) {
-            notifySchemaPending(true, 'Tabelas do Supabase ainda não foram criadas no SQL Editor.');
-            return null;
-          }
-
-          // Se outra transação concorrente acabou de inserir, busca novamente
-          const fetched = await this.getProfile(userId);
-          if (fetched) return fetched;
-
-          throw error;
+      if (error) {
+        if (isTableMissingError(error)) {
+          notifySchemaPending(true, 'Tabelas do Supabase ainda não foram criadas no SQL Editor.');
+          return null;
         }
 
-        notifySchemaPending(false);
-        return data as Profile;
+        // Se outra transação concorrente acabou de inserir, busca novamente
+        const fetched = await this.getProfile(userId);
+        if (fetched) return fetched;
+
+        throw error;
       }
 
-      return await mockSupabase.db.saveProfile(newProfile);
+      notifySchemaPending(false);
+      return data as Profile;
     } catch (err: any) {
       if (isTableMissingError(err)) {
         notifySchemaPending(true);

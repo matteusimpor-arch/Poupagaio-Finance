@@ -133,8 +133,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     checkSession();
 
+    const { data: { subscription } } = supabase
+      ? supabase.auth.onAuthStateChange(async (_event, session) => {
+          if (!isMounted) return;
+          if (session?.user) {
+            const authUser: AuthUser = {
+              id: session.user.id,
+              email: session.user.email || '',
+              full_name: session.user.user_metadata?.full_name,
+            };
+            setUser(authUser);
+            await loadUserData(authUser);
+          } else {
+            setUser(null);
+            setProfile(null);
+            setSpaces([]);
+            setCurrentSpaceState(null);
+          }
+          setIsInitializing(false);
+        })
+      : { data: { subscription: { unsubscribe: () => {} } } };
+
     return () => {
       isMounted = false;
+      subscription.unsubscribe();
     };
   }, [loadUserData]);
 
@@ -148,16 +170,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signUp = async ({ email, password, fullName }: { email: string; password: string; fullName: string }) => {
     setIsLoading(true);
     try {
-      const { user: newUser, error } = await authService.signUp({ email, password, fullName });
-      if (error || !newUser) {
-        return { error: error || new Error('Falha no cadastro.') };
+      const { user: newUser, error, needsEmailConfirmation } = await authService.signUp({ email, password, fullName });
+      if (error) {
+        return { error, needsEmailConfirmation: false };
       }
-
-      setUser(newUser);
-      await loadUserData(newUser);
-      return { error: null };
+      if (needsEmailConfirmation) {
+        return { error: null, needsEmailConfirmation: true };
+      }
+      if (newUser) {
+        setUser(newUser);
+        await loadUserData(newUser);
+      }
+      return { error: null, needsEmailConfirmation: false };
     } catch (err: any) {
-      return { error: new Error(err.message || 'Erro inesperado.') };
+      return { error: new Error(err.message || 'Erro inesperado.'), needsEmailConfirmation: false };
     } finally {
       setIsLoading(false);
     }
