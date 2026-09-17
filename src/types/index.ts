@@ -34,4 +34,15 @@ export interface AuthUser {
   full_name?: string;
 }
 
-export type ActiveTab = 'home' | 'transactions' | 'planning' | 'market' | 'more' | 'profile';
+export type ActiveTab = 
+  | 'home' 
+  | 'entries' 
+  | 'fixed_expenses' 
+  | 'variable_expenses' 
+  | 'installments' 
+  | 'market' 
+  | 'investments' 
+  | 'goals' 
+  | 'wishlist' 
+  | 'closing' 
+  | 'profile';

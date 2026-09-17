@@ -4,7 +4,8 @@ import { AuthProvider, useAuth } from './hooks/useAuth';
 import { AuthScreen } from './components/auth/AuthScreen';
 import { ResetPasswordScreen } from './components/auth/ResetPasswordScreen';
 import { Shell } from './components/layout/Shell';
-import { EmptyDashboard } from './components/dashboard/EmptyDashboard';
+import { DashboardHome } from './components/dashboard/DashboardHome';
+import { ModulePlaceholder } from './components/dashboard/ModulePlaceholder';
 import { ProfileScreen } from './components/profile/ProfileScreen';
 import { Skeleton } from './components/ui/skeleton';
 import { ActiveTab } from './types';
@@ -30,7 +31,7 @@ function AppContent() {
               src={POUPAGAIO_MASCOT_URL}
               alt="Poupagaio"
               referrerPolicy="no-referrer"
-              className="w-full h-full object-cover rounded-2xl"
+              className="w-full h-full object-contain rounded-2xl"
             />
           </div>
           <div className="space-y-2 w-full">
@@ -55,10 +56,21 @@ function AppContent() {
     return <AuthScreen />;
   }
 
+  // Render view based on currentTab
+  const renderContent = () => {
+    if (currentTab === 'home') {
+      return <DashboardHome onSelectTab={setCurrentTab} />;
+    }
+    if (currentTab === 'profile') {
+      return <ProfileScreen />;
+    }
+    return <ModulePlaceholder tab={currentTab} onSelectTab={setCurrentTab} />;
+  };
+
   // Authenticated -> Show Authenticated Layout Shell
   return (
     <Shell currentTab={currentTab} onSelectTab={setCurrentTab}>
-      {currentTab === 'profile' ? <ProfileScreen /> : <EmptyDashboard />}
+      {renderContent()}
     </Shell>
   );
 }

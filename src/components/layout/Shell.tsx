@@ -5,18 +5,21 @@ import { POUPAGAIO_MASCOT_URL } from '../../assets/mascot';
 import { SpaceSelector } from './SpaceSelector';
 import { SupabaseSchemaNotice } from './SupabaseSchemaNotice';
 import { Avatar } from '../ui/avatar';
-import { Badge } from '../ui/badge';
 import {
   Home,
-  ArrowLeftRight,
-  Target,
+  ArrowUpRight,
+  CreditCard,
+  FileText,
   ShoppingBag,
+  TrendingUp,
+  Target,
+  Gift,
+  CalendarCheck,
   MoreHorizontal,
   User,
   Sun,
   Moon,
   LogOut,
-  Info,
   X,
 } from 'lucide-react';
 import { ActiveTab } from '../../types';
@@ -30,29 +33,39 @@ interface ShellProps {
 export function Shell({ currentTab, onSelectTab, children }: ShellProps) {
   const { user, profile, signOut } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const [comingSoonNotice, setComingSoonNotice] = useState<string | null>(null);
+  const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
 
-  const navItems: { id: ActiveTab; label: string; icon: React.ElementType; isReady: boolean }[] = [
-    { id: 'home', label: 'Início', icon: Home, isReady: true },
-    { id: 'transactions', label: 'Transações', icon: ArrowLeftRight, isReady: false },
-    { id: 'planning', label: 'Planejar', icon: Target, isReady: false },
-    { id: 'market', label: 'Mercado', icon: ShoppingBag, isReady: false },
-    { id: 'more', label: 'Mais', icon: MoreHorizontal, isReady: false },
+  const sidebarNavItems: { id: ActiveTab; label: string; icon: React.ElementType }[] = [
+    { id: 'home', label: 'Início', icon: Home },
+    { id: 'entries', label: 'Entradas', icon: ArrowUpRight },
+    { id: 'variable_expenses', label: 'Gastos Variáveis', icon: CreditCard },
+    { id: 'fixed_expenses', label: 'Gastos Fixos', icon: FileText },
+    { id: 'installments', label: 'Parcelados', icon: CreditCard },
+    { id: 'market', label: 'Mercado', icon: ShoppingBag },
+    { id: 'investments', label: 'Investimentos', icon: TrendingUp },
+    { id: 'goals', label: 'Metas', icon: Target },
+    { id: 'wishlist', label: 'Lista de Desejos', icon: Gift },
+    { id: 'closing', label: 'Fechamento', icon: CalendarCheck },
   ];
 
-  const handleNavClick = (item: typeof navItems[0]) => {
-    if (item.isReady) {
-      onSelectTab(item.id);
-    } else {
-      setComingSoonNotice(item.label);
-    }
+  const mobileBottomNav = [
+    { id: 'home' as ActiveTab, label: 'Início', icon: Home },
+    { id: 'entries' as ActiveTab, label: 'Entradas', icon: ArrowUpRight },
+    { id: 'variable_expenses' as ActiveTab, label: 'Gastos', icon: CreditCard },
+    { id: 'market' as ActiveTab, label: 'Mercado', icon: ShoppingBag },
+    { id: 'more' as const, label: 'Mais', icon: MoreHorizontal },
+  ];
+
+  const handleNavClick = (tab: ActiveTab) => {
+    onSelectTab(tab);
+    setIsMoreMenuOpen(false);
   };
 
   return (
     <div className="min-h-screen w-full flex bg-[#F7F4EA] dark:bg-[#101614] text-[#202724] dark:text-[#F7F4EA] transition-colors duration-200">
       {/* DESKTOP SIDEBAR (Visible on md and up) */}
-      <aside className="hidden md:flex flex-col w-64 lg:w-72 border-r border-[#E8E4D5] dark:border-[#24312B] bg-white dark:bg-[#141C18] p-5 shrink-0 justify-between">
-        <div className="space-y-6">
+      <aside className="hidden md:flex flex-col w-64 lg:w-72 border-r border-[#E8E4D5] dark:border-[#24312B] bg-white dark:bg-[#141C18] p-5 shrink-0 justify-between select-none">
+        <div className="space-y-5 overflow-y-auto max-h-[calc(100vh-140px)] pr-1">
           {/* Brand Header */}
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl overflow-hidden border-2 border-[#16A66A]/30 bg-[#F7F4EA] dark:bg-[#18211D] p-0.5 shrink-0 shadow-sm">
@@ -60,7 +73,7 @@ export function Shell({ currentTab, onSelectTab, children }: ShellProps) {
                 src={POUPAGAIO_MASCOT_URL}
                 alt="Poupagaio Mascot"
                 referrerPolicy="no-referrer"
-                className="w-full h-full object-cover rounded-lg"
+                className="w-full h-full object-contain rounded-lg"
               />
             </div>
             <div className="min-w-0">
@@ -73,25 +86,25 @@ export function Shell({ currentTab, onSelectTab, children }: ShellProps) {
             </div>
           </div>
 
-          {/* Space Selector (CRITICAL ARCHITECTURE REQUIREMENT) */}
+          {/* Space Selector */}
           <div className="pt-1">
             <SpaceSelector />
           </div>
 
           {/* Navigation Items */}
-          <nav className="space-y-1.5 pt-2">
-            {navItems.map((item) => {
+          <nav className="space-y-1 pt-1">
+            {sidebarNavItems.map((item) => {
               const Icon = item.icon;
               const isActive = currentTab === item.id;
               return (
                 <button
                   key={item.id}
                   id={`nav-desktop-${item.id}`}
-                  onClick={() => handleNavClick(item)}
+                  onClick={() => handleNavClick(item.id)}
                   type="button"
-                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all duration-150 cursor-pointer ${
+                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-medium text-xs transition-all duration-150 cursor-pointer ${
                     isActive
-                      ? 'bg-[#075C45] text-white shadow-sm dark:bg-[#16A66A] dark:text-[#101614]'
+                      ? 'bg-[#075C45] text-white shadow-xs dark:bg-[#16A66A] dark:text-[#101614]'
                       : 'hover:bg-black/5 text-[#202724] dark:hover:bg-white/5 dark:text-[#F7F4EA]'
                   }`}
                 >
@@ -99,11 +112,6 @@ export function Shell({ currentTab, onSelectTab, children }: ShellProps) {
                     <Icon className={`w-4 h-4 ${isActive ? 'text-white dark:text-[#101614]' : 'text-[#16A66A]'}`} />
                     <span>{item.label}</span>
                   </div>
-                  {!item.isReady && (
-                    <Badge variant="muted" className="text-[10px] py-0 px-2">
-                      Em breve
-                    </Badge>
-                  )}
                 </button>
               );
             })}
@@ -111,12 +119,11 @@ export function Shell({ currentTab, onSelectTab, children }: ShellProps) {
         </div>
 
         {/* Bottom Sidebar: User Profile & Preferences */}
-        <div className="space-y-3 pt-6 border-t border-[#E8E4D5] dark:border-[#24312B]">
-          {/* Profile Quick Access Button */}
+        <div className="space-y-3 pt-4 border-t border-[#E8E4D5] dark:border-[#24312B] shrink-0">
           <button
             type="button"
             id="nav-desktop-profile"
-            onClick={() => onSelectTab('profile')}
+            onClick={() => handleNavClick('profile')}
             className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-colors cursor-pointer text-left ${
               currentTab === 'profile'
                 ? 'bg-[#16A66A]/15 text-[#075C45] dark:bg-[#16A66A]/25 dark:text-[#78D9A6]'
@@ -138,7 +145,6 @@ export function Shell({ currentTab, onSelectTab, children }: ShellProps) {
             <User className="w-4 h-4 text-[#5E6963] dark:text-[#95A39B]" />
           </button>
 
-          {/* Theme Switcher & Logout Row */}
           <div className="flex items-center justify-between pt-1">
             <button
               type="button"
@@ -176,7 +182,7 @@ export function Shell({ currentTab, onSelectTab, children }: ShellProps) {
 
       {/* MAIN CONTENT AREA */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* MOBILE TOP BAR (Visible below md) */}
+        {/* MOBILE TOP BAR */}
         <header className="md:hidden flex items-center justify-between p-4 border-b border-[#E8E4D5] dark:border-[#24312B] bg-white dark:bg-[#141C18] sticky top-0 z-30">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl overflow-hidden border border-[#16A66A]/30 bg-[#F7F4EA] dark:bg-[#18211D] p-0.5 shrink-0">
@@ -184,7 +190,7 @@ export function Shell({ currentTab, onSelectTab, children }: ShellProps) {
                 src={POUPAGAIO_MASCOT_URL}
                 alt="Poupagaio Mascot"
                 referrerPolicy="no-referrer"
-                className="w-full h-full object-cover rounded-lg"
+                className="w-full h-full object-contain rounded-lg"
               />
             </div>
             <span className="font-bold text-sm tracking-tight font-display text-[#075C45] dark:text-[#78D9A6]">
@@ -204,7 +210,7 @@ export function Shell({ currentTab, onSelectTab, children }: ShellProps) {
 
             <button
               type="button"
-              onClick={() => onSelectTab('profile')}
+              onClick={() => handleNavClick('profile')}
               aria-label="Abrir perfil"
               className="cursor-pointer"
             >
@@ -216,12 +222,12 @@ export function Shell({ currentTab, onSelectTab, children }: ShellProps) {
           </div>
         </header>
 
-        {/* MOBILE SPACE SELECTOR BAR (below md) */}
+        {/* MOBILE SPACE SELECTOR BAR */}
         <div className="md:hidden px-4 py-2 border-b border-[#E8E4D5] dark:border-[#24312B] bg-[#F7F4EA]/80 dark:bg-[#101614]/80 backdrop-blur-sm">
           <SpaceSelector />
         </div>
 
-        {/* SUPABASE SCHEMA PENDING NOTICE */}
+        {/* SUPABASE SCHEMA NOTICE */}
         <SupabaseSchemaNotice />
 
         {/* SCROLLABLE VIEW CONTAINER */}
@@ -229,18 +235,26 @@ export function Shell({ currentTab, onSelectTab, children }: ShellProps) {
           {children}
         </main>
 
-        {/* MOBILE BOTTOM NAVIGATION (Section 9 & 14) */}
+        {/* MOBILE BOTTOM NAVIGATION */}
         <nav className="md:hidden fixed bottom-0 left-0 right-0 border-t border-[#E8E4D5] dark:border-[#24312B] bg-white/95 dark:bg-[#141C18]/95 backdrop-blur-md px-2 py-1.5 z-40 flex items-center justify-around">
-          {navItems.map((item) => {
+          {mobileBottomNav.map((item) => {
             const Icon = item.icon;
-            const isActive = currentTab === item.id;
+            const isMore = item.id === 'more';
+            const isActive = isMore ? isMoreMenuOpen : currentTab === item.id;
+
             return (
               <button
                 key={item.id}
                 id={`nav-mobile-${item.id}`}
-                onClick={() => handleNavClick(item)}
+                onClick={() => {
+                  if (isMore) {
+                    setIsMoreMenuOpen(!isMoreMenuOpen);
+                  } else {
+                    handleNavClick(item.id as ActiveTab);
+                  }
+                }}
                 type="button"
-                className={`flex flex-col items-center justify-center py-1 px-2 rounded-xl min-w-[56px] transition-colors cursor-pointer relative ${
+                className={`flex flex-col items-center justify-center py-1 px-2 rounded-xl min-w-[56px] transition-colors cursor-pointer ${
                   isActive
                     ? 'text-[#075C45] dark:text-[#78D9A6] font-bold'
                     : 'text-[#5E6963] dark:text-[#95A39B] hover:text-[#202724] dark:hover:text-[#F7F4EA]'
@@ -248,47 +262,71 @@ export function Shell({ currentTab, onSelectTab, children }: ShellProps) {
               >
                 <Icon className={`w-5 h-5 ${isActive ? 'stroke-[2.5]' : 'stroke-2'}`} />
                 <span className="text-[10px] mt-0.5 leading-tight">{item.label}</span>
-                {!item.isReady && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#D6A84B] absolute top-1 right-3"></span>
-                )}
               </button>
             );
           })}
         </nav>
       </div>
 
-      {/* Discrete Coming Soon Modal/Toast */}
-      {comingSoonNotice && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-in fade-in duration-150">
-          <div className="w-full max-w-sm bg-white dark:bg-[#18211D] border border-[#E8E4D5] dark:border-[#24312B] rounded-2xl p-5 shadow-xl space-y-3 relative">
-            <button
-              type="button"
-              onClick={() => setComingSoonNotice(null)}
-              className="absolute top-3 right-3 text-[#5E6963] hover:text-[#202724] dark:text-[#95A39B] dark:hover:text-[#F7F4EA] p-1 cursor-pointer"
-            >
-              <X className="w-4 h-4" />
-            </button>
-
-            <div className="flex items-center gap-2.5 text-[#075C45] dark:text-[#78D9A6]">
-              <div className="w-8 h-8 rounded-lg bg-[#16A66A]/15 flex items-center justify-center">
-                <Info className="w-4 h-4" />
-              </div>
-              <h4 className="font-bold text-sm font-display">
-                Módulo “{comingSoonNotice}”
-              </h4>
-            </div>
-
-            <p className="text-xs text-[#5E6963] dark:text-[#95A39B] leading-relaxed">
-              Este módulo financeiro será adicionado na próxima etapa de desenvolvimento. A Etapa 1 focou na fundação técnica, autenticação e arquitetura de múltiplos espaços.
-            </p>
-
-            <div className="pt-2 flex justify-end">
+      {/* MOBILE "MAIS" MODULES DRAWER / MODAL */}
+      {isMoreMenuOpen && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex flex-col justify-end animate-in fade-in duration-150 md:hidden">
+          <div className="bg-white dark:bg-[#141C18] border-t border-[#E8E4D5] dark:border-[#24312B] rounded-t-3xl p-5 space-y-4 max-h-[85vh] overflow-y-auto shadow-2xl">
+            <div className="flex items-center justify-between pb-2 border-b border-[#E8E4D5] dark:border-[#24312B]">
+              <h3 className="font-bold text-base font-display text-[#075C45] dark:text-[#78D9A6]">
+                Todos os Módulos
+              </h3>
               <button
                 type="button"
-                onClick={() => setComingSoonNotice(null)}
-                className="w-full py-2 rounded-xl bg-[#075C45] dark:bg-[#16A66A] text-white dark:text-[#101614] text-xs font-semibold cursor-pointer"
+                onClick={() => setIsMoreMenuOpen(false)}
+                className="p-1.5 rounded-full hover:bg-black/5 dark:hover:bg-white/5 text-[#5E6963] dark:text-[#95A39B] cursor-pointer"
               >
-                Compreendido
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              {sidebarNavItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = currentTab === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => handleNavClick(item.id)}
+                    type="button"
+                    className={`flex items-center gap-3 p-3 rounded-xl border text-xs font-semibold text-left transition-colors cursor-pointer ${
+                      isActive
+                        ? 'border-[#16A66A] bg-[#075C45] text-white dark:bg-[#16A66A] dark:text-[#101614]'
+                        : 'border-[#E8E4D5] dark:border-[#24312B] bg-[#F7F4EA]/50 dark:bg-[#18211D] text-[#202724] dark:text-[#F7F4EA]'
+                    }`}
+                  >
+                    <Icon className="w-4 h-4 shrink-0" />
+                    <span className="truncate">{item.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="pt-2 border-t border-[#E8E4D5] dark:border-[#24312B] flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => handleNavClick('profile')}
+                className="flex items-center gap-2 py-2 px-3 rounded-xl text-xs font-medium text-[#075C45] dark:text-[#78D9A6] hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer"
+              >
+                <User className="w-4 h-4" />
+                <span>Perfil & Configurações</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMoreMenuOpen(false);
+                  signOut();
+                }}
+                className="flex items-center gap-2 py-2 px-3 rounded-xl text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 cursor-pointer"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>Sair</span>
               </button>
             </div>
           </div>

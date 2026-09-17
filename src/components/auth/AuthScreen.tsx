@@ -101,7 +101,7 @@ export function AuthScreen() {
               src={POUPAGAIO_MASCOT_URL}
               alt="Poupagaio"
               referrerPolicy="no-referrer"
-              className="w-full h-full object-cover rounded-lg"
+              className="w-full h-full object-contain rounded-lg"
             />
           </div>
           <span className="font-bold text-sm tracking-tight font-display text-[#075C45] dark:text-[#34D399]">
@@ -129,7 +129,7 @@ export function AuthScreen() {
                 src={POUPAGAIO_MASCOT_URL}
                 alt="Poupagaio Mascot"
                 referrerPolicy="no-referrer"
-                className="w-full h-full object-cover rounded-xl"
+                className="w-full h-full object-contain rounded-xl"
               />
             </div>
             <div>

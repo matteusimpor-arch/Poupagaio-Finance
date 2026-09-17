@@ -8,9 +8,9 @@
   "theme_color": "#075C45",
   "icons": [
     {
-      "src": "/mascot.jpg",
+      "src": "/poupagaio-principal.png",
       "sizes": "512x512",
-      "type": "image/jpeg",
+      "type": "image/png",
       "purpose": "any maskable"
     }
   ]
