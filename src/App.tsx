@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ThemeProvider } from './hooks/useTheme';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { AuthScreen } from './components/auth/AuthScreen';
+import { ResetPasswordScreen } from './components/auth/ResetPasswordScreen';
 import { Shell } from './components/layout/Shell';
 import { EmptyDashboard } from './components/dashboard/EmptyDashboard';
 import { ProfileScreen } from './components/profile/ProfileScreen';
@@ -12,6 +13,12 @@ import { POUPAGAIO_MASCOT_URL } from './assets/mascot';
 function AppContent() {
   const { user, isInitializing } = useAuth();
   const [currentTab, setCurrentTab] = useState<ActiveTab>('home');
+
+  const isResetPasswordPath = window.location.pathname === '/reset-password' || window.location.hash.includes('type=recovery');
+
+  if (isResetPasswordPath) {
+    return <ResetPasswordScreen />;
+  }
 
   // Loading state with smooth skeletons to avoid blank white screens
   if (isInitializing) {

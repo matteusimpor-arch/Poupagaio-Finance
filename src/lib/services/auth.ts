@@ -143,7 +143,7 @@ export const authService = {
         return { error: new Error('Cliente Supabase não inicializado.') };
       }
       const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
-        redirectTo: window.location.origin,
+        redirectTo: `${window.location.origin}/reset-password`,
       });
       return { error: error ? new Error(error.message) : null };
     } catch (err: any) {
