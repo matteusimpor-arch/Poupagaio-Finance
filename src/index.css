@@ -33,14 +33,20 @@
     --color-graphite: #F4F4F5;
   }
 
-  ::selection {
-    background-color: #16A66A;
-    color: #FFFFFF;
+  ::selection,
+  *::selection,
+  input::selection,
+  textarea::selection {
+    background-color: rgba(59, 130, 246, 0.22);
+    color: #111827;
   }
 
-  .dark ::selection {
-    background-color: #34D399;
-    color: #121212;
+  .dark ::selection,
+  .dark *::selection,
+  .dark input::selection,
+  .dark textarea::selection {
+    background-color: rgba(100, 149, 237, 0.22);
+    color: #FFFFFF;
   }
 
   body {
