@@ -4,22 +4,25 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
 if (!supabaseUrl) {
-  console.error('[Supabase Error] A variável de ambiente VITE_SUPABASE_URL está ausente.');
+  console.error('[Supabase Error] VITE_SUPABASE_URL');
 }
 
 if (!supabaseAnonKey) {
-  console.error('[Supabase Error] A variável de ambiente VITE_SUPABASE_ANON_KEY está ausente.');
+  console.error('[Supabase Error] VITE_SUPABASE_ANON_KEY');
 }
 
 export const isSupabaseConfigured = (): boolean => {
   return Boolean(supabaseUrl && supabaseAnonKey);
 };
 
-export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-  },
-});
+export const supabase: SupabaseClient | null = isSupabaseConfigured()
+  ? createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+      },
+    })
+  : null;
+
 

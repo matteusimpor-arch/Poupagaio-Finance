@@ -5,7 +5,9 @@ import { POUPAGAIO_MASCOT_URL } from '../../assets/mascot';
 import { Card, CardContent } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
-import { Sun, Moon, ArrowRight, CheckCircle2, Lock, Mail, User, ShieldCheck } from 'lucide-react';
+import { Sun, Moon, ArrowRight, CheckCircle2, Lock, Mail, User, ShieldCheck, AlertTriangle } from 'lucide-react';
+import { isSupabaseConfigured } from '../../lib/supabase';
+
 
 export function AuthScreen() {
   const { signIn, signUp, resetPassword, isLoading } = useAuth();
@@ -139,6 +141,13 @@ export function AuthScreen() {
               </p>
             </div>
           </div>
+
+          {!isSupabaseConfigured() && (
+            <div className="mx-6 mb-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400 text-xs flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+              <span>Configuração do Supabase não encontrada.</span>
+            </div>
+          )}
 
           {/* Tab Switcher (Login / Register) */}
           {mode !== 'forgot' && (
