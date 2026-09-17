@@ -36,6 +36,8 @@ export interface AuthUser {
 
 export type ActiveTab = 
   | 'home' 
+  | 'movements'
+  | 'planning'
   | 'entries' 
   | 'fixed_expenses' 
   | 'variable_expenses' 
@@ -46,3 +48,47 @@ export type ActiveTab =
   | 'wishlist' 
   | 'closing' 
   | 'profile';
+
+export type EntryStatus = 'pending' | 'received';
+
+export interface Entry {
+  id: string;
+  space_id: string;
+  created_by?: string | null;
+  user_id?: string;
+  description: string;
+  amount: number;
+  date: string; // YYYY-MM-DD
+  category: string;
+  status: EntryStatus;
+  notes?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateEntryInput {
+  space_id: string;
+  description: string;
+  amount: number;
+  date: string; // YYYY-MM-DD
+  category?: string;
+  status?: EntryStatus;
+  notes?: string | null;
+}
+
+export interface UpdateEntryInput {
+  description?: string;
+  amount?: number;
+  date?: string; // YYYY-MM-DD
+  category?: string;
+  status?: EntryStatus;
+  notes?: string | null;
+}
+
+export interface EntriesSummary {
+  totalPlanned: number; // Total previsto
+  totalReceived: number; // Total recebido
+  totalPending: number;  // A receber
+  count: number;
+}
+

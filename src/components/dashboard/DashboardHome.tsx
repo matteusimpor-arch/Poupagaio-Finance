@@ -1,25 +1,34 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
+import { useTheme } from '../../hooks/useTheme';
 import { POUPAGAIO_MASCOT_URL } from '../../assets/mascot';
+import { MascotWidget } from './MascotWidget';
 import { Card, CardContent } from '../ui/card';
 import { Button } from '../ui/button';
-import { Badge } from '../ui/badge';
+import { Avatar } from '../ui/avatar';
+import { entriesService } from '../../lib/services/entries';
+import { formatCurrency } from '../../lib/formatters';
+import { EntriesSummary } from '../../types';
 import {
+  Bell,
+  Sun,
+  Moon,
   Wallet,
   ArrowUpRight,
   ArrowDownRight,
-  PiggyBank,
-  Sparkles,
-  ArrowRight,
-  ShieldCheck,
-  TrendingUp,
-  ShoppingBag,
-  Target,
-  FileText,
   CreditCard,
+  FileText,
+  Calendar,
+  TrendingUp,
+  Target,
   Gift,
-  CalendarCheck,
+  ShoppingBag,
   CheckCircle2,
+  Clock,
+  AlertCircle,
+  Plus,
+  ArrowRight,
+  X,
   Info,
 } from 'lucide-react';
 import { ActiveTab } from '../../types';
@@ -29,206 +38,479 @@ interface DashboardHomeProps {
 }
 
 export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
-  const { profile, user, currentSpace, isSchemaPending } = useAuth();
-  const [showInfoModal, setShowInfoModal] = useState(false);
+  const { profile, user, currentSpace } = useAuth();
+  const { theme, toggleTheme } = useTheme();
 
-  const fullName = profile?.full_name || user?.full_name || user?.email?.split('@')[0] || 'Amigo(a)';
-  const firstName = fullName.split(' ')[0];
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
 
-  const quickModules = [
-    { id: 'entries' as ActiveTab, label: 'Entradas', icon: ArrowUpRight, desc: 'Gerencie suas receitas e ganhos' },
-    { id: 'variable_expenses' as ActiveTab, label: 'Gastos Variáveis', icon: CreditCard, desc: 'Controle despesas do dia a dia' },
-    { id: 'fixed_expenses' as ActiveTab, label: 'Gastos Fixos', icon: FileText, desc: 'Contas recorrentes e assinaturas' },
-    { id: 'market' as ActiveTab, label: 'Mercado', icon: ShoppingBag, desc: 'Listas e compras de supermercado' },
-    { id: 'investments' as ActiveTab, label: 'Investimentos', icon: TrendingUp, desc: 'Acompanhe seu patrimônio' },
-    { id: 'goals' as ActiveTab, label: 'Metas', icon: Target, desc: 'Objetivos financeiros' },
-    { id: 'wishlist' as ActiveTab, label: 'Lista de Desejos', icon: Gift, desc: 'Desejos e sonhos futuros' },
-    { id: 'closing' as ActiveTab, label: 'Fechamento', icon: CalendarCheck, desc: 'Balanço mensal' },
+  // Real Supabase entries state for current month
+  const [entriesSummary, setEntriesSummary] = useState<EntriesSummary>({
+    totalPlanned: 0,
+    totalReceived: 0,
+    totalPending: 0,
+    count: 0,
+  });
+  const [isLoadingEntries, setIsLoadingEntries] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    async function loadEntriesData() {
+      if (!currentSpace) return;
+      setIsLoadingEntries(true);
+      const now = new Date();
+      const summary = await entriesService.getMonthSummary(
+        currentSpace.id,
+        now.getFullYear(),
+        now.getMonth() + 1
+      );
+      if (isMounted) {
+        setEntriesSummary(summary);
+        setIsLoadingEntries(false);
+      }
+    }
+
+    loadEntriesData();
+    return () => {
+      isMounted = false;
+    };
+  }, [currentSpace]);
+
+  // Derive real user first name from Supabase authenticated user/profile (never fictional)
+  const fullName = profile?.full_name || user?.full_name || user?.email?.split('@')[0] || '';
+  const firstName = fullName.trim().split(' ')[0] || 'Usuário';
+
+  // 8 Quick Access Shortcuts requested in Section 3
+  const quickShortcuts: {
+    id: ActiveTab;
+    label: string;
+    icon: React.ElementType;
+    emoji: string;
+    desc: string;
+  }[] = [
+    { id: 'entries', label: 'Entradas', icon: ArrowUpRight, emoji: '💰', desc: 'Receitas e ganhos' },
+    { id: 'fixed_expenses', label: 'Gastos Fixos', icon: FileText, emoji: '🏠', desc: 'Contas recorrentes' },
+    { id: 'variable_expenses', label: 'Gastos Variáveis', icon: CreditCard, emoji: '💳', desc: 'Despesas diárias' },
+    { id: 'installments', label: 'Parcelados', icon: Calendar, emoji: '📆', desc: 'Faturas e parcelas' },
+    { id: 'investments', label: 'Investimentos', icon: TrendingUp, emoji: '📈', desc: 'Aportes e reservas' },
+    { id: 'goals', label: 'Metas', icon: Target, emoji: '🎯', desc: 'Objetivos futuros' },
+    { id: 'wishlist', label: 'Lista de Desejos', icon: Gift, emoji: '❤️', desc: 'Sonhos e compras' },
+    { id: 'market', label: 'Mercado', icon: ShoppingBag, emoji: '🛒', desc: 'Listas e compras' },
   ];
 
   return (
-    <div className="w-full max-w-6xl mx-auto space-y-8 pb-24 md:pb-8 animate-in fade-in duration-300">
-      {/* Top Greeting & System Status Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#16A66A]/10 text-[#075C45] dark:bg-[#16A66A]/20 dark:text-[#78D9A6] text-xs font-semibold mb-2">
-            <span>Espaço Ativo:</span>
-            <span className="font-bold">{currentSpace?.name || 'Pessoal'}</span>
-          </div>
-          <h1 className="text-2xl md:text-4xl font-extrabold font-display text-[#202724] dark:text-[#F7F4EA] tracking-tight">
-            Olá, {firstName} 👋
-          </h1>
-          <p className="text-sm text-[#5E6963] dark:text-[#95A39B] mt-1">
-            Aqui está o panorama geral da sua saúde financeira.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2.5">
-          {isSchemaPending ? (
-            <div className="px-3.5 py-2 rounded-2xl bg-[#D6A84B]/15 border border-[#D6A84B]/30 text-xs font-medium text-[#8c6511] dark:text-[#F2D58A] flex items-center gap-2">
-              <Info className="w-4 h-4 shrink-0" />
-              <span>Configuração do Banco Pendente</span>
-            </div>
-          ) : (
-            <div className="px-3.5 py-2 rounded-2xl bg-[#075C45]/10 border border-[#16A66A]/20 text-xs font-medium text-[#075C45] dark:text-[#78D9A6] flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 shrink-0 text-[#16A66A]" />
-              <span>Sincronizado com Supabase</span>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* 4 Overview Metric Cards (Prepared for future data with real empty states R$ 0,00) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="p-5 border-[#E8E4D5] dark:border-[#24312B] bg-white dark:bg-[#18211D] shadow-xs">
-          <div className="flex items-center justify-between text-[#5E6963] dark:text-[#95A39B] mb-3">
-            <span className="text-xs font-medium uppercase tracking-wider">Saldo Atual</span>
-            <div className="w-8 h-8 rounded-xl bg-[#075C45]/10 text-[#075C45] dark:bg-[#16A66A]/20 dark:text-[#78D9A6] flex items-center justify-center">
-              <Wallet className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="space-y-1">
-            <div className="text-2xl font-bold font-display text-[#202724] dark:text-[#F7F4EA]">
-              R$ 0,00
-            </div>
-            <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B]">
-              Atualizado agora
-            </p>
-          </div>
-        </Card>
-
-        <Card className="p-5 border-[#E8E4D5] dark:border-[#24312B] bg-white dark:bg-[#18211D] shadow-xs">
-          <div className="flex items-center justify-between text-[#5E6963] dark:text-[#95A39B] mb-3">
-            <span className="text-xs font-medium uppercase tracking-wider">Entradas do Mês</span>
-            <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400 flex items-center justify-center">
-              <ArrowUpRight className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="space-y-1">
-            <div className="text-2xl font-bold font-display text-emerald-600 dark:text-emerald-400">
-              R$ 0,00
-            </div>
-            <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B]">
-              Nenhum registro este mês
-            </p>
-          </div>
-        </Card>
-
-        <Card className="p-5 border-[#E8E4D5] dark:border-[#24312B] bg-white dark:bg-[#18211D] shadow-xs">
-          <div className="flex items-center justify-between text-[#5E6963] dark:text-[#95A39B] mb-3">
-            <span className="text-xs font-medium uppercase tracking-wider">Gastos do Mês</span>
-            <div className="w-8 h-8 rounded-xl bg-rose-500/10 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400 flex items-center justify-center">
-              <ArrowDownRight className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="space-y-1">
-            <div className="text-2xl font-bold font-display text-[#202724] dark:text-[#F7F4EA]">
-              R$ 0,00
-            </div>
-            <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B]">
-              0% do planejado
-            </p>
-          </div>
-        </Card>
-
-        <Card className="p-5 border-[#E8E4D5] dark:border-[#24312B] bg-white dark:bg-[#18211D] shadow-xs">
-          <div className="flex items-center justify-between text-[#5E6963] dark:text-[#95A39B] mb-3">
-            <span className="text-xs font-medium uppercase tracking-wider">Economia do Mês</span>
-            <div className="w-8 h-8 rounded-xl bg-[#D6A84B]/15 text-[#D6A84B] dark:bg-[#D6A84B]/25 dark:text-[#F2D58A] flex items-center justify-center">
-              <PiggyBank className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="space-y-1">
-            <div className="text-2xl font-bold font-display text-[#202724] dark:text-[#F7F4EA]">
-              R$ 0,00
-            </div>
-            <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B]">
-              Taxa de poupança 0%
-            </p>
-          </div>
-        </Card>
-      </div>
-
-      {/* Hero Welcome Banner with Mascot */}
-      <Card className="overflow-hidden border-[#E8E4D5] dark:border-[#24312B] bg-gradient-to-r from-white via-[#F7F4EA]/50 to-white dark:from-[#18211D] dark:via-[#141C18] dark:to-[#18211D]">
-        <CardContent className="p-6 md:p-8 flex flex-col md:flex-row items-center gap-6">
-          <div className="w-32 h-32 md:w-40 md:h-40 rounded-3xl overflow-hidden border-2 border-[#16A66A]/30 bg-[#F7F4EA] dark:bg-[#101614] p-2 shrink-0 shadow-md">
+    <div className="w-full max-w-5xl mx-auto space-y-6 sm:space-y-8 pb-24 md:pb-8 animate-in fade-in duration-300">
+      {/* ==================================================
+          1. CABEÇALHO DO DASHBOARD
+          ================================================== */}
+      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 sm:p-6 rounded-3xl bg-white dark:bg-[#18211D] border border-[#E8E4D5] dark:border-[#24312B] shadow-xs">
+        <div className="flex items-center gap-3.5">
+          {/* Mascote Poupagaio em tamanho pequeno */}
+          <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl overflow-hidden border border-[#16A66A]/30 bg-[#F7F4EA] dark:bg-[#101614] p-1 shrink-0 shadow-xs flex items-center justify-center">
             <img
               src={POUPAGAIO_MASCOT_URL}
               alt="Mascote Poupagaio"
               referrerPolicy="no-referrer"
-              className="w-full h-full object-contain rounded-2xl"
+              className="w-full h-full object-contain"
             />
           </div>
-          <div className="flex-1 space-y-3 text-center md:text-left">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#16A66A]/15 text-[#075C45] dark:bg-[#16A66A]/20 dark:text-[#78D9A6] text-xs font-semibold">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Dica do Poupagaio</span>
-            </div>
-            <h2 className="text-xl font-bold font-display text-[#075C45] dark:text-[#78D9A6]">
-              Organize hoje. Voe mais longe.
-            </h2>
-            <p className="text-sm text-[#5E6963] dark:text-[#95A39B] leading-relaxed">
-              Explore os módulos abaixo para registrar suas entradas, controlar gastos variáveis e gerenciar suas metas. A interface está pronta para receber seus dados financeiros de forma segura e privada.
+
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold font-display text-[#202724] dark:text-[#F7F4EA] tracking-tight truncate">
+              Olá, {firstName}!
+            </h1>
+            <p className="text-xs sm:text-sm text-[#5E6963] dark:text-[#95A39B]">
+              Vamos organizar suas finanças?
             </p>
-            <div className="pt-1">
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => onSelectTab('entries')}
-                className="gap-2"
-              >
-                <span>Começar Lançamentos</span>
-                <ArrowRight className="w-4 h-4" />
-              </Button>
+          </div>
+        </div>
+
+        {/* Controles de Cabeçalho: Notificações, Claro/Escuro, Perfil */}
+        <div className="flex items-center gap-2 self-end sm:self-center">
+          {/* Botão de Notificações */}
+          <div className="relative">
+            <button
+              type="button"
+              id="header-notifications-btn"
+              onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
+              aria-label="Notificações"
+              className="p-2.5 rounded-xl border border-[#E8E4D5] hover:bg-black/5 dark:border-[#24312B] dark:hover:bg-white/5 text-[#5E6963] dark:text-[#95A39B] transition-colors cursor-pointer relative"
+            >
+              <Bell className="w-4 h-4" />
+              <span className="sr-only">Notificações</span>
+            </button>
+
+            {/* Popover de Notificações */}
+            {isNotificationsOpen && (
+              <div className="absolute right-0 mt-2 w-72 sm:w-80 rounded-2xl border border-[#E8E4D5] dark:border-[#24312B] bg-white dark:bg-[#18211D] p-4 shadow-xl z-50 animate-in fade-in zoom-in-95 duration-150">
+                <div className="flex items-center justify-between pb-2 border-b border-[#E8E4D5] dark:border-[#24312B]">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-[#075C45] dark:text-[#78D9A6]">
+                    Notificações
+                  </h4>
+                  <button
+                    type="button"
+                    onClick={() => setIsNotificationsOpen(false)}
+                    className="p-1 text-[#5E6963] dark:text-[#95A39B] hover:text-[#202724] dark:hover:text-[#F7F4EA] cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                <div className="py-4 text-center space-y-1">
+                  <p className="text-xs font-semibold text-[#202724] dark:text-[#F7F4EA]">
+                    Tudo em dia!
+                  </p>
+                  <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B]">
+                    Você não tem lembretes ou avisos pendentes no momento.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Alternância Claro/Escuro */}
+          <button
+            type="button"
+            id="header-toggle-theme-btn"
+            onClick={toggleTheme}
+            aria-label="Alternar tema claro e escuro"
+            className="p-2.5 rounded-xl border border-[#E8E4D5] hover:bg-black/5 dark:border-[#24312B] dark:hover:bg-white/5 text-[#5E6963] dark:text-[#95A39B] transition-colors cursor-pointer"
+          >
+            {theme === 'light' ? (
+              <Moon className="w-4 h-4" />
+            ) : (
+              <Sun className="w-4 h-4 text-[#D6A84B]" />
+            )}
+            <span className="sr-only">Alternar tema</span>
+          </button>
+
+          {/* Acesso ao Perfil */}
+          <button
+            type="button"
+            id="header-profile-btn"
+            onClick={() => onSelectTab('profile')}
+            aria-label="Acessar Perfil"
+            className="flex items-center gap-2 p-1.5 pr-3 rounded-xl border border-[#E8E4D5] hover:bg-black/5 dark:border-[#24312B] dark:hover:bg-white/5 transition-colors cursor-pointer"
+          >
+            <Avatar
+              name={fullName || user?.email || 'U'}
+              size="sm"
+            />
+            <span className="text-xs font-semibold text-[#202724] dark:text-[#F7F4EA] hidden sm:inline max-w-[100px] truncate">
+              {firstName}
+            </span>
+          </button>
+        </div>
+      </header>
+
+      {/* ==================================================
+          6. MASCOTE INTELIGENTE (Área discreta de mensagens)
+          ================================================== */}
+      <MascotWidget
+        reaction={entriesSummary.count > 0 ? "encouraging" : "welcoming"}
+        message={
+          entriesSummary.count > 0
+            ? "Entradas registradas! Seu planejamento financeiro deste mês está em andamento."
+            : "Vamos começar? Adicione sua primeira entrada para organizar seu mês."
+        }
+        actionLabel={entriesSummary.count > 0 ? "Ver entradas" : "Adicionar entrada"}
+        onAction={() => onSelectTab('entries')}
+      />
+
+      {/* ==================================================
+          2. RESUMO FINANCEIRO (Card principal "Saldo do mês")
+          ================================================== */}
+      <Card className="border-[#E8E4D5] dark:border-[#24312B] bg-white dark:bg-[#18211D] shadow-xs overflow-hidden">
+        <CardContent className="p-5 sm:p-7 space-y-6">
+          <div className="flex items-center justify-between pb-3 border-b border-[#E8E4D5] dark:border-[#24312B]">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-[#075C45]/10 text-[#075C45] dark:bg-[#16A66A]/20 dark:text-[#78D9A6] flex items-center justify-center">
+                <Wallet className="w-4 h-4" />
+              </div>
+              <h2 className="text-base sm:text-lg font-bold font-display text-[#202724] dark:text-[#F7F4EA]">
+                Saldo do mês
+              </h2>
+            </div>
+            <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-[#F7F4EA] dark:bg-[#101614] border border-[#E8E4D5] dark:border-[#24312B] text-[#5E6963] dark:text-[#95A39B]">
+              Espaço: {currentSpace?.name || 'Pessoal'}
+            </span>
+          </div>
+
+          {/* Indicadores Visuais: Entradas, Despesas, Saldo */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
+            {/* Indicador 1: Saldo Principal */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-[#F7F4EA]/70 dark:bg-[#121915] border border-[#E8E4D5] dark:border-[#24312B] space-y-1">
+              <span className="text-xs font-semibold uppercase tracking-wider text-[#5E6963] dark:text-[#95A39B]">
+                Saldo Consolidado
+              </span>
+              <div className="text-2xl sm:text-3xl font-extrabold font-display text-[#075C45] dark:text-[#78D9A6]">
+                {formatCurrency(entriesSummary.totalPlanned)}
+              </div>
+              <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B]">
+                Balanço disponível no mês
+              </p>
+            </div>
+
+            {/* Indicador 2: Entradas (clicável para abrir Entradas) */}
+            <div
+              onClick={() => onSelectTab('entries')}
+              className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#18211D] border border-[#E8E4D5] dark:border-[#24312B] hover:border-[#16A66A]/50 transition-all cursor-pointer space-y-1 group"
+            >
+              <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-[#5E6963] dark:text-[#95A39B]">
+                <span className="group-hover:text-[#075C45] dark:group-hover:text-[#78D9A6] transition-colors">Entradas</span>
+                <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-bold">
+                  <ArrowUpRight className="w-3.5 h-3.5" />
+                  Receitas
+                </span>
+              </div>
+              <div className="text-2xl sm:text-3xl font-extrabold font-display text-emerald-600 dark:text-emerald-400">
+                {formatCurrency(entriesSummary.totalPlanned)}
+              </div>
+              <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B]">
+                {entriesSummary.count} {entriesSummary.count === 1 ? 'lançamento registrado' : 'lançamentos registrados'}
+              </p>
+            </div>
+
+            {/* Indicador 3: Despesas */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#18211D] border border-[#E8E4D5] dark:border-[#24312B] space-y-1">
+              <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-[#5E6963] dark:text-[#95A39B]">
+                <span>Despesas</span>
+                <span className="inline-flex items-center gap-1 text-rose-600 dark:text-rose-400 font-bold">
+                  <ArrowDownRight className="w-3.5 h-3.5" />
+                  Saídas
+                </span>
+              </div>
+              <div className="text-2xl sm:text-3xl font-extrabold font-display text-rose-600 dark:text-rose-400">
+                R$ 0,00
+              </div>
+              <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B]">
+                0 despesas no período
+              </p>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Quick Navigation Modules Grid */}
-      <div className="space-y-4">
+      {/* ==================================================
+          4. SITUAÇÃO DO MÊS ("Este mês" com Pago, Próximo, Atrasado)
+          ================================================== */}
+      <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-bold font-display text-[#202724] dark:text-[#F7F4EA]">
-            Módulos do Poupagaio
+          <h3 className="text-base sm:text-lg font-bold font-display text-[#202724] dark:text-[#F7F4EA]">
+            Este mês
           </h3>
           <span className="text-xs text-[#5E6963] dark:text-[#95A39B]">
-            Selecione um módulo para navegar
+            Status de pagamentos e vencimentos
           </span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {quickModules.map((mod) => {
-            const Icon = mod.icon;
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 sm:gap-4">
+          {/* Indicador Pago (Verde) */}
+          <div className="p-4 sm:p-5 rounded-2xl border border-emerald-500/20 bg-emerald-50/50 dark:bg-emerald-950/20 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
+                Pago
+              </span>
+              <div className="w-7 h-7 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                <CheckCircle2 className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="text-xl sm:text-2xl font-bold font-display text-emerald-700 dark:text-emerald-300">
+              R$ 0,00
+            </div>
+            <p className="text-[11px] text-emerald-700/80 dark:text-emerald-400/80">
+              Contas liquidadas no mês
+            </p>
+          </div>
+
+          {/* Indicador Próximo (Amarelo / Dourado) */}
+          <div className="p-4 sm:p-5 rounded-2xl border border-[#D6A84B]/30 bg-[#F7F4EA] dark:bg-[#D6A84B]/10 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#8c6511] dark:text-[#F2D58A]">
+                Próximo
+              </span>
+              <div className="w-7 h-7 rounded-xl bg-[#D6A84B]/20 text-[#b07d17] dark:text-[#F2D58A] flex items-center justify-center">
+                <Clock className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="text-xl sm:text-2xl font-bold font-display text-[#8c6511] dark:text-[#F2D58A]">
+              R$ 0,00
+            </div>
+            <p className="text-[11px] text-[#8c6511]/80 dark:text-[#F2D58A]/80">
+              A vencer nos próximos dias
+            </p>
+          </div>
+
+          {/* Indicador Atrasado (Vermelho) */}
+          <div className="p-4 sm:p-5 rounded-2xl border border-rose-500/20 bg-rose-50/50 dark:bg-rose-950/20 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-rose-800 dark:text-rose-300">
+                Atrasado
+              </span>
+              <div className="w-7 h-7 rounded-xl bg-rose-500/15 text-rose-600 dark:text-rose-400 flex items-center justify-center">
+                <AlertCircle className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="text-xl sm:text-2xl font-bold font-display text-rose-700 dark:text-rose-300">
+              R$ 0,00
+            </div>
+            <p className="text-[11px] text-rose-700/80 dark:text-rose-400/80">
+              Nenhuma conta atrasada
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* ==================================================
+          3. CARDS DE ACESSO RÁPIDO (8 Atalhos)
+          ================================================== */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-base sm:text-lg font-bold font-display text-[#202724] dark:text-[#F7F4EA]">
+            Acesso rápido
+          </h3>
+          <span className="text-xs text-[#5E6963] dark:text-[#95A39B]">
+            Toque para abrir qualquer módulo
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+          {quickShortcuts.map((item) => {
+            const Icon = item.icon;
             return (
               <button
-                key={mod.id}
+                key={item.id}
                 type="button"
-                onClick={() => onSelectTab(mod.id)}
-                className="group p-5 rounded-2xl border border-[#E8E4D5] dark:border-[#24312B] bg-white dark:bg-[#18211D] hover:border-[#16A66A] dark:hover:border-[#16A66A] hover:shadow-md transition-all text-left flex flex-col justify-between cursor-pointer"
+                id={`shortcut-${item.id}`}
+                onClick={() => onSelectTab(item.id)}
+                className="group p-3.5 sm:p-4 rounded-2xl border border-[#E8E4D5] dark:border-[#24312B] bg-white dark:bg-[#18211D] hover:border-[#16A66A] dark:hover:border-[#16A66A] hover:shadow-md active:scale-[0.98] transition-all text-left flex flex-col justify-between min-h-[96px] cursor-pointer"
               >
-                <div className="space-y-3">
-                  <div className="w-10 h-10 rounded-xl bg-[#075C45]/10 text-[#075C45] dark:bg-[#16A66A]/25 dark:text-[#78D9A6] flex items-center justify-center group-hover:bg-[#16A66A] group-hover:text-white transition-colors">
-                    <Icon className="w-5 h-5" />
+                <div className="flex items-center justify-between w-full">
+                  <div className="w-9 h-9 rounded-xl bg-[#075C45]/10 text-[#075C45] dark:bg-[#16A66A]/20 dark:text-[#78D9A6] group-hover:bg-[#16A66A] group-hover:text-white flex items-center justify-center transition-colors">
+                    <Icon className="w-4 h-4" />
                   </div>
-                  <div>
-                    <h4 className="font-bold text-sm text-[#202724] dark:text-[#F7F4EA] group-hover:text-[#075C45] dark:group-hover:text-[#78D9A6] transition-colors">
-                      {mod.label}
-                    </h4>
-                    <p className="text-xs text-[#5E6963] dark:text-[#95A39B] mt-1 line-clamp-2">
-                      {mod.desc}
-                    </p>
-                  </div>
+                  <span className="text-base" role="img" aria-label={item.label}>
+                    {item.emoji}
+                  </span>
                 </div>
-                <div className="pt-4 flex items-center justify-between text-xs font-semibold text-[#16A66A] opacity-0 group-hover:opacity-150 transition-opacity">
-                  <span>Acessar</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
+
+                <div className="pt-2">
+                  <h4 className="font-bold text-xs sm:text-sm text-[#202724] dark:text-[#F7F4EA] group-hover:text-[#075C45] dark:group-hover:text-[#78D9A6] transition-colors leading-tight">
+                    {item.label}
+                  </h4>
+                  <p className="text-[10px] sm:text-[11px] text-[#5E6963] dark:text-[#95A39B] truncate mt-0.5">
+                    {item.desc}
+                  </p>
                 </div>
               </button>
             );
           })}
         </div>
       </div>
+
+      {/* ==================================================
+          5. METAS (Card "Minhas metas")
+          ================================================== */}
+      <Card className="border-[#E8E4D5] dark:border-[#24312B] bg-white dark:bg-[#18211D] shadow-xs">
+        <CardContent className="p-5 sm:p-6 space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-[#E8E4D5] dark:border-[#24312B]">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-[#D6A84B]/15 text-[#b07d17] dark:bg-[#D6A84B]/25 dark:text-[#F2D58A] flex items-center justify-center">
+                <Target className="w-4 h-4" />
+              </div>
+              <h3 className="text-base font-bold font-display text-[#202724] dark:text-[#F7F4EA]">
+                Minhas metas
+              </h3>
+            </div>
+
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => setIsGoalModalOpen(true)}
+              className="gap-1.5 text-xs font-semibold cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>+ Criar meta</span>
+            </Button>
+          </div>
+
+          {/* Estado inicial de metas */}
+          <div className="py-6 px-4 text-center flex flex-col items-center justify-center space-y-2 rounded-2xl bg-[#F7F4EA]/50 dark:bg-[#101614]/50 border border-dashed border-[#E8E4D5] dark:border-[#24312B]">
+            <div className="w-10 h-10 rounded-full bg-[#16A66A]/10 text-[#075C45] dark:bg-[#16A66A]/20 dark:text-[#78D9A6] flex items-center justify-center">
+              <Target className="w-5 h-5" />
+            </div>
+            <p className="text-sm font-bold text-[#202724] dark:text-[#F7F4EA]">
+              Nenhuma meta criada ainda.
+            </p>
+            <p className="text-xs text-[#5E6963] dark:text-[#95A39B] max-w-sm">
+              Crie objetivos como reserva de emergência, viagens ou conquistas para acompanhar seu progresso.
+            </p>
+            <div className="pt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsGoalModalOpen(true)}
+                className="text-xs font-semibold cursor-pointer"
+              >
+                + Criar meta
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Modal leve de Aviso "Funcionalidade em desenvolvimento" para "+ Criar meta" */}
+      {isGoalModalOpen && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="w-full max-w-md rounded-3xl border border-[#E8E4D5] dark:border-[#24312B] bg-white dark:bg-[#18211D] p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between pb-2 border-b border-[#E8E4D5] dark:border-[#24312B]">
+              <div className="flex items-center gap-2">
+                <Target className="w-5 h-5 text-[#075C45] dark:text-[#78D9A6]" />
+                <h4 className="font-bold text-base font-display text-[#202724] dark:text-[#F7F4EA]">
+                  Criar Nova Meta
+                </h4>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsGoalModalOpen(false)}
+                className="p-1 rounded-full text-[#5E6963] dark:text-[#95A39B] hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-center py-2">
+              <span className="inline-block px-3 py-1 rounded-full bg-[#D6A84B]/15 text-[#8c6511] dark:text-[#F2D58A] text-xs font-bold uppercase tracking-wider">
+                Funcionalidade em desenvolvimento.
+              </span>
+              <p className="text-xs text-[#5E6963] dark:text-[#95A39B] leading-relaxed">
+                O módulo de metas permitirá definir valores-alvo, prazos e aportes mensais sugeridos pelo Poupagaio. A lógica completa será implementada na etapa de Metas.
+              </p>
+            </div>
+
+            <div className="pt-2 flex items-center justify-end gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsGoalModalOpen(false)}
+                className="cursor-pointer"
+              >
+                Fechar
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => {
+                  setIsGoalModalOpen(false);
+                  onSelectTab('goals');
+                }}
+                className="cursor-pointer"
+              >
+                Ver Módulo Metas
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

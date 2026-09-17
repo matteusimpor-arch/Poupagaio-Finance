@@ -5,6 +5,7 @@ import { AuthScreen } from './components/auth/AuthScreen';
 import { ResetPasswordScreen } from './components/auth/ResetPasswordScreen';
 import { Shell } from './components/layout/Shell';
 import { DashboardHome } from './components/dashboard/DashboardHome';
+import { EntriesScreen } from './components/entries/EntriesScreen';
 import { ModulePlaceholder } from './components/dashboard/ModulePlaceholder';
 import { ProfileScreen } from './components/profile/ProfileScreen';
 import { Skeleton } from './components/ui/skeleton';
@@ -60,6 +61,9 @@ function AppContent() {
   const renderContent = () => {
     if (currentTab === 'home') {
       return <DashboardHome onSelectTab={setCurrentTab} />;
+    }
+    if (currentTab === 'entries') {
+      return <EntriesScreen />;
     }
     if (currentTab === 'profile') {
       return <ProfileScreen />;

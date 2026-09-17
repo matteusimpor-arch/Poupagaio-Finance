@@ -92,6 +92,20 @@ const moduleDetails: Record<ActiveTab, { title: string; subtitle: string; icon: 
     description: 'Analise o desempenho financeiro de cada mês e descubra onde você economizou mais.',
     highlights: ['Balanço comparativo', 'Taxa de poupança', 'Lições para o próximo mês'],
   },
+  movements: {
+    title: 'Movimentações',
+    subtitle: 'Entradas e saídas financeiras',
+    icon: ArrowUpRight,
+    description: 'Central de controle de todas as movimentações financeiras, entradas, gastos fixos e variáveis.',
+    highlights: ['Lançamento de receitas', 'Registro de despesas', 'Histórico completo'],
+  },
+  planning: {
+    title: 'Planejamento',
+    subtitle: 'Metas e projeções futuras',
+    icon: Target,
+    description: 'Gerencie metas, listas de desejos e projeções orçamentárias para o seu futuro financeiro.',
+    highlights: ['Metas de economia', 'Lista de desejos', 'Acompanhamento de progresso'],
+  },
   profile: {
     title: 'Perfil & Configurações',
     subtitle: 'Sua conta e preferências',
@@ -118,8 +132,8 @@ export function ModulePlaceholder({ tab, onSelectTab }: ModulePlaceholderProps) 
           <span>Voltar para o Início</span>
         </button>
 
-        <span className="text-xs px-3 py-1 rounded-full bg-[#16A66A]/10 text-[#075C45] dark:bg-[#16A66A]/25 dark:text-[#78D9A6] font-medium">
-          Módulo em Estruturação
+        <span className="text-xs px-3 py-1 rounded-full bg-[#D6A84B]/15 text-[#8c6511] dark:text-[#F2D58A] font-semibold border border-[#D6A84B]/30">
+          Funcionalidade em desenvolvimento
         </span>
       </div>
 
@@ -131,6 +145,9 @@ export function ModulePlaceholder({ tab, onSelectTab }: ModulePlaceholderProps) 
           </div>
 
           <div className="space-y-2 max-w-lg">
+            <div className="inline-block px-3 py-1 rounded-full bg-[#16A66A]/10 text-[#075C45] dark:bg-[#16A66A]/20 dark:text-[#78D9A6] text-xs font-bold uppercase tracking-wider">
+              Funcionalidade em desenvolvimento.
+            </div>
             <h1 className="text-2xl md:text-3xl font-bold font-display text-[#075C45] dark:text-[#78D9A6]">
               {info.title}
             </h1>

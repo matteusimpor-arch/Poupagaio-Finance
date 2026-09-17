@@ -8,6 +8,7 @@ import { Avatar } from '../ui/avatar';
 import {
   Home,
   ArrowUpRight,
+  ArrowLeftRight,
   CreditCard,
   FileText,
   ShoppingBag,
@@ -37,9 +38,11 @@ export function Shell({ currentTab, onSelectTab, children }: ShellProps) {
 
   const sidebarNavItems: { id: ActiveTab; label: string; icon: React.ElementType }[] = [
     { id: 'home', label: 'Início', icon: Home },
+    { id: 'movements', label: 'Movimentações', icon: ArrowLeftRight },
+    { id: 'planning', label: 'Planejamento', icon: Target },
     { id: 'entries', label: 'Entradas', icon: ArrowUpRight },
-    { id: 'variable_expenses', label: 'Gastos Variáveis', icon: CreditCard },
     { id: 'fixed_expenses', label: 'Gastos Fixos', icon: FileText },
+    { id: 'variable_expenses', label: 'Gastos Variáveis', icon: CreditCard },
     { id: 'installments', label: 'Parcelados', icon: CreditCard },
     { id: 'market', label: 'Mercado', icon: ShoppingBag },
     { id: 'investments', label: 'Investimentos', icon: TrendingUp },
@@ -48,12 +51,12 @@ export function Shell({ currentTab, onSelectTab, children }: ShellProps) {
     { id: 'closing', label: 'Fechamento', icon: CalendarCheck },
   ];
 
-  const mobileBottomNav = [
-    { id: 'home' as ActiveTab, label: 'Início', icon: Home },
-    { id: 'entries' as ActiveTab, label: 'Entradas', icon: ArrowUpRight },
-    { id: 'variable_expenses' as ActiveTab, label: 'Gastos', icon: CreditCard },
-    { id: 'market' as ActiveTab, label: 'Mercado', icon: ShoppingBag },
-    { id: 'more' as const, label: 'Mais', icon: MoreHorizontal },
+  // Exactly as requested in Section 7: Início, Movimentações, Planejamento, Perfil
+  const mobileBottomNav: { id: ActiveTab; label: string; icon: React.ElementType }[] = [
+    { id: 'home', label: 'Início', icon: Home },
+    { id: 'movements', label: 'Movimentações', icon: ArrowLeftRight },
+    { id: 'planning', label: 'Planejamento', icon: Target },
+    { id: 'profile', label: 'Perfil', icon: User },
   ];
 
   const handleNavClick = (tab: ActiveTab) => {
@@ -236,32 +239,25 @@ export function Shell({ currentTab, onSelectTab, children }: ShellProps) {
         </main>
 
         {/* MOBILE BOTTOM NAVIGATION */}
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 border-t border-[#E8E4D5] dark:border-[#24312B] bg-white/95 dark:bg-[#141C18]/95 backdrop-blur-md px-2 py-1.5 z-40 flex items-center justify-around">
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 border-t border-[#E8E4D5] dark:border-[#24312B] bg-white/95 dark:bg-[#141C18]/95 backdrop-blur-md px-2 py-2 z-40 flex items-center justify-around">
           {mobileBottomNav.map((item) => {
             const Icon = item.icon;
-            const isMore = item.id === 'more';
-            const isActive = isMore ? isMoreMenuOpen : currentTab === item.id;
+            const isActive = currentTab === item.id;
 
             return (
               <button
                 key={item.id}
                 id={`nav-mobile-${item.id}`}
-                onClick={() => {
-                  if (isMore) {
-                    setIsMoreMenuOpen(!isMoreMenuOpen);
-                  } else {
-                    handleNavClick(item.id as ActiveTab);
-                  }
-                }}
+                onClick={() => handleNavClick(item.id)}
                 type="button"
-                className={`flex flex-col items-center justify-center py-1 px-2 rounded-xl min-w-[56px] transition-colors cursor-pointer ${
+                className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl min-w-[64px] transition-colors cursor-pointer ${
                   isActive
                     ? 'text-[#075C45] dark:text-[#78D9A6] font-bold'
                     : 'text-[#5E6963] dark:text-[#95A39B] hover:text-[#202724] dark:hover:text-[#F7F4EA]'
                 }`}
               >
                 <Icon className={`w-5 h-5 ${isActive ? 'stroke-[2.5]' : 'stroke-2'}`} />
-                <span className="text-[10px] mt-0.5 leading-tight">{item.label}</span>
+                <span className="text-[11px] mt-0.5 leading-tight">{item.label}</span>
               </button>
             );
           })}
