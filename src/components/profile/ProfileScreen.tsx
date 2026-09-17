@@ -45,33 +45,33 @@ export function ProfileScreen() {
   };
 
   return (
-    <div className="w-full max-w-2xl mx-auto space-y-6 pb-20 md:pb-6 animate-in fade-in duration-300">
+    <div className="w-full max-w-2xl mx-auto space-y-3.5 sm:space-y-6 pb-20 md:pb-6 animate-in fade-in duration-300">
       <div>
-        <h1 className="text-2xl font-bold font-display text-[#075C45] dark:text-[#78D9A6]">
+        <h1 className="text-xl sm:text-2xl font-bold font-display text-[#075C45] dark:text-[#78D9A6]">
           Meu Perfil & Configurações
         </h1>
-        <p className="text-sm text-[#5E6963] dark:text-[#95A39B]">
+        <p className="text-xs sm:text-sm text-[#5E6963] dark:text-[#95A39B]">
           Gerencie seus dados pessoais e preferências do Poupagaio Finance.
         </p>
       </div>
 
       {/* User Summary Card */}
-      <Card>
-        <CardContent className="p-6 flex flex-col sm:flex-row items-center sm:items-start gap-5">
+      <Card className="border-[#E8E4D5] dark:border-[#24312B] bg-white dark:bg-[#18211D]">
+        <CardContent className="p-3.5 sm:p-6 flex flex-row items-center gap-3 sm:gap-5">
           <Avatar
             name={profile?.full_name || user?.full_name || user?.email || 'U'}
             size="lg"
-            className="w-16 h-16 text-xl shadow-md"
+            className="w-12 h-12 sm:w-16 sm:h-16 text-base sm:text-xl shadow-xs shrink-0"
           />
-          <div className="space-y-1 text-center sm:text-left flex-1">
-            <h2 className="text-lg font-bold text-[#202724] dark:text-[#F7F4EA]">
+          <div className="space-y-0.5 text-left flex-1 min-w-0">
+            <h2 className="text-base sm:text-lg font-bold text-[#202724] dark:text-[#F7F4EA] truncate">
               {profile?.full_name || user?.full_name || 'Usuário'}
             </h2>
-            <div className="flex items-center justify-center sm:justify-start gap-1.5 text-xs text-[#5E6963] dark:text-[#95A39B]">
-              <Mail className="w-3.5 h-3.5" />
-              <span>{user?.email}</span>
+            <div className="flex items-center gap-1.5 text-xs text-[#5E6963] dark:text-[#95A39B] truncate">
+              <Mail className="w-3.5 h-3.5 shrink-0" />
+              <span className="truncate">{user?.email}</span>
             </div>
-            <p className="text-[11px] text-[#16A66A] dark:text-[#78D9A6] font-medium pt-1">
+            <p className="text-[10px] sm:text-[11px] text-[#16A66A] dark:text-[#78D9A6] font-medium pt-0.5">
               Membro desde: {profile?.created_at ? new Date(profile.created_at).toLocaleDateString('pt-BR') : 'Hoje'}
             </p>
           </div>
