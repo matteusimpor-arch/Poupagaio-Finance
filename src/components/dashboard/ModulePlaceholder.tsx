@@ -138,45 +138,50 @@ export function ModulePlaceholder({ tab, onSelectTab }: ModulePlaceholderProps) 
       </div>
 
       {/* Main Module Header & Empty State Card */}
-      <Card className="overflow-hidden border-[#E8E4D5] dark:border-[#24312B] bg-white dark:bg-[#18211D]">
-        <CardContent className="p-4 sm:p-8 md:p-12 text-center flex flex-col items-center space-y-3.5 sm:space-y-6">
-          <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl bg-[#075C45]/10 text-[#075C45] dark:bg-[#16A66A]/20 dark:text-[#78D9A6] flex items-center justify-center shadow-xs">
-            <Icon className="w-6 h-6 sm:w-8 sm:h-8" />
+      <Card className="overflow-hidden border-[#E2E8E4] dark:border-[#24312B] bg-white dark:bg-[#18211D]">
+        <CardContent className="pt-6 pb-5 px-4 sm:p-8 md:p-10 text-center flex flex-col items-center space-y-2.5 sm:space-y-4">
+          {/* 1. Ícone (totalmente contido com respiro superior) */}
+          <div className="w-11 h-11 sm:w-14 sm:h-14 rounded-2xl bg-[#075C45]/10 text-[#075C45] dark:bg-[#16A66A]/20 dark:text-[#78D9A6] flex items-center justify-center shadow-xs shrink-0">
+            <Icon className="w-5.5 h-5.5 sm:w-7 sm:h-7" />
           </div>
 
-          <div className="space-y-1.5 sm:space-y-2 max-w-lg">
-            <div className="inline-block px-2.5 py-0.5 rounded-full bg-[#16A66A]/10 text-[#075C45] dark:bg-[#16A66A]/20 dark:text-[#78D9A6] text-[10px] sm:text-xs font-bold uppercase tracking-wider">
-              Funcionalidade em desenvolvimento
-            </div>
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold font-display text-[#075C45] dark:text-[#78D9A6]">
+          {/* 2. Badge */}
+          <div className="inline-block px-2.5 py-0.5 rounded-full bg-[#16A66A]/10 text-[#075C45] dark:bg-[#16A66A]/20 dark:text-[#78D9A6] text-[10px] sm:text-xs font-bold uppercase tracking-wider">
+            Funcionalidade em desenvolvimento
+          </div>
+
+          {/* 3. Título + Subtítulo + Descrição */}
+          <div className="space-y-1 sm:space-y-1.5 max-w-lg">
+            <h1 className="text-lg sm:text-2xl md:text-3xl font-bold font-display text-[#075C45] dark:text-[#78D9A6]">
               {info.title}
             </h1>
             <p className="text-xs sm:text-sm font-medium text-[#5E6963] dark:text-[#95A39B]">
               {info.subtitle}
             </p>
-            <p className="text-[11px] sm:text-xs text-[#202724] dark:text-[#F7F4EA] pt-1 sm:pt-2 leading-relaxed">
+            <p className="text-[11px] sm:text-xs text-[#202724] dark:text-[#F7F4EA] pt-0.5 sm:pt-1 leading-relaxed">
               {info.description}
             </p>
           </div>
 
-          {/* Highlights */}
+          {/* 4. Opções (Highlights) */}
           <div className="w-full max-w-md grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 pt-1">
             {info.highlights.map((h, i) => (
               <div
                 key={i}
-                className="p-2 sm:p-3 rounded-xl bg-[#F7F4EA] dark:bg-[#111614] border border-[#E8E4D5] dark:border-[#24312B] text-[11px] sm:text-xs font-medium text-[#202724] dark:text-[#F7F4EA] flex items-center justify-center text-center"
+                className="p-2 sm:p-2.5 rounded-xl bg-[#F2F5F3] dark:bg-[#111614] border border-[#E2E8E4] dark:border-[#24312B] text-[11px] sm:text-xs font-medium text-[#202724] dark:text-[#F7F4EA] flex items-center justify-center text-center"
               >
                 {h}
               </div>
             ))}
           </div>
 
-          <div className="pt-2 sm:pt-4 flex flex-wrap items-center justify-center gap-3">
+          {/* 5. Botão */}
+          <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
             <Button
               variant="primary"
               size="sm"
               onClick={() => onSelectTab('home')}
-              className="gap-2 cursor-pointer"
+              className="gap-2 cursor-pointer h-8 py-1.5 px-4 text-xs font-semibold"
             >
               <span>Ir para o Início</span>
             </Button>

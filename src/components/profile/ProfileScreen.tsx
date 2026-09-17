@@ -56,8 +56,8 @@ export function ProfileScreen() {
       </div>
 
       {/* User Summary Card */}
-      <Card className="border-[#E8E4D5] dark:border-[#24312B] bg-white dark:bg-[#18211D]">
-        <CardContent className="p-3.5 sm:p-6 flex flex-row items-center gap-3 sm:gap-5">
+      <Card className="border-[#E2E8E4] dark:border-[#24312B] bg-white dark:bg-[#18211D]">
+        <CardContent className="p-4 pt-4 sm:p-6 flex flex-row items-center gap-3.5 sm:gap-5">
           <Avatar
             name={profile?.full_name || user?.full_name || user?.email || 'U'}
             size="lg"
@@ -79,7 +79,7 @@ export function ProfileScreen() {
       </Card>
 
       {/* Edit Name Form */}
-      <Card>
+      <Card className="border-[#E2E8E4] dark:border-[#24312B] bg-white dark:bg-[#18211D]">
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <User className="w-4 h-4 text-[#16A66A]" />
@@ -90,7 +90,7 @@ export function ProfileScreen() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSaveName} className="space-y-4">
+          <form onSubmit={handleSaveName} className="space-y-3.5 sm:space-y-4">
             <Input
               id="profile-name-input"
               label="Nome Completo"
@@ -108,7 +108,7 @@ export function ProfileScreen() {
                 type="text"
                 value={user?.email || ''}
                 disabled
-                className="w-full h-11 px-3.5 rounded-xl border border-[#E8E4D5] bg-black/[0.03] text-[#5E6963] text-sm dark:bg-white/[0.03] dark:border-[#24312B] dark:text-[#95A39B] cursor-not-allowed"
+                className="w-full h-10 sm:h-11 px-3.5 rounded-xl border border-[#E2E8E4] bg-black/[0.03] text-[#5E6963] text-xs sm:text-sm dark:bg-white/[0.03] dark:border-[#24312B] dark:text-[#95A39B] cursor-not-allowed"
               />
               <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B]">
                 O e-mail é gerenciado pelo Supabase Auth.
@@ -122,14 +122,14 @@ export function ProfileScreen() {
               </div>
             )}
 
-            <div className="pt-2 flex justify-end">
+            <div className="pt-1 flex justify-end">
               <Button
                 type="submit"
                 id="save-profile-btn"
                 variant="primary"
-                size="md"
+                size="sm"
                 isLoading={isSaving}
-                className="gap-2"
+                className="gap-2 text-xs font-semibold py-1.5 px-4 h-8 sm:h-9"
               >
                 <Save className="w-4 h-4" />
                 Salvar Alterações
@@ -140,7 +140,7 @@ export function ProfileScreen() {
       </Card>
 
       {/* Appearance / Theme Settings */}
-      <Card>
+      <Card className="border-[#E2E8E4] dark:border-[#24312B] bg-white dark:bg-[#18211D]">
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <Sun className="w-4 h-4 text-[#D6A84B]" />
@@ -151,21 +151,21 @@ export function ProfileScreen() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
             <button
               type="button"
               id="theme-light-btn"
               onClick={() => setTheme('light')}
-              className={`p-4 rounded-xl border flex flex-col items-center gap-2 text-center transition-all cursor-pointer ${
+              className={`p-3 sm:p-4 rounded-xl border flex flex-col items-center gap-1.5 text-center transition-all cursor-pointer ${
                 theme === 'light'
                   ? 'border-[#16A66A] bg-[#16A66A]/10 text-[#075C45] font-semibold ring-2 ring-[#16A66A]/30'
-                  : 'border-[#E8E4D5] bg-white text-[#5E6963] hover:bg-black/5 dark:bg-[#18211D] dark:border-[#24312B]'
+                  : 'border-[#E2E8E4] bg-white text-[#5E6963] hover:bg-black/5 dark:bg-[#18211D] dark:border-[#24312B]'
               }`}
             >
-              <Sun className="w-5 h-5 text-[#D6A84B]" />
-              <span className="text-sm">Tema Claro</span>
-              <span className="text-[11px] text-[#5E6963] dark:text-[#95A39B]">
-                Cores Creme & Verde
+              <Sun className="w-4 h-4 sm:w-5 sm:h-5 text-[#D6A84B]" />
+              <span className="text-xs sm:text-sm">Tema Claro</span>
+              <span className="text-[10px] sm:text-[11px] text-[#5E6963] dark:text-[#95A39B]">
+                Cores Claras & Verde
               </span>
             </button>
 
@@ -173,15 +173,15 @@ export function ProfileScreen() {
               type="button"
               id="theme-dark-btn"
               onClick={() => setTheme('dark')}
-              className={`p-4 rounded-xl border flex flex-col items-center gap-2 text-center transition-all cursor-pointer ${
+              className={`p-3 sm:p-4 rounded-xl border flex flex-col items-center gap-1.5 text-center transition-all cursor-pointer ${
                 theme === 'dark'
                   ? 'border-[#16A66A] bg-[#16A66A]/20 text-[#78D9A6] font-semibold ring-2 ring-[#16A66A]/30'
-                  : 'border-[#E8E4D5] bg-white text-[#5E6963] hover:bg-black/5 dark:bg-[#18211D] dark:border-[#24312B] dark:text-[#95A39B]'
+                  : 'border-[#E2E8E4] bg-white text-[#5E6963] hover:bg-black/5 dark:bg-[#18211D] dark:border-[#24312B] dark:text-[#95A39B]'
               }`}
             >
-              <Moon className="w-5 h-5 text-[#78D9A6]" />
-              <span className="text-sm">Tema Escuro</span>
-              <span className="text-[11px] text-[#5E6963] dark:text-[#95A39B]">
+              <Moon className="w-4 h-4 sm:w-5 sm:h-5 text-[#78D9A6]" />
+              <span className="text-xs sm:text-sm">Tema Escuro</span>
+              <span className="text-[10px] sm:text-[11px] text-[#5E6963] dark:text-[#95A39B]">
                 Grafite Profundo
               </span>
             </button>

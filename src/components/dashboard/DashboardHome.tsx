@@ -421,9 +421,9 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
       </Card>
 
       {/* MOBILE COMPACT VERSION OF SALDO DO MÊS */}
-      <Card className="md:hidden border-[#E8E4D5] dark:border-[#24312B] bg-white dark:bg-[#18211D] shadow-xs">
-        <CardContent className="p-3.5 space-y-2.5">
-          <div className="flex items-center justify-between pb-2 border-b border-[#E8E4D5]/60 dark:border-[#24312B]/60">
+      <Card className="md:hidden border-[#E2E8E4] dark:border-[#24312B] bg-white dark:bg-[#18211D] shadow-xs">
+        <CardContent className="p-4 pt-4 space-y-3">
+          <div className="flex items-center justify-between pb-2 border-b border-[#E2E8E4]/80 dark:border-[#24312B]/60">
             <span className="text-xs font-bold uppercase tracking-wider text-[#5E6963] dark:text-[#95A39B]">
               Saldo do mês
             </span>
@@ -432,7 +432,7 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
             </span>
           </div>
 
-          <div className="py-1 flex flex-col items-center justify-center text-center space-y-0.5 bg-[#F7F4EA]/40 dark:bg-[#121915]/40 rounded-xl p-2.5 border border-[#E8E4D5]/40 dark:border-[#24312B]/40">
+          <div className="py-2 px-3 flex flex-col items-center justify-center text-center space-y-0.5 bg-[#F2F5F3] dark:bg-[#121915]/40 rounded-xl border border-[#E2E8E4]/60 dark:border-[#24312B]/40">
             <span className="text-[11px] font-semibold text-[#5E6963] dark:text-[#95A39B]">
               Saldo consolidado
             </span>
@@ -441,11 +441,11 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 pt-1 border-t border-[#E8E4D5]/60 dark:border-[#24312B]/60">
+          <div className="grid grid-cols-2 gap-2 pt-1 border-t border-[#E2E8E4]/80 dark:border-[#24312B]/60">
             <button
               type="button"
               onClick={() => onSelectTab('entries')}
-              className="flex flex-col p-2 rounded-xl bg-[#F7F4EA]/80 dark:bg-[#121915] border border-[#E8E4D5] dark:border-[#24312B] text-left cursor-pointer active:scale-98 transition-transform"
+              className="flex flex-col p-2.5 rounded-xl bg-[#F2F5F3] dark:bg-[#121915] border border-[#E2E8E4] dark:border-[#24312B] text-left cursor-pointer active:scale-98 transition-transform"
             >
               <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
                 <ArrowUpRight className="w-3.5 h-3.5" /> Entradas
@@ -458,7 +458,7 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
             <button
               type="button"
               onClick={() => onSelectTab('fixed_expenses')}
-              className="flex flex-col p-2 rounded-xl bg-[#F7F4EA]/80 dark:bg-[#121915] border border-[#E8E4D5] dark:border-[#24312B] text-left cursor-pointer active:scale-98 transition-transform"
+              className="flex flex-col p-2.5 rounded-xl bg-[#F2F5F3] dark:bg-[#121915] border border-[#E2E8E4] dark:border-[#24312B] text-left cursor-pointer active:scale-98 transition-transform"
             >
               <span className="text-[10px] font-bold uppercase tracking-wider text-rose-700 dark:text-rose-400 flex items-center gap-1">
                 <ArrowDownRight className="w-3.5 h-3.5" /> Despesas
@@ -571,7 +571,7 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
           {/* Próximo */}
           <div
             onClick={() => onSelectTab('fixed_expenses')}
-            className="p-2 sm:p-2.5 rounded-xl border border-[#D6A84B]/30 bg-[#F7F4EA] dark:bg-[#D6A84B]/10 space-y-0.5 cursor-pointer text-center active:scale-98 transition-transform flex flex-col items-center justify-center"
+            className="p-2 sm:p-2.5 rounded-xl border border-[#D6A84B]/30 bg-[#F2F5F3] dark:bg-[#D6A84B]/10 space-y-0.5 cursor-pointer text-center active:scale-98 transition-transform flex flex-col items-center justify-center"
           >
             <div className="flex items-center justify-center gap-1 text-[10px] font-bold uppercase text-[#8c6511] dark:text-[#F2D58A] truncate">
               <Clock className="w-3 h-3 shrink-0 text-[#b07d17] dark:text-[#F2D58A]" />
@@ -648,9 +648,9 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
       {/* ==================================================
           5. METAS (Card "Minhas metas")
           ================================================== */}
-      <Card className="border-[#E8E4D5] dark:border-[#24312B] bg-white dark:bg-[#18211D] shadow-xs">
-        <CardContent className="p-3.5 sm:p-6 space-y-3 sm:space-y-4">
-          <div className="flex items-center justify-between pb-2.5 sm:pb-3 border-b border-[#E8E4D5] dark:border-[#24312B]">
+      <Card className="border-[#E2E8E4] dark:border-[#24312B] bg-white dark:bg-[#18211D] shadow-xs">
+        <CardContent className="p-4 pt-4 sm:p-6 space-y-3 sm:space-y-4">
+          <div className="flex items-center justify-between pb-2.5 sm:pb-3 border-b border-[#E2E8E4] dark:border-[#24312B]">
             <div className="flex items-center gap-2 sm:gap-2.5">
               <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-[#D6A84B]/15 text-[#b07d17] dark:bg-[#D6A84B]/25 dark:text-[#F2D58A] flex items-center justify-center shrink-0">
                 <Target className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -672,9 +672,9 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
           </div>
 
           {/* Estado inicial de metas */}
-          <div className="py-3.5 px-3 sm:py-6 sm:px-4 text-center flex flex-col items-center justify-center space-y-1.5 sm:space-y-2 rounded-xl sm:rounded-2xl bg-[#F7F4EA]/50 dark:bg-[#101614]/50 border border-dashed border-[#E8E4D5] dark:border-[#24312B]">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#16A66A]/10 text-[#075C45] dark:bg-[#16A66A]/20 dark:text-[#78D9A6] flex items-center justify-center shrink-0">
-              <Target className="w-4 h-4 sm:w-5 sm:h-5" />
+          <div className="py-3 px-3 sm:py-6 sm:px-4 text-center flex flex-col items-center justify-center space-y-1.5 sm:space-y-2 rounded-xl sm:rounded-2xl bg-[#F2F5F3]/70 dark:bg-[#101614]/50 border border-dashed border-[#E2E8E4] dark:border-[#24312B]">
+            <div className="w-7 h-7 sm:w-10 sm:h-10 rounded-full bg-[#16A66A]/10 text-[#075C45] dark:bg-[#16A66A]/20 dark:text-[#78D9A6] flex items-center justify-center shrink-0">
+              <Target className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
             </div>
             <p className="text-xs sm:text-sm font-bold text-[#202724] dark:text-[#F7F4EA]">
               Nenhuma meta criada ainda.

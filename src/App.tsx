@@ -28,7 +28,7 @@ function AppContent() {
   // Loading state with smooth skeletons to avoid blank white screens
   if (isInitializing) {
     return (
-      <div className="min-h-screen w-full flex flex-col items-center justify-center p-6 bg-[#F7F4EA] dark:bg-[#101614] text-[#202724] dark:text-[#F7F4EA]">
+      <div className="min-h-screen w-full flex flex-col items-center justify-center p-6 bg-[#F7F9F7] dark:bg-[#101614] text-[#202724] dark:text-[#F7F4EA]">
         <div className="w-full max-w-md space-y-6 text-center flex flex-col items-center">
           <div className="w-20 h-20 rounded-3xl overflow-hidden border-2 border-[#16A66A]/30 bg-white dark:bg-[#18211D] p-1.5 shadow-md animate-pulse">
             <img

@@ -197,9 +197,9 @@ export function Shell({ currentTab, onSelectTab, children }: ShellProps) {
       {/* MAIN CONTENT AREA */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* MOBILE TOP BAR */}
-        <header className="md:hidden flex items-center justify-between px-4 py-2.5 pt-[calc(0.625rem+env(safe-area-inset-top))] border-b border-[#E8E4D5] dark:border-[#24312B] bg-white dark:bg-[#141C18] sticky top-0 z-30">
+        <header className="md:hidden flex items-center justify-between px-4 py-2.5 pt-[calc(0.625rem+env(safe-area-inset-top))] border-b border-[#E2E8E4] dark:border-[#24312B] bg-white dark:bg-[#141C18] sticky top-0 z-30">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl overflow-hidden border border-[#16A66A]/30 bg-[#F7F4EA] dark:bg-[#18211D] p-0.5 shrink-0">
+            <div className="w-8 h-8 rounded-xl overflow-hidden border border-[#16A66A]/30 bg-[#F2F5F3] dark:bg-[#18211D] p-0.5 shrink-0">
               <img
                 src={POUPAGAIO_MASCOT_URL}
                 alt="Poupagaio Mascot"
@@ -220,15 +220,15 @@ export function Shell({ currentTab, onSelectTab, children }: ShellProps) {
                 id="mobile-header-notifications-btn"
                 onClick={() => setIsMobileNotificationsOpen(!isMobileNotificationsOpen)}
                 aria-label="Notificações"
-                className="p-2 rounded-xl border border-[#E8E4D5] hover:bg-black/5 dark:border-[#24312B] dark:hover:bg-white/5 text-[#5E6963] dark:text-[#95A39B] cursor-pointer relative"
+                className="p-2 rounded-xl border border-[#E2E8E4] hover:bg-black/5 dark:border-[#24312B] dark:hover:bg-white/5 text-[#5E6963] dark:text-[#95A39B] cursor-pointer relative"
               >
                 <Bell className="w-4 h-4" />
                 <span className="sr-only">Notificações</span>
               </button>
 
               {isMobileNotificationsOpen && (
-                <div className="absolute right-0 mt-2 w-72 rounded-2xl border border-[#E8E4D5] dark:border-[#24312B] bg-white dark:bg-[#18211D] p-4 shadow-xl z-50 animate-in fade-in zoom-in-95 duration-150">
-                  <div className="flex items-center justify-between pb-2 border-b border-[#E8E4D5] dark:border-[#24312B]">
+                <div className="absolute right-0 mt-2 w-72 rounded-2xl border border-[#E2E8E4] dark:border-[#24312B] bg-white dark:bg-[#18211D] p-4 shadow-xl z-50 animate-in fade-in zoom-in-95 duration-150">
+                  <div className="flex items-center justify-between pb-2 border-b border-[#E2E8E4] dark:border-[#24312B]">
                     <h4 className="text-xs font-bold uppercase tracking-wider text-[#075C45] dark:text-[#78D9A6]">
                       Notificações
                     </h4>
@@ -258,7 +258,7 @@ export function Shell({ currentTab, onSelectTab, children }: ShellProps) {
               id="mobile-header-toggle-theme-btn"
               onClick={toggleTheme}
               aria-label="Alternar tema"
-              className="p-2 rounded-xl border border-[#E8E4D5] hover:bg-black/5 dark:border-[#24312B] dark:hover:bg-white/5 text-[#5E6963] dark:text-[#95A39B] cursor-pointer"
+              className="p-2 rounded-xl border border-[#E2E8E4] hover:bg-black/5 dark:border-[#24312B] dark:hover:bg-white/5 text-[#5E6963] dark:text-[#95A39B] cursor-pointer"
             >
               {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4 text-[#D6A84B]" />}
             </button>
@@ -266,7 +266,7 @@ export function Shell({ currentTab, onSelectTab, children }: ShellProps) {
         </header>
 
         {/* MOBILE SPACE SELECTOR BAR */}
-        <div className="md:hidden px-3.5 py-1.5 border-b border-[#E8E4D5] dark:border-[#24312B] bg-[#F7F4EA]/80 dark:bg-[#101614]/80 backdrop-blur-sm">
+        <div className="md:hidden px-3.5 py-1.5 border-b border-[#E2E8E4] dark:border-[#24312B] bg-[#F2F5F3]/80 dark:bg-[#101614]/80 backdrop-blur-sm">
           <SpaceSelector />
         </div>
 
@@ -279,7 +279,7 @@ export function Shell({ currentTab, onSelectTab, children }: ShellProps) {
         </main>
 
         {/* MOBILE BOTTOM NAVIGATION (5 Ícones com + Central) */}
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 border-t border-[#E8E4D5] dark:border-[#24312B] bg-white/95 dark:bg-[#141C18]/95 backdrop-blur-md px-2 py-1.5 pb-[calc(0.5rem+env(safe-area-inset-bottom))] z-40 flex items-center justify-between">
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 border-t border-[#E2E8E4] dark:border-[#24312B] bg-white/95 dark:bg-[#141C18]/95 backdrop-blur-md px-2 py-1.5 pb-[calc(0.5rem+env(safe-area-inset-bottom))] z-40 flex items-center justify-between">
           {/* Item 1: Início */}
           <button
             type="button"
