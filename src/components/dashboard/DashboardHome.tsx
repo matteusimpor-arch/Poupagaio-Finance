@@ -38,6 +38,7 @@ import {
   ArrowRight,
   X,
   Info,
+  Sparkles,
 } from 'lucide-react';
 import { ActiveTab } from '../../types';
 
@@ -187,118 +188,144 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
   ];
 
   return (
-    <div className="w-full max-w-5xl mx-auto space-y-6 sm:space-y-8 pb-24 md:pb-8 animate-in fade-in duration-300">
+    <div className="w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 space-y-6 sm:space-y-8 pb-24 md:pb-8 animate-in fade-in duration-300">
       {/* ==================================================
-          1. CABEÇALHO DO DASHBOARD
+          1. NOVO HERO INTEGRADO DO DASHBOARD
+          Cabeçalho principal unificado com saudações, ações e a área da dica do Poupagaio
           ================================================== */}
-      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 sm:p-6 rounded-3xl bg-white dark:bg-[#18211D] border border-[#E8E4D5] dark:border-[#24312B] shadow-xs">
-        <div className="flex items-center gap-3.5">
-          {/* Mascote Poupagaio em tamanho pequeno */}
-          <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl overflow-hidden border border-[#16A66A]/30 bg-[#F7F4EA] dark:bg-[#101614] p-1 shrink-0 shadow-xs flex items-center justify-center">
-            <img
-              src={POUPAGAIO_MASCOT_URL}
-              alt="Mascote Poupagaio"
-              referrerPolicy="no-referrer"
-              className="w-full h-full object-contain"
-            />
+      <Card className="border-[#E8E4D5] dark:border-[#24312B] bg-white dark:bg-[#18211D] shadow-xs overflow-hidden">
+        <CardContent className="p-5 sm:p-7 space-y-6">
+          {/* Topo do Hero: Saudação do Usuário + Controles de Cabeçalho */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#E8E4D5]/80 dark:border-[#24312B]/80">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-extrabold font-display text-[#202724] dark:text-[#F7F4EA] tracking-tight">
+                Olá, {firstName}! 👋
+              </h1>
+              <p className="text-xs sm:text-sm text-[#5E6963] dark:text-[#95A39B] mt-0.5">
+                Vamos organizar suas finanças?
+              </p>
+            </div>
+
+            {/* Controles de Cabeçalho: Notificações, Claro/Escuro, Perfil */}
+            <div className="flex items-center gap-2.5 self-start sm:self-center">
+              {/* Botão e Popover de Notificações */}
+              <div className="relative">
+                <button
+                  type="button"
+                  id="header-notifications-btn"
+                  onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
+                  aria-label="Notificações"
+                  className="p-2.5 rounded-xl border border-[#E8E4D5] hover:bg-black/5 dark:border-[#24312B] dark:hover:bg-white/5 text-[#5E6963] dark:text-[#95A39B] transition-colors cursor-pointer relative"
+                >
+                  <Bell className="w-4 h-4" />
+                  <span className="sr-only">Notificações</span>
+                </button>
+
+                {isNotificationsOpen && (
+                  <div className="absolute right-0 mt-2 w-72 sm:w-80 rounded-2xl border border-[#E8E4D5] dark:border-[#24312B] bg-white dark:bg-[#18211D] p-4 shadow-xl z-50 animate-in fade-in zoom-in-95 duration-150">
+                    <div className="flex items-center justify-between pb-2 border-b border-[#E8E4D5] dark:border-[#24312B]">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-[#075C45] dark:text-[#78D9A6]">
+                        Notificações
+                      </h4>
+                      <button
+                        type="button"
+                        onClick={() => setIsNotificationsOpen(false)}
+                        className="p-1 text-[#5E6963] dark:text-[#95A39B] hover:text-[#202724] dark:hover:text-[#F7F4EA] cursor-pointer"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <div className="py-4 text-center space-y-1">
+                      <p className="text-xs font-semibold text-[#202724] dark:text-[#F7F4EA]">
+                        Tudo em dia!
+                      </p>
+                      <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B]">
+                        Você não tem lembretes ou avisos pendentes no momento.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Alternância Claro/Escuro */}
+              <button
+                type="button"
+                id="header-toggle-theme-btn"
+                onClick={toggleTheme}
+                aria-label="Alternar tema claro e escuro"
+                className="p-2.5 rounded-xl border border-[#E8E4D5] hover:bg-black/5 dark:border-[#24312B] dark:hover:bg-white/5 text-[#5E6963] dark:text-[#95A39B] transition-colors cursor-pointer"
+              >
+                {theme === 'light' ? (
+                  <Moon className="w-4 h-4" />
+                ) : (
+                  <Sun className="w-4 h-4 text-[#D6A84B]" />
+                )}
+                <span className="sr-only">Alternar tema</span>
+              </button>
+
+              {/* Acesso ao Perfil */}
+              <button
+                type="button"
+                id="header-profile-btn"
+                onClick={() => onSelectTab('profile')}
+                aria-label="Acessar Perfil"
+                className="flex items-center gap-2 p-1.5 pr-3 rounded-xl border border-[#E8E4D5] hover:bg-black/5 dark:border-[#24312B] dark:hover:bg-white/5 transition-colors cursor-pointer"
+              >
+                <Avatar
+                  name={fullName || user?.email || 'U'}
+                  size="sm"
+                />
+                <span className="text-xs font-semibold text-[#202724] dark:text-[#F7F4EA] hidden sm:inline max-w-[120px] truncate">
+                  {firstName}
+                </span>
+              </button>
+            </div>
           </div>
 
-          <div className="min-w-0">
-            <h1 className="text-xl sm:text-2xl font-bold font-display text-[#202724] dark:text-[#F7F4EA] tracking-tight truncate">
-              Olá, {firstName}!
-            </h1>
-            <p className="text-xs sm:text-sm text-[#5E6963] dark:text-[#95A39B]">
-              Vamos organizar suas finanças?
-            </p>
-          </div>
-        </div>
+          {/* Dica do Poupagaio Integrada (Única Aparição do Mascote no Conteúdo) */}
+          <div className="p-4 sm:p-5 rounded-2xl bg-[#F7F4EA]/60 dark:bg-[#121915]/60 border border-[#E8E4D5] dark:border-[#24312B] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3.5 min-w-0">
+              {/* Mascote Poupagaio */}
+              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl overflow-hidden border border-[#16A66A]/30 bg-white dark:bg-[#101614] p-1 shrink-0 shadow-xs flex items-center justify-center">
+                <img
+                  src={POUPAGAIO_MASCOT_URL}
+                  alt="Mascote Poupagaio"
+                  referrerPolicy="no-referrer"
+                  className="w-full h-full object-contain"
+                />
+              </div>
 
-        {/* Controles de Cabeçalho: Notificações, Claro/Escuro, Perfil */}
-        <div className="flex items-center gap-2 self-end sm:self-center">
-          {/* Botão de Notificações */}
-          <div className="relative">
-            <button
-              type="button"
-              id="header-notifications-btn"
-              onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
-              aria-label="Notificações"
-              className="p-2.5 rounded-xl border border-[#E8E4D5] hover:bg-black/5 dark:border-[#24312B] dark:hover:bg-white/5 text-[#5E6963] dark:text-[#95A39B] transition-colors cursor-pointer relative"
-            >
-              <Bell className="w-4 h-4" />
-              <span className="sr-only">Notificações</span>
-            </button>
+              {/* Mensagem e Dica do Poupagaio */}
+              <div className="space-y-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#16A66A]/15 text-[#075C45] dark:bg-[#16A66A]/20 dark:text-[#78D9A6]">
+                    <Sparkles className="w-3 h-3" />
+                    <span>Dica do Poupagaio</span>
+                  </span>
+                </div>
+                <p className="text-xs sm:text-sm text-[#202724] dark:text-[#F7F4EA] font-medium leading-snug">
+                  {mascotMessage}
+                </p>
+              </div>
+            </div>
 
-            {/* Popover de Notificações */}
-            {isNotificationsOpen && (
-              <div className="absolute right-0 mt-2 w-72 sm:w-80 rounded-2xl border border-[#E8E4D5] dark:border-[#24312B] bg-white dark:bg-[#18211D] p-4 shadow-xl z-50 animate-in fade-in zoom-in-95 duration-150">
-                <div className="flex items-center justify-between pb-2 border-b border-[#E8E4D5] dark:border-[#24312B]">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-[#075C45] dark:text-[#78D9A6]">
-                    Notificações
-                  </h4>
-                  <button
-                    type="button"
-                    onClick={() => setIsNotificationsOpen(false)}
-                    className="p-1 text-[#5E6963] dark:text-[#95A39B] hover:text-[#202724] dark:hover:text-[#F7F4EA] cursor-pointer"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-                <div className="py-4 text-center space-y-1">
-                  <p className="text-xs font-semibold text-[#202724] dark:text-[#F7F4EA]">
-                    Tudo em dia!
-                  </p>
-                  <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B]">
-                    Você não tem lembretes ou avisos pendentes no momento.
-                  </p>
-                </div>
+            {/* Ação rápida da Dica */}
+            {mascotActionLabel && (
+              <div className="shrink-0 self-end sm:self-center">
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => onSelectTab(mascotActionTab)}
+                  className="gap-1.5 text-xs font-semibold cursor-pointer"
+                >
+                  <span>{mascotActionLabel}</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Button>
               </div>
             )}
           </div>
-
-          {/* Alternância Claro/Escuro */}
-          <button
-            type="button"
-            id="header-toggle-theme-btn"
-            onClick={toggleTheme}
-            aria-label="Alternar tema claro e escuro"
-            className="p-2.5 rounded-xl border border-[#E8E4D5] hover:bg-black/5 dark:border-[#24312B] dark:hover:bg-white/5 text-[#5E6963] dark:text-[#95A39B] transition-colors cursor-pointer"
-          >
-            {theme === 'light' ? (
-              <Moon className="w-4 h-4" />
-            ) : (
-              <Sun className="w-4 h-4 text-[#D6A84B]" />
-            )}
-            <span className="sr-only">Alternar tema</span>
-          </button>
-
-          {/* Acesso ao Perfil */}
-          <button
-            type="button"
-            id="header-profile-btn"
-            onClick={() => onSelectTab('profile')}
-            aria-label="Acessar Perfil"
-            className="flex items-center gap-2 p-1.5 pr-3 rounded-xl border border-[#E8E4D5] hover:bg-black/5 dark:border-[#24312B] dark:hover:bg-white/5 transition-colors cursor-pointer"
-          >
-            <Avatar
-              name={fullName || user?.email || 'U'}
-              size="sm"
-            />
-            <span className="text-xs font-semibold text-[#202724] dark:text-[#F7F4EA] hidden sm:inline max-w-[100px] truncate">
-              {firstName}
-            </span>
-          </button>
-        </div>
-      </header>
-
-      {/* ==================================================
-          6. MASCOTE INTELIGENTE (Área discreta de mensagens)
-          ================================================== */}
-      <MascotWidget
-        reaction={mascotReaction}
-        message={mascotMessage}
-        actionLabel={mascotActionLabel}
-        onAction={() => onSelectTab(mascotActionTab)}
-      />
+        </CardContent>
+      </Card>
 
       {/* ==================================================
           2. RESUMO FINANCEIRO (Card principal "Saldo do mês")
@@ -321,11 +348,16 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
 
           {/* Indicadores Visuais: Entradas, Despesas, Saldo */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
-            {/* Indicador 1: Saldo Principal */}
-            <div className="p-4 sm:p-5 rounded-2xl bg-[#F7F4EA]/70 dark:bg-[#121915] border border-[#E8E4D5] dark:border-[#24312B] space-y-1">
-              <span className="text-xs font-semibold uppercase tracking-wider text-[#5E6963] dark:text-[#95A39B]">
-                Saldo Consolidado
-              </span>
+            {/* Indicador 1: Saldo Principal com destaque discreto */}
+            <div className="p-5 rounded-2xl bg-gradient-to-br from-[#F7F4EA] via-white to-[#F7F4EA]/40 dark:from-[#121915] dark:via-[#18211D] dark:to-[#121915] border-2 border-[#16A66A]/30 dark:border-[#16A66A]/20 space-y-1.5 shadow-2xs">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-[#5E6963] dark:text-[#95A39B]">
+                  Saldo Consolidado
+                </span>
+                <span className="px-2 py-0.5 rounded-md bg-[#16A66A]/15 text-[#075C45] dark:text-[#78D9A6] text-[10px] font-bold">
+                  Balanço Mês
+                </span>
+              </div>
               <div
                 className={`text-2xl sm:text-3xl font-extrabold font-display ${
                   saldoConsolidado < 0
@@ -347,7 +379,7 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
             {/* Indicador 2: Entradas (clicável para abrir Entradas) */}
             <div
               onClick={() => onSelectTab('entries')}
-              className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#18211D] border border-[#E8E4D5] dark:border-[#24312B] hover:border-[#16A66A]/50 transition-all cursor-pointer space-y-1 group"
+              className="p-5 rounded-2xl bg-white dark:bg-[#18211D] border border-[#E8E4D5] dark:border-[#24312B] hover:border-[#16A66A]/50 transition-all cursor-pointer space-y-1.5 group"
             >
               <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-[#5E6963] dark:text-[#95A39B]">
                 <span className="group-hover:text-[#075C45] dark:group-hover:text-[#78D9A6] transition-colors">Entradas</span>
@@ -367,7 +399,7 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
             {/* Indicador 3: Despesas (clicável para abrir Gastos Fixos) */}
             <div
               onClick={() => onSelectTab('fixed_expenses')}
-              className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#18211D] border border-[#E8E4D5] dark:border-[#24312B] hover:border-rose-500/50 transition-all cursor-pointer space-y-1 group"
+              className="p-5 rounded-2xl bg-white dark:bg-[#18211D] border border-[#E8E4D5] dark:border-[#24312B] hover:border-rose-500/50 transition-all cursor-pointer space-y-1.5 group"
             >
               <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-[#5E6963] dark:text-[#95A39B]">
                 <span className="group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors">Despesas</span>
@@ -388,7 +420,7 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
       </Card>
 
       {/* ==================================================
-          4. SITUAÇÃO DO MÊS ("Este mês" com Pago, Próximo, Atrasado)
+          3. SITUAÇÃO DO MÊS ("Este mês" com Pago, Próximo, Atrasado)
           ================================================== */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
@@ -400,11 +432,11 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
           </span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 sm:gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
           {/* Indicador Pago (Verde) */}
           <div
             onClick={() => onSelectTab('fixed_expenses')}
-            className="p-4 sm:p-5 rounded-2xl border border-emerald-500/20 bg-emerald-50/50 dark:bg-emerald-950/20 space-y-2 cursor-pointer hover:border-emerald-500/50 transition-all"
+            className="p-5 rounded-2xl border border-emerald-500/20 bg-emerald-50/50 dark:bg-emerald-950/20 space-y-2 cursor-pointer hover:border-emerald-500/50 transition-all"
           >
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
@@ -425,7 +457,7 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
           {/* Indicador Próximo (Amarelo / Dourado) */}
           <div
             onClick={() => onSelectTab('fixed_expenses')}
-            className="p-4 sm:p-5 rounded-2xl border border-[#D6A84B]/30 bg-[#F7F4EA] dark:bg-[#D6A84B]/10 space-y-2 cursor-pointer hover:border-[#D6A84B]/60 transition-all"
+            className="p-5 rounded-2xl border border-[#D6A84B]/30 bg-[#F7F4EA] dark:bg-[#D6A84B]/10 space-y-2 cursor-pointer hover:border-[#D6A84B]/60 transition-all"
           >
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold uppercase tracking-wider text-[#8c6511] dark:text-[#F2D58A]">
@@ -446,7 +478,7 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
           {/* Indicador Atrasado (Vermelho) */}
           <div
             onClick={() => onSelectTab('fixed_expenses')}
-            className="p-4 sm:p-5 rounded-2xl border border-rose-500/20 bg-rose-50/50 dark:bg-rose-950/20 space-y-2 cursor-pointer hover:border-rose-500/50 transition-all"
+            className="p-5 rounded-2xl border border-rose-500/20 bg-rose-50/50 dark:bg-rose-950/20 space-y-2 cursor-pointer hover:border-rose-500/50 transition-all"
           >
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold uppercase tracking-wider text-rose-800 dark:text-rose-300">
@@ -469,7 +501,7 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
       </div>
 
       {/* ==================================================
-          3. CARDS DE ACESSO RÁPIDO (8 Atalhos)
+          4. CARDS DE ACESSO RÁPIDO (8 Atalhos com Grid Fluido para Desktop)
           ================================================== */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
@@ -481,7 +513,7 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
           </span>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 sm:gap-4">
           {quickShortcuts.map((item) => {
             const Icon = item.icon;
             return (
