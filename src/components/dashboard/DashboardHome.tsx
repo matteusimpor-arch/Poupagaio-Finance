@@ -9,8 +9,14 @@ import { Avatar } from '../ui/avatar';
 import { entriesService } from '../../lib/services/entries';
 import { fixedExpensesService } from '../../lib/services/fixedExpenses';
 import { variableExpensesService } from '../../lib/services/variableExpenses';
+import { installmentsService, emptyMonthSummary } from '../../lib/services/installments';
 import { formatCurrency } from '../../lib/formatters';
-import { EntriesSummary, FixedExpensesSummary, VariableExpensesSummary } from '../../types';
+import {
+  EntriesSummary,
+  FixedExpensesSummary,
+  VariableExpensesSummary,
+  InstallmentsMonthSummary,
+} from '../../types';
 import {
   Bell,
   Sun,
@@ -72,6 +78,7 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
     paidCount: 0,
     pendingCount: 0,
   });
+  const [installmentsSummary, setInstallmentsSummary] = useState<InstallmentsMonthSummary>(emptyMonthSummary);
   const [isLoadingData, setIsLoadingData] = useState(false);
 
   useEffect(() => {
@@ -84,16 +91,18 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
       const month = now.getMonth() + 1;
 
       try {
-        const [entriesRes, fixedRes, variableRes] = await Promise.all([
+        const [entriesRes, fixedRes, variableRes, installmentsRes] = await Promise.all([
           entriesService.getMonthSummary(currentSpace.id, year, month),
           fixedExpensesService.getMonthSummary(currentSpace.id, year, month),
           variableExpensesService.getMonthSummary(currentSpace.id, year, month),
+          installmentsService.getMonthSummary(currentSpace.id, year, month),
         ]);
 
         if (isMounted) {
           setEntriesSummary(entriesRes);
           setFixedSummary(fixedRes);
           setVariableSummary(variableRes);
+          setInstallmentsSummary(installmentsRes);
           setIsLoadingData(false);
         }
       } catch {
@@ -109,16 +118,16 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
     };
   }, [currentSpace]);
 
-  // Cálculos financeiros reais da competência atual
+  // Cálculos financeiros reais da competência atual (gastos fixos + variáveis + parcelas do mês)
   const totalReceitas = entriesSummary.totalPlanned;
-  const totalDespesas = fixedSummary.totalMonth + variableSummary.totalMonth;
+  const totalDespesas = fixedSummary.totalMonth + variableSummary.totalMonth + installmentsSummary.totalMonth;
   const saldoConsolidado = totalReceitas - totalDespesas;
-  const totalDespesasCount = fixedSummary.count + variableSummary.count;
+  const totalDespesasCount = fixedSummary.count + variableSummary.count + installmentsSummary.count;
 
   // Situação do mês: Pago, Próximo, Atrasado
-  const totalPago = fixedSummary.totalPaid + variableSummary.totalPaid;
-  const totalProximo = fixedSummary.totalUpcoming + variableSummary.totalPending;
-  const totalAtrasado = fixedSummary.totalOverdue;
+  const totalPago = fixedSummary.totalPaid + variableSummary.totalPaid + installmentsSummary.totalPaid;
+  const totalProximo = fixedSummary.totalUpcoming + variableSummary.totalPending + installmentsSummary.totalUpcoming;
+  const totalAtrasado = fixedSummary.totalOverdue + installmentsSummary.totalOverdue;
 
   // Derive real user first name from Supabase authenticated user/profile (never fictional)
   const fullName = profile?.full_name || user?.full_name || user?.email?.split('@')[0] || '';
@@ -130,13 +139,14 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
   let mascotActionLabel = 'Ver entradas';
   let mascotActionTab: ActiveTab = 'entries';
 
-  if (fixedSummary.overdueCount > 0) {
+  const totalOverdueCount = fixedSummary.overdueCount + installmentsSummary.overdueCount;
+  if (totalOverdueCount > 0) {
     mascotReaction = 'alert';
-    mascotMessage = `Atenção: você tem ${fixedSummary.overdueCount} ${
-      fixedSummary.overdueCount === 1 ? 'conta fixa vencida' : 'contas fixas vencidas'
+    mascotMessage = `Atenção: você tem ${totalOverdueCount} ${
+      totalOverdueCount === 1 ? 'conta ou parcela vencida' : 'contas ou parcelas vencidas'
     } neste mês. Vale conferir!`;
-    mascotActionLabel = 'Ver gastos fixos';
-    mascotActionTab = 'fixed_expenses';
+    mascotActionLabel = fixedSummary.overdueCount > 0 ? 'Ver gastos fixos' : 'Ver parcelados';
+    mascotActionTab = fixedSummary.overdueCount > 0 ? 'fixed_expenses' : 'installments';
   } else if (totalReceitas > 0 && totalDespesas > 0 && saldoConsolidado >= 0) {
     mascotReaction = 'celebrating';
     mascotMessage = `Excelente! Seu saldo consolidado está positivo em ${formatCurrency(

@@ -212,3 +212,93 @@ export interface VariableExpensesSummary {
   pendingCount: number;
 }
 
+// ==========================================
+// PARCELADOS (INSTALLMENTS) — ETAPA 3.4
+// ==========================================
+export type InstallmentStatus = 'pending' | 'paid';
+export type InstallmentComputedStatus = 'paid' | 'upcoming' | 'overdue';
+
+export interface InstallmentPurchase {
+  id: string;
+  space_id: string;
+  created_by?: string | null;
+  description: string;
+  total_amount: number;
+  installment_count: number;
+  first_due_date: string; // YYYY-MM-DD
+  category: string;
+  notes?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Installment {
+  id: string;
+  purchase_id: string;
+  space_id: string;
+  installment_number: number;
+  amount: number;
+  due_date: string; // YYYY-MM-DD
+  status: InstallmentStatus;
+  paid_at?: string | null; // YYYY-MM-DD
+  paid_by?: string | null;
+  notes?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface InstallmentWithStatus extends Installment {
+  computedStatus: InstallmentComputedStatus;
+  purchaseDescription?: string;
+  purchaseCategory?: string;
+  purchaseTotalCount?: number;
+}
+
+export interface InstallmentPurchaseWithInstallments extends InstallmentPurchase {
+  installments: InstallmentWithStatus[];
+  paidCount: number;
+  totalPaidAmount: number;
+  progressPercentage: number;
+  isFullyPaid: boolean;
+  nextDueDate?: string | null;
+}
+
+export interface CreateInstallmentPurchaseInput {
+  space_id: string;
+  description: string;
+  total_amount: number;
+  installment_count: number;
+  first_due_date: string; // YYYY-MM-DD
+  category?: string;
+  notes?: string | null;
+}
+
+export interface UpdateInstallmentPurchaseInput {
+  description?: string;
+  category?: string;
+  notes?: string | null;
+  total_amount?: number;
+  installment_count?: number;
+  first_due_date?: string;
+}
+
+export interface InstallmentsMonthSummary {
+  totalMonth: number;   // Total de parcelas com vencimento neste mês
+  totalPaid: number;    // Parcelas do mês já pagas
+  totalPending: number; // Parcelas do mês a pagar (próximas + atrasadas)
+  totalUpcoming: number; // Parcelas do mês que ainda vão vencer
+  totalOverdue: number;  // Parcelas do mês atrasadas
+  count: number;
+  paidCount: number;
+  upcomingCount: number;
+  overdueCount: number;
+}
+
+export interface InstallmentsGlobalSummary {
+  totalOverall: number;
+  totalPaidOverall: number;
+  totalRemainingOverall: number;
+  activePurchasesCount: number;
+  completedPurchasesCount: number;
+}
+

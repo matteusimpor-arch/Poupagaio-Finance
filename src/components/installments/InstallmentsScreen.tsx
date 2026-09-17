@@ -1,0 +1,537 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '../../hooks/useAuth';
+import {
+  InstallmentPurchaseWithInstallments,
+  InstallmentsMonthSummary,
+  InstallmentsGlobalSummary,
+  CreateInstallmentPurchaseInput,
+  UpdateInstallmentPurchaseInput,
+} from '../../types';
+import {
+  installmentsService,
+  emptyMonthSummary,
+  emptyGlobalSummary,
+} from '../../lib/services/installments';
+import { formatCurrency } from '../../lib/formatters';
+import { InstallmentCard } from './InstallmentCard';
+import { InstallmentPurchaseModal } from './InstallmentPurchaseModal';
+import { Button } from '../ui/button';
+import { Card, CardContent } from '../ui/card';
+import { Skeleton } from '../ui/skeleton';
+import { POUPAGAIO_MASCOT_URL } from '../../assets/mascot';
+import {
+  Calendar,
+  Plus,
+  CreditCard,
+  CheckCircle2,
+  Clock,
+  AlertCircle,
+  ChevronLeft,
+  ChevronRight,
+  Filter,
+  Trash2,
+  Layers,
+  Sparkles,
+  Info,
+} from 'lucide-react';
+
+const MONTH_NAMES = [
+  'Janeiro',
+  'Fevereiro',
+  'Março',
+  'Abril',
+  'Maio',
+  'Junho',
+  'Julho',
+  'Agosto',
+  'Setembro',
+  'Outubro',
+  'Novembro',
+  'Dezembro',
+];
+
+export function InstallmentsScreen() {
+  const { currentSpace } = useAuth();
+
+  // Competência selecionada (Mês / Ano)
+  const now = new Date();
+  const [selectedYear, setSelectedYear] = useState<number>(now.getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState<number>(now.getMonth() + 1);
+
+  // Filtro de listagem: Todas / Em andamento / Finalizadas
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'completed'>('all');
+
+  // Dados
+  const [purchases, setPurchases] = useState<InstallmentPurchaseWithInstallments[]>([]);
+  const [monthSummary, setMonthSummary] = useState<InstallmentsMonthSummary>(emptyMonthSummary);
+  const [globalSummary, setGlobalSummary] = useState<InstallmentsGlobalSummary>(emptyGlobalSummary);
+  const [isLoading, setIsLoading] = useState(true);
+  const [userFriendlyError, setUserFriendlyError] = useState<string | null>(null);
+
+  // Modais
+  const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
+  const [purchaseToEdit, setPurchaseToEdit] = useState<InstallmentPurchaseWithInstallments | null>(null);
+  const [purchaseToDelete, setPurchaseToDelete] = useState<InstallmentPurchaseWithInstallments | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Carregar dados de parcelados
+  const loadInstallmentsData = useCallback(async () => {
+    if (!currentSpace?.id) {
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    setUserFriendlyError(null);
+
+    try {
+      const res = await installmentsService.getPurchasesWithInstallments(currentSpace.id, {
+        year: selectedYear,
+        month: selectedMonth,
+        filterStatus: statusFilter,
+      });
+
+      if (res.error) {
+        setUserFriendlyError(res.error);
+      } else {
+        setPurchases(res.purchases);
+        setMonthSummary(res.monthSummary);
+        setGlobalSummary(res.globalSummary);
+      }
+    } catch {
+      setUserFriendlyError('Não foi possível carregar as compras parceladas no momento.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentSpace?.id, selectedYear, selectedMonth, statusFilter]);
+
+  useEffect(() => {
+    loadInstallmentsData();
+  }, [loadInstallmentsData]);
+
+  // Navegação de mês
+  const handlePrevMonth = () => {
+    if (selectedMonth === 1) {
+      setSelectedMonth(12);
+      setSelectedYear((prev) => prev - 1);
+    } else {
+      setSelectedMonth((prev) => prev - 1);
+    }
+  };
+
+  const handleNextMonth = () => {
+    if (selectedMonth === 12) {
+      setSelectedMonth(1);
+      setSelectedYear((prev) => prev + 1);
+    } else {
+      setSelectedMonth((prev) => prev + 1);
+    }
+  };
+
+  // Salvar compra (criar ou atualizar)
+  const handleSavePurchase = async (
+    input: CreateInstallmentPurchaseInput | UpdateInstallmentPurchaseInput
+  ): Promise<{ success: boolean; error?: string }> => {
+    if (!currentSpace?.id) return { success: false, error: 'Espaço não selecionado.' };
+
+    if (purchaseToEdit) {
+      const res = await installmentsService.updatePurchase(purchaseToEdit.id, currentSpace.id, input);
+      if (res.success) {
+        await loadInstallmentsData();
+        setIsPurchaseModalOpen(false);
+        setPurchaseToEdit(null);
+      }
+      return res;
+    } else {
+      const res = await installmentsService.createPurchase(input as CreateInstallmentPurchaseInput);
+      if (res.purchase) {
+        await loadInstallmentsData();
+        setIsPurchaseModalOpen(false);
+        return { success: true };
+      }
+      return { success: false, error: res.error || 'Erro ao criar compra parcelada.' };
+    }
+  };
+
+  // Excluir compra confirmada
+  const handleConfirmDelete = async () => {
+    if (!purchaseToDelete || !currentSpace?.id || isDeleting) return;
+    setIsDeleting(true);
+
+    try {
+      const res = await installmentsService.deletePurchase(purchaseToDelete.id, currentSpace.id);
+      if (res.success) {
+        await loadInstallmentsData();
+        setPurchaseToDelete(null);
+      } else {
+        setUserFriendlyError(res.error || 'Não foi possível excluir a compra parcelada.');
+      }
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  // Marcar parcela como paga
+  const handleMarkInstallmentPaid = async (installmentId: string) => {
+    if (!currentSpace?.id) return;
+    const res = await installmentsService.markInstallmentAsPaid(installmentId, currentSpace.id);
+    if (res.success) {
+      await loadInstallmentsData();
+    } else {
+      setUserFriendlyError(res.error || 'Não foi possível registrar o pagamento.');
+    }
+  };
+
+  // Desfazer pagamento de parcela
+  const handleUnmarkInstallmentPaid = async (installmentId: string) => {
+    if (!currentSpace?.id) return;
+    const res = await installmentsService.unmarkInstallmentPayment(installmentId, currentSpace.id);
+    if (res.success) {
+      await loadInstallmentsData();
+    } else {
+      setUserFriendlyError(res.error || 'Não foi possível desfazer o pagamento.');
+    }
+  };
+
+  return (
+    <div className="w-full max-w-5xl mx-auto space-y-6 sm:space-y-8 pb-24 md:pb-8 animate-in fade-in duration-300">
+      {/* ==================================================
+          1. CABEÇALHO DO MÓDULO PARCELADOS
+          ================================================== */}
+      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 sm:p-6 rounded-3xl bg-white dark:bg-[#18211D] border border-[#E8E4D5] dark:border-[#24312B] shadow-xs">
+        <div className="flex items-center gap-3.5">
+          <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-[#075C45]/10 text-[#075C45] dark:bg-[#16A66A]/20 dark:text-[#78D9A6] flex items-center justify-center shrink-0 shadow-xs">
+            <Calendar className="w-6 h-6" />
+          </div>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold font-display text-[#202724] dark:text-[#F7F4EA] tracking-tight">
+              Parcelados
+            </h1>
+            <p className="text-xs sm:text-sm text-[#5E6963] dark:text-[#95A39B]">
+              Acompanhe suas compras e compromissos parcelados.
+            </p>
+          </div>
+        </div>
+
+        {/* Botão Nova Compra */}
+        <Button
+          type="button"
+          onClick={() => {
+            setPurchaseToEdit(null);
+            setIsPurchaseModalOpen(true);
+          }}
+          className="rounded-2xl bg-[#075C45] hover:bg-[#075C45]/90 dark:bg-[#16A66A] dark:hover:bg-[#16A66A]/90 text-white font-bold gap-2 px-4 py-2.5 shadow-xs cursor-pointer self-stretch sm:self-auto justify-center"
+        >
+          <Plus className="w-4 h-4" />
+          <span>Nova compra parcelada</span>
+        </Button>
+      </header>
+
+      {/* Alerta amigável de erro se houver */}
+      {userFriendlyError && (
+        <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-700 dark:text-rose-300 text-xs flex items-center justify-between gap-3 animate-in fade-in">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{userFriendlyError}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setUserFriendlyError(null)}
+            className="text-xs font-bold underline hover:opacity-80 cursor-pointer"
+          >
+            Fechar
+          </button>
+        </div>
+      )}
+
+      {/* ==================================================
+          2. SELETOR DE COMPETÊNCIA (MÊS / ANO)
+          ================================================== */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl bg-white dark:bg-[#18211D] border border-[#E8E4D5] dark:border-[#24312B]">
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handlePrevMonth}
+            aria-label="Mês anterior"
+            className="rounded-xl h-9 w-9 p-0 border-[#E8E4D5] dark:border-[#24312B] cursor-pointer"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </Button>
+
+          <div className="px-4 py-1.5 rounded-xl bg-[#F7F4EA] dark:bg-[#101614] border border-[#E8E4D5] dark:border-[#24312B] text-center min-w-[160px]">
+            <span className="text-sm font-bold font-display text-[#202724] dark:text-[#F7F4EA]">
+              {MONTH_NAMES[selectedMonth - 1]} de {selectedYear}
+            </span>
+          </div>
+
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleNextMonth}
+            aria-label="Próximo mês"
+            className="rounded-xl h-9 w-9 p-0 border-[#E8E4D5] dark:border-[#24312B] cursor-pointer"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </Button>
+        </div>
+
+        {/* Filtros de Visualização de Compras */}
+        <div className="flex items-center gap-1.5 bg-[#F7F4EA] dark:bg-[#101614] p-1 rounded-xl border border-[#E8E4D5] dark:border-[#24312B] self-start sm:self-auto">
+          <button
+            type="button"
+            onClick={() => setStatusFilter('all')}
+            className={`px-3 py-1 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
+              statusFilter === 'all'
+                ? 'bg-white dark:bg-[#18211D] text-[#075C45] dark:text-[#78D9A6] shadow-xs'
+                : 'text-[#5E6963] dark:text-[#95A39B] hover:text-[#202724] dark:hover:text-[#F7F4EA]'
+            }`}
+          >
+            Todas ({globalSummary.activePurchasesCount + globalSummary.completedPurchasesCount})
+          </button>
+          <button
+            type="button"
+            onClick={() => setStatusFilter('active')}
+            className={`px-3 py-1 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
+              statusFilter === 'active'
+                ? 'bg-white dark:bg-[#18211D] text-[#075C45] dark:text-[#78D9A6] shadow-xs'
+                : 'text-[#5E6963] dark:text-[#95A39B] hover:text-[#202724] dark:hover:text-[#F7F4EA]'
+            }`}
+          >
+            Em andamento ({globalSummary.activePurchasesCount})
+          </button>
+          <button
+            type="button"
+            onClick={() => setStatusFilter('completed')}
+            className={`px-3 py-1 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
+              statusFilter === 'completed'
+                ? 'bg-white dark:bg-[#18211D] text-[#075C45] dark:text-[#78D9A6] shadow-xs'
+                : 'text-[#5E6963] dark:text-[#95A39B] hover:text-[#202724] dark:hover:text-[#F7F4EA]'
+            }`}
+          >
+            Quitadas ({globalSummary.completedPurchasesCount})
+          </button>
+        </div>
+      </div>
+
+      {/* ==================================================
+          3. CARDS SUPERIORES: TOTAL PARCELADO | PAGO | A PAGAR
+          ================================================== */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 sm:gap-5">
+        {/* Card 1: TOTAL PARCELADO (Comprometimento da Competência) */}
+        <Card className="rounded-2xl border-[#E8E4D5] dark:border-[#24312B] bg-white dark:bg-[#18211D] shadow-xs">
+          <CardContent className="p-4 sm:p-5 space-y-1.5">
+            <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-[#5E6963] dark:text-[#95A39B]">
+              <span>Total Parcelado no Mês</span>
+              <Calendar className="w-4 h-4 text-[#075C45] dark:text-[#78D9A6]" />
+            </div>
+            <div className="text-2xl sm:text-3xl font-extrabold font-display text-[#202724] dark:text-[#F7F4EA]">
+              {isLoading ? <Skeleton className="h-8 w-28" /> : formatCurrency(monthSummary.totalMonth)}
+            </div>
+            <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B]">
+              {monthSummary.count} {monthSummary.count === 1 ? 'parcela com vencimento' : 'parcelas com vencimento'} em{' '}
+              {MONTH_NAMES[selectedMonth - 1]}
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Card 2: PAGO (Parcelas pagas na competência) */}
+        <Card className="rounded-2xl border-emerald-500/20 bg-emerald-50/50 dark:bg-emerald-950/20 shadow-xs">
+          <CardContent className="p-4 sm:p-5 space-y-1.5">
+            <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
+              <span>Pago</span>
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <div className="text-2xl sm:text-3xl font-extrabold font-display text-emerald-600 dark:text-emerald-400">
+              {isLoading ? <Skeleton className="h-8 w-28" /> : formatCurrency(monthSummary.totalPaid)}
+            </div>
+            <p className="text-[11px] text-emerald-700/80 dark:text-emerald-400/80">
+              {monthSummary.paidCount} de {monthSummary.count} pagas neste mês
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Card 3: A PAGAR (Parcelas pendentes/atrasadas na competência) */}
+        <Card className="rounded-2xl border-amber-500/20 bg-amber-50/50 dark:bg-amber-950/20 shadow-xs">
+          <CardContent className="p-4 sm:p-5 space-y-1.5">
+            <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300">
+              <span>A Pagar</span>
+              <Clock className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+            </div>
+            <div className="text-2xl sm:text-3xl font-extrabold font-display text-amber-700 dark:text-amber-300">
+              {isLoading ? <Skeleton className="h-8 w-28" /> : formatCurrency(monthSummary.totalPending)}
+            </div>
+            <div className="flex items-center gap-2 text-[11px] text-amber-700/80 dark:text-amber-400/80">
+              <span>Próximas: {formatCurrency(monthSummary.totalUpcoming)}</span>
+              {monthSummary.totalOverdue > 0 && (
+                <span className="text-rose-600 dark:text-rose-400 font-semibold">
+                  • {formatCurrency(monthSummary.totalOverdue)} atrasadas
+                </span>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Resumo Global Compacto das Obrigações Totais */}
+      <div className="p-4 rounded-2xl bg-[#F7F4EA]/70 dark:bg-[#121915] border border-[#E8E4D5] dark:border-[#24312B] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+        <div className="flex items-center gap-2 text-[#5E6963] dark:text-[#95A39B]">
+          <Layers className="w-4 h-4 text-[#075C45] dark:text-[#78D9A6]" />
+          <span>
+            Saldo total de compromissos parcelados:{' '}
+            <strong className="text-[#202724] dark:text-[#F7F4EA]">
+              {formatCurrency(globalSummary.totalRemainingOverall)}
+            </strong>{' '}
+            a quitar
+          </span>
+        </div>
+        <div className="text-[#5E6963] dark:text-[#95A39B]">
+          Histórico geral: {formatCurrency(globalSummary.totalPaidOverall)} pagos de{' '}
+          {formatCurrency(globalSummary.totalOverall)} contratados
+        </div>
+      </div>
+
+      {/* ==================================================
+          4. LISTAGEM DAS COMPRAS PARCELADAS
+          ================================================== */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-base sm:text-lg font-bold font-display text-[#202724] dark:text-[#F7F4EA]">
+            Suas Compras Parceladas
+          </h2>
+          <span className="text-xs text-[#5E6963] dark:text-[#95A39B]">
+            {purchases.length} {purchases.length === 1 ? 'compra registrada' : 'compras registradas'}
+          </span>
+        </div>
+
+        {/* Loading Skeletons */}
+        {isLoading && (
+          <div className="space-y-3">
+            <Skeleton className="h-32 w-full rounded-3xl" />
+            <Skeleton className="h-32 w-full rounded-3xl" />
+          </div>
+        )}
+
+        {/* Estado Vazio com Mascote Oficial do Poupagaio */}
+        {!isLoading && purchases.length === 0 && (
+          <div className="p-8 sm:p-12 rounded-3xl bg-white dark:bg-[#18211D] border border-[#E8E4D5] dark:border-[#24312B] text-center flex flex-col items-center justify-center space-y-4 shadow-xs">
+            <div className="w-24 h-24 rounded-3xl overflow-hidden border-2 border-[#16A66A]/30 bg-[#F7F4EA] dark:bg-[#101614] p-2 shadow-sm">
+              <img
+                src={POUPAGAIO_MASCOT_URL}
+                alt="Poupagaio"
+                referrerPolicy="no-referrer"
+                className="w-full h-full object-contain rounded-2xl"
+              />
+            </div>
+            <div className="max-w-md space-y-1.5">
+              <h3 className="text-base sm:text-lg font-bold font-display text-[#202724] dark:text-[#F7F4EA]">
+                Tudo tranquilo por aqui
+              </h3>
+              <p className="text-xs sm:text-sm text-[#5E6963] dark:text-[#95A39B]">
+                Sem parcelas por enquanto. Quando precisar, o Poupagaio ajuda você a acompanhar cada uma.
+              </p>
+            </div>
+            <Button
+              type="button"
+              onClick={() => {
+                setPurchaseToEdit(null);
+                setIsPurchaseModalOpen(true);
+              }}
+              className="rounded-2xl bg-[#075C45] hover:bg-[#075C45]/90 dark:bg-[#16A66A] dark:hover:bg-[#16A66A]/90 text-white font-bold gap-2 px-5 py-2.5 cursor-pointer mt-2"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Cadastrar primeira compra</span>
+            </Button>
+          </div>
+        )}
+
+        {/* Cards das Compras */}
+        {!isLoading && purchases.length > 0 && (
+          <div className="space-y-4">
+            {purchases.map((purchase) => (
+              <InstallmentCard
+                key={purchase.id}
+                purchase={purchase}
+                onEdit={(item) => {
+                  setPurchaseToEdit(item);
+                  setIsPurchaseModalOpen(true);
+                }}
+                onDelete={(item) => setPurchaseToDelete(item)}
+                onMarkPaid={handleMarkInstallmentPaid}
+                onUnmarkPaid={handleUnmarkInstallmentPaid}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ==================================================
+          5. MODAL DE CADASTRO / EDIÇÃO DE COMPRA PARCELADA
+          ================================================== */}
+      {isPurchaseModalOpen && currentSpace?.id && (
+        <InstallmentPurchaseModal
+          isOpen={isPurchaseModalOpen}
+          onClose={() => {
+            setIsPurchaseModalOpen(false);
+            setPurchaseToEdit(null);
+          }}
+          spaceId={currentSpace.id}
+          purchaseToEdit={purchaseToEdit}
+          onSave={handleSavePurchase}
+        />
+      )}
+
+      {/* ==================================================
+          6. MODAL DE CONFIRMAÇÃO DE EXCLUSÃO
+          ================================================== */}
+      {purchaseToDelete && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150"
+        >
+          <div className="w-full max-w-md rounded-3xl bg-white dark:bg-[#18211D] border border-[#E8E4D5] dark:border-[#24312B] p-6 shadow-2xl space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-rose-500/10 text-rose-600 flex items-center justify-center shrink-0">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <h3 className="text-base sm:text-lg font-bold font-display text-[#202724] dark:text-[#F7F4EA]">
+                Excluir Compra Parcelada?
+              </h3>
+            </div>
+            <p className="text-xs sm:text-sm text-[#5E6963] dark:text-[#95A39B]">
+              Excluir esta compra também removerá suas parcelas e o histórico de pagamentos relacionado.
+              Deseja continuar?
+            </p>
+            <div className="p-3 rounded-xl bg-[#F7F4EA] dark:bg-[#101614] border border-[#E8E4D5] dark:border-[#24312B] text-xs">
+              <strong>{purchaseToDelete.description}</strong> — {purchaseToDelete.installment_count} parcelas
+              de {formatCurrency(purchaseToDelete.total_amount / purchaseToDelete.installment_count)} (Total:{' '}
+              {formatCurrency(purchaseToDelete.total_amount)})
+            </div>
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setPurchaseToDelete(null)}
+                disabled={isDeleting}
+                className="rounded-xl cursor-pointer"
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                onClick={handleConfirmDelete}
+                disabled={isDeleting}
+                className="rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold cursor-pointer"
+              >
+                {isDeleting ? 'Excluindo...' : 'Sim, excluir compra'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
