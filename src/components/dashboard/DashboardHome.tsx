@@ -7,8 +7,10 @@ import { Card, CardContent } from '../ui/card';
 import { Button } from '../ui/button';
 import { Avatar } from '../ui/avatar';
 import { entriesService } from '../../lib/services/entries';
+import { fixedExpensesService } from '../../lib/services/fixedExpenses';
+import { variableExpensesService } from '../../lib/services/variableExpenses';
 import { formatCurrency } from '../../lib/formatters';
-import { EntriesSummary } from '../../types';
+import { EntriesSummary, FixedExpensesSummary, VariableExpensesSummary } from '../../types';
 import {
   Bell,
   Sun,
@@ -44,41 +46,117 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
 
-  // Real Supabase entries state for current month
+  // Real Supabase entries and expenses state for current month
   const [entriesSummary, setEntriesSummary] = useState<EntriesSummary>({
     totalPlanned: 0,
     totalReceived: 0,
     totalPending: 0,
     count: 0,
   });
-  const [isLoadingEntries, setIsLoadingEntries] = useState(false);
+  const [fixedSummary, setFixedSummary] = useState<FixedExpensesSummary>({
+    totalMonth: 0,
+    totalPaid: 0,
+    totalPending: 0,
+    totalUpcoming: 0,
+    totalOverdue: 0,
+    count: 0,
+    paidCount: 0,
+    upcomingCount: 0,
+    overdueCount: 0,
+  });
+  const [variableSummary, setVariableSummary] = useState<VariableExpensesSummary>({
+    totalMonth: 0,
+    totalPaid: 0,
+    totalPending: 0,
+    count: 0,
+    paidCount: 0,
+    pendingCount: 0,
+  });
+  const [isLoadingData, setIsLoadingData] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
-    async function loadEntriesData() {
+    async function loadAllData() {
       if (!currentSpace) return;
-      setIsLoadingEntries(true);
+      setIsLoadingData(true);
       const now = new Date();
-      const summary = await entriesService.getMonthSummary(
-        currentSpace.id,
-        now.getFullYear(),
-        now.getMonth() + 1
-      );
-      if (isMounted) {
-        setEntriesSummary(summary);
-        setIsLoadingEntries(false);
+      const year = now.getFullYear();
+      const month = now.getMonth() + 1;
+
+      try {
+        const [entriesRes, fixedRes, variableRes] = await Promise.all([
+          entriesService.getMonthSummary(currentSpace.id, year, month),
+          fixedExpensesService.getMonthSummary(currentSpace.id, year, month),
+          variableExpensesService.getMonthSummary(currentSpace.id, year, month),
+        ]);
+
+        if (isMounted) {
+          setEntriesSummary(entriesRes);
+          setFixedSummary(fixedRes);
+          setVariableSummary(variableRes);
+          setIsLoadingData(false);
+        }
+      } catch {
+        if (isMounted) {
+          setIsLoadingData(false);
+        }
       }
     }
 
-    loadEntriesData();
+    loadAllData();
     return () => {
       isMounted = false;
     };
   }, [currentSpace]);
 
+  // Cálculos financeiros reais da competência atual
+  const totalReceitas = entriesSummary.totalPlanned;
+  const totalDespesas = fixedSummary.totalMonth + variableSummary.totalMonth;
+  const saldoConsolidado = totalReceitas - totalDespesas;
+  const totalDespesasCount = fixedSummary.count + variableSummary.count;
+
+  // Situação do mês: Pago, Próximo, Atrasado
+  const totalPago = fixedSummary.totalPaid + variableSummary.totalPaid;
+  const totalProximo = fixedSummary.totalUpcoming + variableSummary.totalPending;
+  const totalAtrasado = fixedSummary.totalOverdue;
+
   // Derive real user first name from Supabase authenticated user/profile (never fictional)
   const fullName = profile?.full_name || user?.full_name || user?.email?.split('@')[0] || '';
   const firstName = fullName.trim().split(' ')[0] || 'Usuário';
+
+  // Mensagem e reação dinâmica do mascote baseada no balanço real
+  let mascotReaction: 'welcoming' | 'encouraging' | 'celebrating' | 'alert' = 'welcoming';
+  let mascotMessage = 'Vamos começar? Cadastre suas receitas e despesas para organizar seu mês.';
+  let mascotActionLabel = 'Ver entradas';
+  let mascotActionTab: ActiveTab = 'entries';
+
+  if (fixedSummary.overdueCount > 0) {
+    mascotReaction = 'alert';
+    mascotMessage = `Atenção: você tem ${fixedSummary.overdueCount} ${
+      fixedSummary.overdueCount === 1 ? 'conta fixa vencida' : 'contas fixas vencidas'
+    } neste mês. Vale conferir!`;
+    mascotActionLabel = 'Ver gastos fixos';
+    mascotActionTab = 'fixed_expenses';
+  } else if (totalReceitas > 0 && totalDespesas > 0 && saldoConsolidado >= 0) {
+    mascotReaction = 'celebrating';
+    mascotMessage = `Excelente! Seu saldo consolidado está positivo em ${formatCurrency(
+      saldoConsolidado
+    )} neste mês. Continue assim!`;
+    mascotActionLabel = 'Ver gastos variáveis';
+    mascotActionTab = 'variable_expenses';
+  } else if (totalDespesas > totalReceitas && totalReceitas > 0) {
+    mascotReaction = 'alert';
+    mascotMessage = `Atenção: suas despesas superam as receitas deste mês em ${formatCurrency(
+      Math.abs(saldoConsolidado)
+    )}. Fique atento ao orçamento!`;
+    mascotActionLabel = 'Ver gastos';
+    mascotActionTab = 'fixed_expenses';
+  } else if (entriesSummary.count > 0 || totalDespesasCount > 0) {
+    mascotReaction = 'encouraging';
+    mascotMessage = 'Seu planejamento deste mês está em andamento. Mantenha os lançamentos em dia!';
+    mascotActionLabel = 'Novo gasto fixo';
+    mascotActionTab = 'fixed_expenses';
+  }
 
   // 8 Quick Access Shortcuts requested in Section 3
   const quickShortcuts: {
@@ -206,14 +284,10 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
           6. MASCOTE INTELIGENTE (Área discreta de mensagens)
           ================================================== */}
       <MascotWidget
-        reaction={entriesSummary.count > 0 ? "encouraging" : "welcoming"}
-        message={
-          entriesSummary.count > 0
-            ? "Entradas registradas! Seu planejamento financeiro deste mês está em andamento."
-            : "Vamos começar? Adicione sua primeira entrada para organizar seu mês."
-        }
-        actionLabel={entriesSummary.count > 0 ? "Ver entradas" : "Adicionar entrada"}
-        onAction={() => onSelectTab('entries')}
+        reaction={mascotReaction}
+        message={mascotMessage}
+        actionLabel={mascotActionLabel}
+        onAction={() => onSelectTab(mascotActionTab)}
       />
 
       {/* ==================================================
@@ -242,11 +316,21 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
               <span className="text-xs font-semibold uppercase tracking-wider text-[#5E6963] dark:text-[#95A39B]">
                 Saldo Consolidado
               </span>
-              <div className="text-2xl sm:text-3xl font-extrabold font-display text-[#075C45] dark:text-[#78D9A6]">
-                {formatCurrency(entriesSummary.totalPlanned)}
+              <div
+                className={`text-2xl sm:text-3xl font-extrabold font-display ${
+                  saldoConsolidado < 0
+                    ? 'text-rose-600 dark:text-rose-400'
+                    : 'text-[#075C45] dark:text-[#78D9A6]'
+                }`}
+              >
+                {formatCurrency(saldoConsolidado)}
               </div>
               <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B]">
-                Balanço disponível no mês
+                {totalReceitas > 0 || totalDespesas > 0
+                  ? saldoConsolidado >= 0
+                    ? 'Saldo líquido disponível'
+                    : 'Saldo negativo no período'
+                  : 'Balanço disponível no mês'}
               </p>
             </div>
 
@@ -263,27 +347,30 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
                 </span>
               </div>
               <div className="text-2xl sm:text-3xl font-extrabold font-display text-emerald-600 dark:text-emerald-400">
-                {formatCurrency(entriesSummary.totalPlanned)}
+                {formatCurrency(totalReceitas)}
               </div>
               <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B]">
                 {entriesSummary.count} {entriesSummary.count === 1 ? 'lançamento registrado' : 'lançamentos registrados'}
               </p>
             </div>
 
-            {/* Indicador 3: Despesas */}
-            <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#18211D] border border-[#E8E4D5] dark:border-[#24312B] space-y-1">
+            {/* Indicador 3: Despesas (clicável para abrir Gastos Fixos) */}
+            <div
+              onClick={() => onSelectTab('fixed_expenses')}
+              className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#18211D] border border-[#E8E4D5] dark:border-[#24312B] hover:border-rose-500/50 transition-all cursor-pointer space-y-1 group"
+            >
               <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-[#5E6963] dark:text-[#95A39B]">
-                <span>Despesas</span>
+                <span className="group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors">Despesas</span>
                 <span className="inline-flex items-center gap-1 text-rose-600 dark:text-rose-400 font-bold">
                   <ArrowDownRight className="w-3.5 h-3.5" />
                   Saídas
                 </span>
               </div>
               <div className="text-2xl sm:text-3xl font-extrabold font-display text-rose-600 dark:text-rose-400">
-                R$ 0,00
+                {formatCurrency(totalDespesas)}
               </div>
               <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B]">
-                0 despesas no período
+                {totalDespesasCount} {totalDespesasCount === 1 ? 'despesa no período' : 'despesas no período'}
               </p>
             </div>
           </div>
@@ -305,7 +392,10 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 sm:gap-4">
           {/* Indicador Pago (Verde) */}
-          <div className="p-4 sm:p-5 rounded-2xl border border-emerald-500/20 bg-emerald-50/50 dark:bg-emerald-950/20 space-y-2">
+          <div
+            onClick={() => onSelectTab('fixed_expenses')}
+            className="p-4 sm:p-5 rounded-2xl border border-emerald-500/20 bg-emerald-50/50 dark:bg-emerald-950/20 space-y-2 cursor-pointer hover:border-emerald-500/50 transition-all"
+          >
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
                 Pago
@@ -315,15 +405,18 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
               </div>
             </div>
             <div className="text-xl sm:text-2xl font-bold font-display text-emerald-700 dark:text-emerald-300">
-              R$ 0,00
+              {formatCurrency(totalPago)}
             </div>
             <p className="text-[11px] text-emerald-700/80 dark:text-emerald-400/80">
-              Contas liquidadas no mês
+              {fixedSummary.paidCount + variableSummary.paidCount} quitados no mês
             </p>
           </div>
 
           {/* Indicador Próximo (Amarelo / Dourado) */}
-          <div className="p-4 sm:p-5 rounded-2xl border border-[#D6A84B]/30 bg-[#F7F4EA] dark:bg-[#D6A84B]/10 space-y-2">
+          <div
+            onClick={() => onSelectTab('fixed_expenses')}
+            className="p-4 sm:p-5 rounded-2xl border border-[#D6A84B]/30 bg-[#F7F4EA] dark:bg-[#D6A84B]/10 space-y-2 cursor-pointer hover:border-[#D6A84B]/60 transition-all"
+          >
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold uppercase tracking-wider text-[#8c6511] dark:text-[#F2D58A]">
                 Próximo
@@ -333,15 +426,18 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
               </div>
             </div>
             <div className="text-xl sm:text-2xl font-bold font-display text-[#8c6511] dark:text-[#F2D58A]">
-              R$ 0,00
+              {formatCurrency(totalProximo)}
             </div>
             <p className="text-[11px] text-[#8c6511]/80 dark:text-[#F2D58A]/80">
-              A vencer nos próximos dias
+              {fixedSummary.upcomingCount + variableSummary.pendingCount} pendentes no mês
             </p>
           </div>
 
           {/* Indicador Atrasado (Vermelho) */}
-          <div className="p-4 sm:p-5 rounded-2xl border border-rose-500/20 bg-rose-50/50 dark:bg-rose-950/20 space-y-2">
+          <div
+            onClick={() => onSelectTab('fixed_expenses')}
+            className="p-4 sm:p-5 rounded-2xl border border-rose-500/20 bg-rose-50/50 dark:bg-rose-950/20 space-y-2 cursor-pointer hover:border-rose-500/50 transition-all"
+          >
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold uppercase tracking-wider text-rose-800 dark:text-rose-300">
                 Atrasado
@@ -351,10 +447,12 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
               </div>
             </div>
             <div className="text-xl sm:text-2xl font-bold font-display text-rose-700 dark:text-rose-300">
-              R$ 0,00
+              {formatCurrency(totalAtrasado)}
             </div>
             <p className="text-[11px] text-rose-700/80 dark:text-rose-400/80">
-              Nenhuma conta atrasada
+              {fixedSummary.overdueCount > 0
+                ? `${fixedSummary.overdueCount} ${fixedSummary.overdueCount === 1 ? 'conta vencida' : 'contas vencidas'}`
+                : 'Nenhuma conta atrasada'}
             </p>
           </div>
         </div>

@@ -19,17 +19,19 @@ export function notifySchemaPending(isPending: boolean, message?: string) {
 
 export function isTableMissingError(error: any): boolean {
   if (!error) return false;
+  const code = String(error.code || '');
+  if (code === 'PGRST205' || code === 'PGRST204' || code === '42P01') {
+    return true;
+  }
+  const msg = String(error.message || '').toLowerCase();
+  const details = String(error.details || '').toLowerCase();
+  const combined = `${msg} ${details}`;
   return (
-    error.code === 'PGRST205' ||
-    error.code === '42P01' || // undefined_table
-    Boolean(
-      error.message &&
-        (error.message.includes('schema cache') ||
-          error.message.includes('Could not find the table') ||
-          error.message.includes('relation "public.profiles" does not exist') ||
-          error.message.includes('relation "public.spaces" does not exist') ||
-          error.message.includes('relation "public.space_members" does not exist'))
-    )
+    combined.includes('could not find the table') ||
+    combined.includes('schema cache') ||
+    combined.includes('does not exist') ||
+    combined.includes('undefined_table') ||
+    (combined.includes('relation') && combined.includes('not exist'))
   );
 }
 

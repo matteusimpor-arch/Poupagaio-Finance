@@ -240,13 +240,13 @@ export const entriesService = {
         .single();
 
       if (error) {
-        console.error('Erro ao atualizar entrada:', error.message || error);
+        console.warn('Erro ao atualizar entrada:', error.message || error);
         return { entry: null, error: 'Não foi possível salvar as alterações. Tente novamente.' };
       }
 
       return { entry: data as Entry };
     } catch (err: any) {
-      console.error('updateEntry exception:', err?.message || err);
+      console.warn('updateEntry exception:', err?.message || err);
       return { entry: null, error: 'Não foi possível salvar as alterações. Tente novamente.' };
     }
   },
@@ -274,13 +274,13 @@ export const entriesService = {
       const { error } = await supabase.from('entries').delete().eq('id', entryId);
 
       if (error) {
-        console.error('Erro ao excluir entrada:', error.message || error);
+        console.warn('Erro ao excluir entrada:', error.message || error);
         return { success: false, error: 'Não foi possível excluir a entrada. Tente novamente.' };
       }
 
       return { success: true };
     } catch (err: any) {
-      console.error('deleteEntry exception:', err?.message || err);
+      console.warn('deleteEntry exception:', err?.message || err);
       return { success: false, error: 'Não foi possível excluir a entrada. Tente novamente.' };
     }
   },

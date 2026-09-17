@@ -6,6 +6,8 @@ import { ResetPasswordScreen } from './components/auth/ResetPasswordScreen';
 import { Shell } from './components/layout/Shell';
 import { DashboardHome } from './components/dashboard/DashboardHome';
 import { EntriesScreen } from './components/entries/EntriesScreen';
+import { FixedExpensesScreen } from './components/fixed-expenses/FixedExpensesScreen';
+import { VariableExpensesScreen } from './components/variable-expenses/VariableExpensesScreen';
 import { ModulePlaceholder } from './components/dashboard/ModulePlaceholder';
 import { ProfileScreen } from './components/profile/ProfileScreen';
 import { Skeleton } from './components/ui/skeleton';
@@ -64,6 +66,12 @@ function AppContent() {
     }
     if (currentTab === 'entries') {
       return <EntriesScreen />;
+    }
+    if (currentTab === 'fixed_expenses') {
+      return <FixedExpensesScreen />;
+    }
+    if (currentTab === 'variable_expenses') {
+      return <VariableExpensesScreen />;
     }
     if (currentTab === 'profile') {
       return <ProfileScreen />;
