@@ -92,11 +92,11 @@ export function AuthScreen() {
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col justify-between bg-[#F7F4EA] dark:bg-[#101614] text-[#202724] dark:text-[#F7F4EA] p-4 md:p-6 transition-colors duration-200">
+    <div className="min-h-screen w-full flex flex-col justify-between bg-[#F7F4EA] dark:bg-[#121212] text-[#202724] dark:text-[#F4F4F5] p-4 md:p-6 transition-colors duration-200">
       {/* Top Bar with Theme Toggle */}
       <div className="w-full max-w-5xl mx-auto flex items-center justify-between py-2">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-xl overflow-hidden border border-[#16A66A]/30 bg-white dark:bg-[#18211D] p-0.5">
+          <div className="w-8 h-8 rounded-xl overflow-hidden border border-[#16A66A]/30 bg-white dark:bg-[#1A1A1A] p-0.5">
             <img
               src={POUPAGAIO_MASCOT_URL}
               alt="Poupagaio"
@@ -104,7 +104,7 @@ export function AuthScreen() {
               className="w-full h-full object-cover rounded-lg"
             />
           </div>
-          <span className="font-bold text-sm tracking-tight font-display text-[#075C45] dark:text-[#78D9A6]">
+          <span className="font-bold text-sm tracking-tight font-display text-[#075C45] dark:text-[#34D399]">
             Poupagaio Finance
           </span>
         </div>
@@ -113,18 +113,18 @@ export function AuthScreen() {
           type="button"
           onClick={toggleTheme}
           aria-label="Alternar tema"
-          className="p-2 rounded-xl border border-[#E8E4D5] hover:bg-black/5 dark:border-[#24312B] dark:hover:bg-white/5 transition-colors cursor-pointer text-[#5E6963] dark:text-[#95A39B]"
+          className="p-2.5 rounded-xl border border-[#E8E4D5] hover:bg-black/5 dark:border-white/15 dark:hover:bg-white/5 transition-colors cursor-pointer text-[#5E6963] dark:text-zinc-300"
         >
-          {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4 text-[#D6A84B]" />}
+          {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4 text-amber-400" />}
         </button>
       </div>
 
       {/* Main Center Auth Container */}
       <div className="w-full max-w-md mx-auto my-auto py-8">
-        <Card className="border-[#E8E4D5] dark:border-[#24312B] shadow-lg overflow-hidden">
+        <Card className="border-[#E8E4D5] dark:border-white/12 bg-white dark:bg-[#1A1A1A] shadow-xl overflow-hidden">
           {/* Header Brand */}
           <div className="p-6 pb-2 text-center flex flex-col items-center space-y-3">
-            <div className="w-20 h-20 rounded-2xl overflow-hidden shadow-md border-2 border-[#16A66A]/30 bg-[#F7F4EA] dark:bg-[#18211D] p-1">
+            <div className="w-20 h-20 rounded-2xl overflow-hidden shadow-md border-2 border-[#16A66A]/30 bg-[#F7F4EA] dark:bg-[#222226] p-1">
               <img
                 src={POUPAGAIO_MASCOT_URL}
                 alt="Poupagaio Mascot"
@@ -133,10 +133,10 @@ export function AuthScreen() {
               />
             </div>
             <div>
-              <h1 className="text-xl font-bold font-display text-[#075C45] dark:text-[#78D9A6]">
+              <h1 className="text-xl font-bold font-display text-[#075C45] dark:text-[#34D399]">
                 Poupagaio Finance
               </h1>
-              <p className="text-xs text-[#5E6963] dark:text-[#95A39B] italic mt-0.5">
+              <p className="text-xs text-[#5E6963] dark:text-zinc-400 italic mt-0.5">
                 “Organize hoje. Voe mais longe.”
               </p>
             </div>
@@ -149,10 +149,10 @@ export function AuthScreen() {
             </div>
           )}
 
-          {/* Tab Switcher (Login / Register) */}
+           {/* Tab Switcher (Login / Register) */}
           {mode !== 'forgot' && (
             <div className="px-6 pt-2 pb-0">
-              <div className="grid grid-cols-2 p-1 rounded-xl bg-black/[0.04] dark:bg-white/[0.04] border border-[#E8E4D5]/60 dark:border-[#24312B]/60 text-xs font-semibold">
+              <div className="grid grid-cols-2 p-1 rounded-xl bg-black/[0.04] dark:bg-white/[0.06] border border-[#E8E4D5]/60 dark:border-white/10 text-xs font-semibold">
                 <button
                   type="button"
                   id="tab-login"
@@ -162,8 +162,8 @@ export function AuthScreen() {
                   }}
                   className={`py-2 rounded-lg transition-all cursor-pointer ${
                     mode === 'login'
-                      ? 'bg-white dark:bg-[#18211D] text-[#075C45] dark:text-[#78D9A6] shadow-sm'
-                      : 'text-[#5E6963] dark:text-[#95A39B] hover:text-[#202724] dark:hover:text-[#F7F4EA]'
+                      ? 'bg-white dark:bg-[#2A2A2E] text-[#075C45] dark:text-[#34D399] shadow-sm font-bold'
+                      : 'text-[#5E6963] dark:text-zinc-400 hover:text-[#202724] dark:hover:text-white'
                   }`}
                 >
                   Entrar
@@ -177,8 +177,8 @@ export function AuthScreen() {
                   }}
                   className={`py-2 rounded-lg transition-all cursor-pointer ${
                     mode === 'register'
-                      ? 'bg-white dark:bg-[#18211D] text-[#075C45] dark:text-[#78D9A6] shadow-sm'
-                      : 'text-[#5E6963] dark:text-[#95A39B] hover:text-[#202724] dark:hover:text-[#F7F4EA]'
+                      ? 'bg-white dark:bg-[#2A2A2E] text-[#075C45] dark:text-[#34D399] shadow-sm font-bold'
+                      : 'text-[#5E6963] dark:text-zinc-400 hover:text-[#202724] dark:hover:text-white'
                   }`}
                 >
                   Criar Conta

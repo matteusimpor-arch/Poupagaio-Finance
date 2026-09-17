@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@variant dark (&:where(.dark, .dark *));
+
 @layer base {
   :root {
     --bg-page: #F7F4EA;
@@ -17,18 +19,28 @@
   }
 
   .dark {
-    --bg-page: #101614;
-    --card-bg: #18211D;
-    --card-border: #24312B;
-    --text-main: #F7F4EA;
-    --text-muted: #95A39B;
-    --color-emerald-deep: #0B7357;
-    --color-emerald-main: #16A66A;
-    --color-emerald-light: #78D9A6;
-    --color-gold: #E5B95C;
-    --color-champagne: #F2D58A;
-    --color-cream: #18211D;
-    --color-graphite: #F7F4EA;
+    --bg-page: #121212;
+    --card-bg: #1A1A1A;
+    --card-border: rgba(255, 255, 255, 0.12);
+    --text-main: #F4F4F5;
+    --text-muted: #A1A1AA;
+    --color-emerald-deep: #0E744B;
+    --color-emerald-main: #10B981;
+    --color-emerald-light: #34D399;
+    --color-gold: #F59E0B;
+    --color-champagne: #FDE047;
+    --color-cream: #1A1A1A;
+    --color-graphite: #F4F4F5;
+  }
+
+  ::selection {
+    background-color: #16A66A;
+    color: #FFFFFF;
+  }
+
+  .dark ::selection {
+    background-color: #34D399;
+    color: #121212;
   }
 
   body {
@@ -42,4 +54,5 @@
     font-family: 'Space Grotesk', 'Plus Jakarta Sans', sans-serif;
   }
 }
+
 
