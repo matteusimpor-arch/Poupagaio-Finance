@@ -84,14 +84,14 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
   useEffect(() => {
     let isMounted = true;
     async function loadAllData() {
-      if (!currentSpace) return;
+      if (!currentSpace?.id) return;
       setIsLoadingData(true);
       const now = new Date();
       const year = now.getFullYear();
       const month = now.getMonth() + 1;
 
       try {
-        const [entriesRes, fixedRes, variableRes, installmentsRes] = await Promise.all([
+        const [entriesResult, fixedResult, variableResult, installmentsResult] = await Promise.allSettled([
           entriesService.getMonthSummary(currentSpace.id, year, month),
           fixedExpensesService.getMonthSummary(currentSpace.id, year, month),
           variableExpensesService.getMonthSummary(currentSpace.id, year, month),
@@ -99,10 +99,10 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
         ]);
 
         if (isMounted) {
-          setEntriesSummary(entriesRes);
-          setFixedSummary(fixedRes);
-          setVariableSummary(variableRes);
-          setInstallmentsSummary(installmentsRes);
+          if (entriesResult.status === 'fulfilled') setEntriesSummary(entriesResult.value);
+          if (fixedResult.status === 'fulfilled') setFixedSummary(fixedResult.value);
+          if (variableResult.status === 'fulfilled') setVariableSummary(variableResult.value);
+          if (installmentsResult.status === 'fulfilled') setInstallmentsSummary(installmentsResult.value);
           setIsLoadingData(false);
         }
       } catch {
@@ -116,7 +116,7 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
     return () => {
       isMounted = false;
     };
-  }, [currentSpace]);
+  }, [currentSpace?.id]);
 
   // Cálculos financeiros reais da competência atual (gastos fixos + variáveis + parcelas do mês)
   const totalReceitas = entriesSummary.totalPlanned;
@@ -418,7 +418,7 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
               {formatCurrency(totalPago)}
             </div>
             <p className="text-[11px] text-emerald-700/80 dark:text-emerald-400/80">
-              {fixedSummary.paidCount + variableSummary.paidCount} quitados no mês
+              {fixedSummary.paidCount + variableSummary.paidCount + installmentsSummary.paidCount} quitados no mês
             </p>
           </div>
 
@@ -439,7 +439,7 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
               {formatCurrency(totalProximo)}
             </div>
             <p className="text-[11px] text-[#8c6511]/80 dark:text-[#F2D58A]/80">
-              {fixedSummary.upcomingCount + variableSummary.pendingCount} pendentes no mês
+              {fixedSummary.upcomingCount + variableSummary.pendingCount + installmentsSummary.upcomingCount} pendentes no mês
             </p>
           </div>
 
@@ -460,8 +460,8 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
               {formatCurrency(totalAtrasado)}
             </div>
             <p className="text-[11px] text-rose-700/80 dark:text-rose-400/80">
-              {fixedSummary.overdueCount > 0
-                ? `${fixedSummary.overdueCount} ${fixedSummary.overdueCount === 1 ? 'conta vencida' : 'contas vencidas'}`
+              {totalOverdueCount > 0
+                ? `${totalOverdueCount} ${totalOverdueCount === 1 ? 'conta vencida' : 'contas vencidas'}`
                 : 'Nenhuma conta atrasada'}
             </p>
           </div>

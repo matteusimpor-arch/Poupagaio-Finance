@@ -345,6 +345,11 @@ export const installmentsService = {
     if (!supabase || !spaceId) return emptyMonthSummary;
 
     const cyclePrefix = `${year}-${String(month).padStart(2, '0')}`;
+    const startStr = `${cyclePrefix}-01`;
+    // Cálculo seguro do último dia real do mês (evita datas inválidas como 2026-09-31 no Postgres)
+    const lastDay = new Date(year, month, 0).getDate();
+    const endStr = `${cyclePrefix}-${String(lastDay).padStart(2, '0')}`;
+
     const now = new Date();
     const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(
       now.getDate()
@@ -355,8 +360,8 @@ export const installmentsService = {
         .from('installments')
         .select('*')
         .eq('space_id', spaceId)
-        .gte('due_date', `${cyclePrefix}-01`)
-        .lte('due_date', `${cyclePrefix}-31`);
+        .gte('due_date', startStr)
+        .lte('due_date', endStr);
 
       if (error) {
         if (!isTableMissingError(error)) {
@@ -405,7 +410,8 @@ export const installmentsService = {
         upcomingCount,
         overdueCount,
       };
-    } catch {
+    } catch (err) {
+      console.warn('Exceção ao calcular getMonthSummary de parcelados:', err);
       return emptyMonthSummary;
     }
   },
