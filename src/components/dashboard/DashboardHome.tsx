@@ -193,7 +193,7 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
           1. NOVO HERO INTEGRADO DO DASHBOARD
           Cabeçalho principal unificado com saudações, ações e a área da dica do Poupagaio
           ================================================== */}
-      <Card className="border-[#E8E4D5] dark:border-[#24312B] bg-white dark:bg-[#18211D] shadow-xs overflow-hidden">
+      <Card className="hidden md:block border-[#E8E4D5] dark:border-[#24312B] bg-white dark:bg-[#18211D] shadow-xs overflow-hidden">
         <CardContent className="p-5 sm:p-7 space-y-6">
           {/* Topo do Hero: Saudação do Usuário + Controles de Cabeçalho */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#E8E4D5]/80 dark:border-[#24312B]/80">
@@ -330,7 +330,8 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
       {/* ==================================================
           2. RESUMO FINANCEIRO (Card principal "Saldo do mês")
           ================================================== */}
-      <Card className="border-[#E8E4D5] dark:border-[#24312B] bg-white dark:bg-[#18211D] shadow-xs overflow-hidden">
+      {/* DESKTOP VERSION OF SALDO DO MÊS */}
+      <Card className="hidden md:block border-[#E8E4D5] dark:border-[#24312B] bg-white dark:bg-[#18211D] shadow-xs overflow-hidden">
         <CardContent className="p-5 sm:p-7 space-y-6">
           <div className="flex items-center justify-between pb-3 border-b border-[#E8E4D5] dark:border-[#24312B]">
             <div className="flex items-center gap-2.5">
@@ -419,6 +420,57 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
         </CardContent>
       </Card>
 
+      {/* MOBILE COMPACT VERSION OF SALDO DO MÊS */}
+      <Card className="md:hidden border-[#E8E4D5] dark:border-[#24312B] bg-white dark:bg-[#18211D] shadow-xs">
+        <CardContent className="p-4 space-y-3">
+          <div className="flex items-center justify-between pb-2 border-b border-[#E8E4D5]/60 dark:border-[#24312B]/60">
+            <span className="text-xs font-bold uppercase tracking-wider text-[#5E6963] dark:text-[#95A39B]">
+              Saldo do mês
+            </span>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#16A66A]/10 text-[#075C45] dark:text-[#78D9A6]">
+              Consolidado
+            </span>
+          </div>
+
+          <div className="space-y-0.5">
+            <span className="text-[11px] font-semibold text-[#5E6963] dark:text-[#95A39B]">
+              Saldo consolidado
+            </span>
+            <div className={`text-2xl font-extrabold font-display ${saldoConsolidado < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-[#075C45] dark:text-[#78D9A6]'}`}>
+              {formatCurrency(saldoConsolidado)}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#E8E4D5]/60 dark:border-[#24312B]/60">
+            <button
+              type="button"
+              onClick={() => onSelectTab('entries')}
+              className="flex flex-col p-2.5 rounded-xl bg-[#F7F4EA]/80 dark:bg-[#121915] border border-[#E8E4D5] dark:border-[#24312B] text-left cursor-pointer active:scale-98 transition-transform"
+            >
+              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
+                <ArrowUpRight className="w-3.5 h-3.5" /> Entradas
+              </span>
+              <span className="text-sm font-bold text-[#202724] dark:text-[#F7F4EA] mt-0.5">
+                {formatCurrency(totalReceitas)}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onSelectTab('fixed_expenses')}
+              className="flex flex-col p-2.5 rounded-xl bg-[#F7F4EA]/80 dark:bg-[#121915] border border-[#E8E4D5] dark:border-[#24312B] text-left cursor-pointer active:scale-98 transition-transform"
+            >
+              <span className="text-[10px] font-bold uppercase tracking-wider text-rose-700 dark:text-rose-400 flex items-center gap-1">
+                <ArrowDownRight className="w-3.5 h-3.5" /> Despesas
+              </span>
+              <span className="text-sm font-bold text-[#202724] dark:text-[#F7F4EA] mt-0.5">
+                {formatCurrency(totalDespesas)}
+              </span>
+            </button>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* ==================================================
           3. SITUAÇÃO DO MÊS ("Este mês" com Pago, Próximo, Atrasado)
           ================================================== */}
@@ -428,11 +480,12 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
             Este mês
           </h3>
           <span className="text-xs text-[#5E6963] dark:text-[#95A39B]">
-            Status de pagamentos e vencimentos
+            Status de pagamentos
           </span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
+        {/* DESKTOP VIEW: 3 Large Cards */}
+        <div className="hidden md:grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
           {/* Indicador Pago (Verde) */}
           <div
             onClick={() => onSelectTab('fixed_expenses')}
@@ -498,12 +551,57 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
             </p>
           </div>
         </div>
+
+        {/* MOBILE COMPACT VIEW: 3 Columns in 1 Row */}
+        <div className="grid md:hidden grid-cols-3 gap-2">
+          {/* Pago */}
+          <div
+            onClick={() => onSelectTab('fixed_expenses')}
+            className="p-2.5 rounded-xl border border-emerald-500/20 bg-emerald-50/50 dark:bg-emerald-950/20 space-y-1 cursor-pointer text-center active:scale-98 transition-transform"
+          >
+            <div className="flex items-center justify-center gap-1 text-[10px] font-bold uppercase text-emerald-800 dark:text-emerald-300 truncate">
+              <CheckCircle2 className="w-3 h-3 shrink-0 text-emerald-600 dark:text-emerald-400" />
+              <span className="truncate">Pago</span>
+            </div>
+            <p className="text-xs font-bold text-emerald-900 dark:text-emerald-200 truncate">
+              {formatCurrency(totalPago)}
+            </p>
+          </div>
+
+          {/* Próximo */}
+          <div
+            onClick={() => onSelectTab('fixed_expenses')}
+            className="p-2.5 rounded-xl border border-[#D6A84B]/30 bg-[#F7F4EA] dark:bg-[#D6A84B]/10 space-y-1 cursor-pointer text-center active:scale-98 transition-transform"
+          >
+            <div className="flex items-center justify-center gap-1 text-[10px] font-bold uppercase text-[#8c6511] dark:text-[#F2D58A] truncate">
+              <Clock className="w-3 h-3 shrink-0 text-[#b07d17] dark:text-[#F2D58A]" />
+              <span className="truncate">Próximo</span>
+            </div>
+            <p className="text-xs font-bold text-[#5c4207] dark:text-[#f7e3b2] truncate">
+              {formatCurrency(totalProximo)}
+            </p>
+          </div>
+
+          {/* Atrasado */}
+          <div
+            onClick={() => onSelectTab('fixed_expenses')}
+            className="p-2.5 rounded-xl border border-rose-500/20 bg-rose-50/50 dark:bg-rose-950/20 space-y-1 cursor-pointer text-center active:scale-98 transition-transform"
+          >
+            <div className="flex items-center justify-center gap-1 text-[10px] font-bold uppercase text-rose-800 dark:text-rose-300 truncate">
+              <AlertCircle className="w-3 h-3 shrink-0 text-rose-600 dark:text-rose-400" />
+              <span className="truncate">Atrasado</span>
+            </div>
+            <p className="text-xs font-bold text-rose-900 dark:text-rose-200 truncate">
+              {formatCurrency(totalAtrasado)}
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* ==================================================
-          4. CARDS DE ACESSO RÁPIDO (8 Atalhos com Grid Fluido para Desktop)
+          4. CARDS DE ACESSO RÁPIDO (Apenas Desktop / Tablet)
           ================================================== */}
-      <div className="space-y-3">
+      <div className="hidden md:block space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="text-base sm:text-lg font-bold font-display text-[#202724] dark:text-[#F7F4EA]">
             Acesso rápido
