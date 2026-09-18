@@ -709,8 +709,8 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
           5. METAS (Card "Minhas metas")
           ================================================== */}
       <Card className="border-[#E2E8E4] dark:border-[#2E3532] bg-white dark:bg-[#232725] shadow-xs">
-        <CardContent className="p-4 pt-4 sm:p-5 space-y-3 sm:space-y-3.5">
-          <div className="flex items-center justify-between pb-2.5 sm:pb-3 border-b border-[#E2E8E4] dark:border-[#2E3532]">
+        <CardContent className="p-3.5 sm:p-4 space-y-2.5 sm:space-y-3">
+          <div className="flex items-center justify-between pb-2 sm:pb-2.5 border-b border-[#E2E8E4] dark:border-[#2E3532]">
             <div className="flex items-center gap-2 sm:gap-2.5">
               <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-[#D6A84B]/15 text-[#b07d17] dark:bg-[#D6A84B]/25 dark:text-[#F2D58A] flex items-center justify-center shrink-0">
                 <Target className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -731,17 +731,22 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
             </Button>
           </div>
 
-          {/* Estado inicial de metas */}
-          <div className="py-3 px-3 sm:py-5 sm:px-4 text-center flex flex-col items-center justify-center space-y-1.5 sm:space-y-2 rounded-xl sm:rounded-2xl bg-[#EBECEE]/50 dark:bg-[#181B1A]/50 border border-dashed border-[#E2E8E4] dark:border-[#2E3532]">
-            <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-full bg-[#16A66A]/10 text-[#075C45] dark:bg-[#16A66A]/20 dark:text-[#78D9A6] flex items-center justify-center shrink-0">
-              <Target className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5" />
+          {/* Estado inicial de metas: layout horizontal compacto (60–80px de altura no desktop) */}
+          <div className="py-2.5 px-3.5 sm:py-3 sm:px-4 flex items-center gap-3 rounded-xl sm:rounded-2xl bg-[#EBECEE]/50 dark:bg-[#181B1A]/50 border border-dashed border-[#E2E8E4] dark:border-[#2E3532]">
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#16A66A]/10 text-[#075C45] dark:bg-[#16A66A]/20 dark:text-[#78D9A6] flex items-center justify-center shrink-0">
+              <Target className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
-            <p className="text-xs sm:text-sm font-bold text-[#202724] dark:text-[#F4F4F5]">
-              Nenhuma meta criada ainda.
-            </p>
-            <p className="text-[11px] sm:text-xs text-[#5E6963] dark:text-[#95A39B] max-w-sm leading-snug">
-              Crie objetivos como reserva de emergência, viagens ou conquistas para acompanhar seu progresso.
-            </p>
+            <div className="flex-1 min-w-0">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2">
+                <p className="text-xs sm:text-sm font-bold text-[#202724] dark:text-[#F4F4F5]">
+                  Nenhuma meta criada ainda.
+                </p>
+                <span className="hidden sm:inline text-xs text-[#5E6963]/50 dark:text-[#95A39B]/50">•</span>
+                <p className="text-[11px] sm:text-xs text-[#5E6963] dark:text-[#95A39B] truncate">
+                  Crie objetivos para acompanhar seu progresso.
+                </p>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
