@@ -112,6 +112,13 @@ const moduleDetails: Record<ActiveTab, { title: string; subtitle: string; icon: 
     description: 'Acompanhe seus compromissos e anote lembretes diários diretamente no calendário.',
     highlights: ['Visão diária de vencimentos', 'Anotações por data', 'Filtros rápidos de status'],
   },
+  reports: {
+    title: 'Visão Financeira',
+    subtitle: 'Relatórios analíticos',
+    icon: Sparkles,
+    description: 'Acompanhe análises, tendências, evolução e relatórios mensais completos do seu espaço.',
+    highlights: ['Evolução financeira', 'Composição de despesas', 'Comparativo de competências'],
+  },
 };
 
 export function ModulePlaceholder({ tab, onSelectTab }: ModulePlaceholderProps) {

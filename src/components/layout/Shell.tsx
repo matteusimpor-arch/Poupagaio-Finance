@@ -18,6 +18,7 @@ import {
   Target,
   Gift,
   CalendarCheck,
+  BarChart3,
   MoreHorizontal,
   User,
   Sun,
@@ -97,6 +98,7 @@ export function Shell({ currentTab, onSelectTab, children }: ShellProps) {
     {
       title: 'Relatórios',
       items: [
+        { id: 'reports', label: 'Visão Financeira', icon: BarChart3 },
         { id: 'closing', label: 'Fechamento', icon: CalendarCheck },
       ],
     },

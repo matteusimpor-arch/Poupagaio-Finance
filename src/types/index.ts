@@ -46,6 +46,7 @@ export type ActiveTab =
   | 'goals' 
   | 'wishlist' 
   | 'closing' 
+  | 'reports'
   | 'calendar'
   | 'profile';
 

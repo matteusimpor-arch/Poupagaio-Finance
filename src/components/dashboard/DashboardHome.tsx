@@ -231,7 +231,7 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
           A. DESKTOP VIEW (hidden md:flex)
           Utilizes full viewport height, fits exactly inside 768px+ screens
           ================================================== */}
-      <div className="hidden md:flex md:flex-col md:gap-4 w-full">
+      <div className="hidden md:flex md:flex-col md:gap-4 w-full md:h-[calc(100dvh-3.6rem)] md:min-h-[550px]">
         
         {/* LINHA 1: CABEÇALHO OPERACIONAL COMPACTO */}
         <div className="flex flex-row items-center justify-between gap-2.5 shrink-0 bg-white dark:bg-[#1E2220] px-4 py-2.5 rounded-xl border border-[#E2E8E4] dark:border-[#2E3532] shadow-3xs">
@@ -545,10 +545,10 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
         </div>
 
         {/* LINHA 4: PRÓXIMOS VENCIMENTOS + CALENDÁRIO DO MÊS */}
-        <div className="grid grid-cols-12 gap-3.5">
+        <div className="grid grid-cols-12 gap-3.5 flex-grow flex-shrink flex-1 min-h-0">
           
           {/* COLUNA ESQUERDA: PRÓXIMOS VENCIMENTOS */}
-          <div className="col-span-5 bg-white dark:bg-[#1E2220] border border-[#E2E8E4] dark:border-[#2E3532] rounded-2xl p-4 flex flex-col shadow-3xs">
+          <div className="col-span-5 bg-white dark:bg-[#1E2220] border border-[#E2E8E4] dark:border-[#2E3532] rounded-2xl p-4 flex flex-col shadow-3xs h-full">
             <div className="flex items-center justify-between pb-1.5 border-b border-[#E2E8E4]/60 dark:border-[#2E3532]/60 shrink-0 mb-3">
               <div>
                 <h3 className="text-xs font-bold font-display text-[#202724] dark:text-[#F4F4F5] uppercase tracking-wider">
@@ -567,70 +567,72 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
               </button>
             </div>
 
-            <div className="space-y-2.5">
+            <div className="flex-grow flex-shrink flex-1 min-h-0 flex flex-col justify-center">
               {sortedUpcomingItems.length === 0 ? (
-                <div className="text-center py-10 border border-dashed border-[#E2E8E4] dark:border-[#2A312E] rounded-xl bg-[#F8F9F8]/50 dark:bg-[#161918]/30">
+                <div className="text-center py-6 border border-dashed border-[#E2E8E4] dark:border-[#2A312E] rounded-xl bg-[#F8F9F8]/50 dark:bg-[#161918]/30 my-auto">
                   <CheckCircle2 className="w-6 h-6 text-emerald-500/30 mx-auto mb-1" />
                   <p className="text-[10px] font-semibold text-[#202724] dark:text-[#F4F4F5]">Tudo pago por enquanto!</p>
                 </div>
               ) : (
-                sortedUpcomingItems.map((item) => {
-                  const [, m, d] = item.dueDate.split('-');
-                  const shortMonth = MONTH_SHORT_NAMES[Number(m) - 1];
-                  
-                  let relativeLabel = 'Próximo';
-                  let badgeStyle = 'bg-slate-100 text-slate-800 dark:bg-slate-900/40 dark:text-slate-400';
-                  if (item.visualStatus === 'overdue') {
-                    relativeLabel = 'Atrasado';
-                    badgeStyle = 'bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-400 animate-pulse';
-                  } else if (item.visualStatus === 'today') {
-                    relativeLabel = 'Hoje';
-                    badgeStyle = 'bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-400 font-bold';
-                  } else if (item.visualStatus === 'upcoming') {
-                    relativeLabel = 'Amanhã';
-                    badgeStyle = 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-400';
-                  }
+                <div className="space-y-2 flex-1 overflow-y-auto pr-0.5">
+                  {sortedUpcomingItems.map((item) => {
+                    const [, m, d] = item.dueDate.split('-');
+                    const shortMonth = MONTH_SHORT_NAMES[Number(m) - 1];
+                    
+                    let relativeLabel = 'Próximo';
+                    let badgeStyle = 'bg-slate-100 text-slate-800 dark:bg-slate-900/40 dark:text-slate-400';
+                    if (item.visualStatus === 'overdue') {
+                      relativeLabel = 'Atrasado';
+                      badgeStyle = 'bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-400 animate-pulse';
+                    } else if (item.visualStatus === 'today') {
+                      relativeLabel = 'Hoje';
+                      badgeStyle = 'bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-400 font-bold';
+                    } else if (item.visualStatus === 'upcoming') {
+                      relativeLabel = 'Amanhã';
+                      badgeStyle = 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-400';
+                    }
 
-                  return (
-                    <div
-                      key={item.id}
-                      className="p-2.5 rounded-xl border border-[#E2E8E4] dark:border-[#2A312E] bg-white dark:bg-[#1A1E1C] flex items-center justify-between gap-3 group hover:border-[#16A66A]/40 transition-colors"
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-10 h-10 rounded-xl bg-[#F3F4F4] dark:bg-[#282E2B] flex flex-col items-center justify-center border border-[#E2E8E4] dark:border-[#2E3532] shrink-0 select-none">
-                          <span className="text-[13px] font-extrabold text-[#202724] dark:text-[#F4F4F5] leading-none">
-                            {d}
-                          </span>
-                          <span className="text-[7px] font-bold text-[#5E6963] dark:text-[#95A39B] tracking-wider mt-0.5 leading-none">
-                            {shortMonth}
-                          </span>
+                    return (
+                      <div
+                        key={item.id}
+                        className="p-2.5 rounded-xl border border-[#E2E8E4] dark:border-[#2A312E] bg-white dark:bg-[#1A1E1C] flex items-center justify-between gap-3 group hover:border-[#16A66A]/40 transition-colors"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-10 h-10 rounded-xl bg-[#F3F4F4] dark:bg-[#282E2B] flex flex-col items-center justify-center border border-[#E2E8E4] dark:border-[#2E3532] shrink-0 select-none">
+                            <span className="text-[13px] font-extrabold text-[#202724] dark:text-[#F4F4F5] leading-none">
+                              {d}
+                            </span>
+                            <span className="text-[7px] font-bold text-[#5E6963] dark:text-[#95A39B] tracking-wider mt-0.5 leading-none">
+                              {shortMonth}
+                            </span>
+                          </div>
+
+                          <div className="min-w-0">
+                            <h4 className="text-xs font-bold text-[#202724] dark:text-[#F4F4F5] truncate leading-normal">
+                              {item.title}
+                            </h4>
+                            <span className="text-[9px] text-[#5E6963] dark:text-[#95A39B] block truncate leading-none mt-0.5">
+                              {item.sourceType === 'fixed' ? 'Gasto fixo' : item.sourceType === 'variable' ? 'Gasto variável' : 'Parcelado'} • {formatCurrency(item.amount)}
+                            </span>
+                          </div>
                         </div>
 
-                        <div className="min-w-0">
-                          <h4 className="text-xs font-bold text-[#202724] dark:text-[#F4F4F5] truncate leading-normal">
-                            {item.title}
-                          </h4>
-                          <span className="text-[9px] text-[#5E6963] dark:text-[#95A39B] block truncate leading-none mt-0.5">
-                            {item.sourceType === 'fixed' ? 'Gasto fixo' : item.sourceType === 'variable' ? 'Gasto variável' : 'Parcelado'} • {formatCurrency(item.amount)}
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${badgeStyle}`}>
+                            {relativeLabel}
                           </span>
+                          <ChevronIcon className="w-3.5 h-3.5 text-[#5E6963]/40 group-hover:text-[#16A66A] transition-colors" />
                         </div>
                       </div>
-
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${badgeStyle}`}>
-                          {relativeLabel}
-                        </span>
-                        <ChevronIcon className="w-3.5 h-3.5 text-[#5E6963]/40 group-hover:text-[#16A66A] transition-colors" />
-                      </div>
-                    </div>
-                  );
-                })
+                    );
+                  })}
+                </div>
               )}
             </div>
           </div>
 
           {/* COLUNA DIREITA: CALENDÁRIO COMPACTO */}
-          <div className="col-span-7 bg-white dark:bg-[#1E2220] border border-[#E2E8E4] dark:border-[#2E3532] rounded-2xl p-4 flex flex-col shadow-3xs">
+          <div className="col-span-7 bg-white dark:bg-[#1E2220] border border-[#E2E8E4] dark:border-[#2E3532] rounded-2xl p-4 flex flex-col shadow-3xs h-full">
             <div className="flex items-center justify-between pb-1.5 border-b border-[#E2E8E4]/60 dark:border-[#2E3532]/60 shrink-0 mb-3">
               <div>
                 <h3 className="text-xs font-bold font-display text-[#202724] dark:text-[#F4F4F5] uppercase tracking-wider">
@@ -649,10 +651,10 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
               </button>
             </div>
 
-            <div className="flex flex-row gap-4">
+            <div className="flex-grow flex-shrink flex-1 min-h-0 flex flex-row gap-4">
               
               {/* Matrix days left */}
-              <div className="w-[58%] flex flex-col">
+              <div className="w-[58%] flex flex-col h-full justify-between">
                 <div className="grid grid-cols-7 text-center gap-1.5 pb-1 border-b border-[#E2E8E4]/40 dark:border-[#2E3532]/40">
                   {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((wd, i) => (
                     <span key={i} className={`text-[8px] font-bold ${i === 0 || i === 6 ? 'text-rose-500' : 'text-[#5E6963]'}`}>
@@ -661,7 +663,7 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
                   ))}
                 </div>
 
-                <div className="grid grid-cols-7 gap-1.5 mt-2 justify-items-center">
+                <div className="flex-grow grid grid-cols-7 gap-x-1.5 gap-y-1 sm:gap-y-1.5 mt-2 justify-items-center items-center content-around">
                   {Array.from({ length: firstDayWeekday }).map((_, idx) => (
                     <div key={`empty-${idx}`} className="w-5.5 h-5.5" />
                   ))}
@@ -705,9 +707,9 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
               </div>
 
               {/* Day details right */}
-              <div className="w-[42%] bg-[#F8F9F8] dark:bg-[#18201D] border border-[#E2E8E4] dark:border-[#2A312E] rounded-xl p-3 flex flex-col justify-between">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between pb-1 border-b border-[#E2E8E4]/60 dark:border-[#2E3532]/60">
+              <div className="w-[42%] bg-[#F8F9F8] dark:bg-[#18201D] border border-[#E2E8E4] dark:border-[#2A312E] rounded-xl p-3 flex flex-col justify-between h-full">
+                <div className="space-y-2 flex-grow flex-shrink flex-1 min-h-0 overflow-y-auto pr-0.5">
+                  <div className="flex items-center justify-between pb-1 border-b border-[#E2E8E4]/60 dark:border-[#2E3532]/60 sticky top-0 bg-[#F8F9F8] dark:bg-[#18201D] z-10">
                     <span className="text-[10px] font-bold text-[#075C45] dark:text-[#78D9A6]">
                       {selectedMiniDay} de {MONTH_NAMES[currentMonth - 1].toLowerCase()}
                     </span>
@@ -721,7 +723,7 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
                       Nenhum lançamento ou nota.
                     </p>
                   ) : (
-                    <div className="space-y-1.5">
+                    <div className="space-y-1.5 pt-1">
                       {miniSelectedDayItems.slice(0, 2).map(item => (
                         <div key={item.id} className="text-[9px] font-semibold text-[#202724] dark:text-[#F4F4F5] flex items-center justify-between">
                           <span className="truncate max-w-[70%]">• {item.title}</span>
@@ -741,7 +743,7 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
                 <button
                   type="button"
                   onClick={() => onSelectTab('calendar')}
-                  className="mt-2 w-full text-center text-[9px] font-bold text-[#16A66A] hover:underline flex items-center justify-center gap-0.5"
+                  className="mt-2 w-full text-center text-[9px] font-bold text-[#16A66A] hover:underline flex items-center justify-center gap-0.5 shrink-0 pt-1"
                 >
                   <Plus className="w-2.5 h-2.5" />
                   <span>Gerenciar anotações</span>

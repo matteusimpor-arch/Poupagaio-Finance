@@ -8,6 +8,7 @@ import {
   Target,
   Gift,
   CalendarCheck,
+  BarChart3,
 } from 'lucide-react';
 import { ActiveTab } from '../../types';
 
@@ -75,5 +76,12 @@ export const QUICK_ACTION_ITEMS: QuickActionItem[] = [
     description: 'Resumo da competência',
     icon: CalendarCheck,
     color: 'text-cyan-600 bg-cyan-50 dark:bg-cyan-950/40 dark:text-cyan-400',
+  },
+  {
+    id: 'reports',
+    label: 'Visão Financeira',
+    description: 'Relatórios e análises',
+    icon: BarChart3,
+    color: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 dark:text-emerald-400',
   },
 ];
