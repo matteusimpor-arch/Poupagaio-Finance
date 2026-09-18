@@ -27,11 +27,17 @@ import {
   Bell,
 } from 'lucide-react';
 import { ActiveTab } from '../../types';
+import { QUICK_ACTION_ITEMS } from '../../lib/constants/quickActions';
 
 interface ShellProps {
   currentTab: ActiveTab;
   onSelectTab: (tab: ActiveTab) => void;
   children: React.ReactNode;
+}
+
+interface NavGroup {
+  title: string;
+  items: { id: ActiveTab; label: string; icon: React.ElementType }[];
 }
 
 export function Shell({ currentTab, onSelectTab, children }: ShellProps) {
@@ -41,33 +47,43 @@ export function Shell({ currentTab, onSelectTab, children }: ShellProps) {
   const [isActionSheetOpen, setIsActionSheetOpen] = useState(false);
   const [isMobileNotificationsOpen, setIsMobileNotificationsOpen] = useState(false);
 
-  const sidebarNavItems: { id: ActiveTab; label: string; icon: React.ElementType }[] = [
-    { id: 'home', label: 'Início', icon: Home },
-    { id: 'movements', label: 'Movimentações', icon: ArrowLeftRight },
-    { id: 'planning', label: 'Planejamento', icon: Target },
-    { id: 'entries', label: 'Entradas', icon: ArrowUpRight },
-    { id: 'fixed_expenses', label: 'Gastos Fixos', icon: FileText },
-    { id: 'variable_expenses', label: 'Gastos Variáveis', icon: CreditCard },
-    { id: 'installments', label: 'Parcelados', icon: Calendar },
-    { id: 'market', label: 'Mercado', icon: ShoppingBag },
-    { id: 'investments', label: 'Investimentos', icon: TrendingUp },
-    { id: 'goals', label: 'Metas', icon: Target },
-    { id: 'wishlist', label: 'Lista de Desejos', icon: Gift },
-    { id: 'closing', label: 'Fechamento', icon: CalendarCheck },
+  const sidebarNavGroups: NavGroup[] = [
+    {
+      title: 'Visão Geral',
+      items: [
+        { id: 'home', label: 'Início', icon: Home },
+        { id: 'movements', label: 'Movimentações', icon: ArrowLeftRight },
+        { id: 'planning', label: 'Planejamento', icon: Target },
+      ],
+    },
+    {
+      title: 'Finanças',
+      items: [
+        { id: 'entries', label: 'Entradas', icon: ArrowUpRight },
+        { id: 'fixed_expenses', label: 'Gastos Fixos', icon: FileText },
+        { id: 'variable_expenses', label: 'Gastos Variáveis', icon: CreditCard },
+        { id: 'installments', label: 'Parcelados', icon: Calendar },
+      ],
+    },
+    {
+      title: 'Organização',
+      items: [
+        { id: 'market', label: 'Mercado', icon: ShoppingBag },
+        { id: 'investments', label: 'Investimentos', icon: TrendingUp },
+        { id: 'goals', label: 'Metas', icon: Target },
+        { id: 'wishlist', label: 'Lista de Desejos', icon: Gift },
+      ],
+    },
+    {
+      title: 'Relatórios',
+      items: [
+        { id: 'closing', label: 'Fechamento', icon: CalendarCheck },
+      ],
+    },
   ];
 
-  // Action Sheet Items for Mobile "+" Button
-  const actionSheetItems: { id: ActiveTab; label: string; description: string; icon: React.ElementType; color: string }[] = [
-    { id: 'entries', label: 'Entradas', description: 'Receitas e ganhos', icon: ArrowUpRight, color: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 dark:text-emerald-400' },
-    { id: 'fixed_expenses', label: 'Gastos Fixos', description: 'Contas recorrentes', icon: FileText, color: 'text-amber-600 bg-amber-50 dark:bg-amber-950/40 dark:text-amber-400' },
-    { id: 'variable_expenses', label: 'Gastos Variáveis', description: 'Despesas do dia a dia', icon: CreditCard, color: 'text-rose-600 bg-rose-50 dark:bg-rose-950/40 dark:text-rose-400' },
-    { id: 'installments', label: 'Parcelados', description: 'Compras em parcelas', icon: Calendar, color: 'text-indigo-600 bg-indigo-50 dark:bg-indigo-950/40 dark:text-indigo-400' },
-    { id: 'market', label: 'Mercado', description: 'Listas e compras', icon: ShoppingBag, color: 'text-orange-600 bg-orange-50 dark:bg-orange-950/40 dark:text-orange-400' },
-    { id: 'investments', label: 'Investimentos', description: 'Aplicações e resgates', icon: TrendingUp, color: 'text-blue-600 bg-blue-50 dark:bg-blue-950/40 dark:text-blue-400' },
-    { id: 'goals', label: 'Metas', description: 'Objetivos financeiros', icon: Target, color: 'text-teal-600 bg-teal-50 dark:bg-teal-950/40 dark:text-teal-400' },
-    { id: 'wishlist', label: 'Lista de Desejos', description: 'Sonhos de consumo', icon: Gift, color: 'text-purple-600 bg-purple-50 dark:bg-purple-950/40 dark:text-purple-400' },
-    { id: 'closing', label: 'Fechamento', description: 'Resumo da competência', icon: CalendarCheck, color: 'text-cyan-600 bg-cyan-50 dark:bg-cyan-950/40 dark:text-cyan-400' },
-  ];
+  // Reutiliza a configuração unificada de ações rápidas
+  const actionSheetItems = QUICK_ACTION_ITEMS;
 
   const handleNavClick = (tab: ActiveTab) => {
     onSelectTab(tab);
@@ -105,30 +121,39 @@ export function Shell({ currentTab, onSelectTab, children }: ShellProps) {
             <SpaceSelector />
           </div>
 
-          {/* Navigation Items */}
-          <nav className="space-y-1 pt-1">
-            {sidebarNavItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = currentTab === item.id;
-              return (
-                <button
-                  key={item.id}
-                  id={`nav-desktop-${item.id}`}
-                  onClick={() => handleNavClick(item.id)}
-                  type="button"
-                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-medium text-xs transition-all duration-150 cursor-pointer ${
-                    isActive
-                      ? 'bg-[#075C45] text-white shadow-xs dark:bg-[#16A66A] dark:text-[#101614]'
-                      : 'hover:bg-black/5 text-[#202724] dark:hover:bg-white/5 dark:text-[#F7F4EA]'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <Icon className={`w-4 h-4 ${isActive ? 'text-white dark:text-[#101614]' : 'text-[#16A66A]'}`} />
-                    <span>{item.label}</span>
-                  </div>
-                </button>
-              );
-            })}
+          {/* Navigation Groups */}
+          <nav className="space-y-3 pt-1">
+            {sidebarNavGroups.map((group) => (
+              <div key={group.title} className="space-y-0.5">
+                <p className="px-3 text-[10px] font-bold uppercase tracking-wider text-[#5E6963]/75 dark:text-[#95A39B]/65 select-none">
+                  {group.title}
+                </p>
+                <div className="space-y-0.5">
+                  {group.items.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = currentTab === item.id;
+                    return (
+                      <button
+                        key={item.id}
+                        id={`nav-desktop-${item.id}`}
+                        onClick={() => handleNavClick(item.id)}
+                        type="button"
+                        className={`w-full flex items-center justify-between px-3 py-2 rounded-xl font-medium text-xs transition-all duration-150 cursor-pointer ${
+                          isActive
+                            ? 'bg-[#075C45] text-white shadow-xs dark:bg-[#16A66A] dark:text-[#101614]'
+                            : 'hover:bg-black/5 text-[#202724] dark:hover:bg-white/5 dark:text-[#F7F4EA]'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <Icon className={`w-4 h-4 ${isActive ? 'text-white dark:text-[#101614]' : 'text-[#16A66A]'}`} />
+                          <span>{item.label}</span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </nav>
         </div>
 

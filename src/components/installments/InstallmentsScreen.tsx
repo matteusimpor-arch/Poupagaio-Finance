@@ -320,18 +320,18 @@ export function InstallmentsScreen() {
       {/* ==================================================
           3. CARDS SUPERIORES: TOTAL PARCELADO | PAGO | A PAGAR
           ================================================== */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-5">
         {/* Card 1: TOTAL PARCELADO (Comprometimento da Competência) */}
         <Card className="rounded-2xl border-[#E2E8E4] dark:border-[#24312B] bg-white dark:bg-[#18211D] shadow-xs">
-          <CardContent className="p-4 sm:p-5 space-y-1 sm:space-y-1.5">
-            <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-[#5E6963] dark:text-[#95A39B]">
-              <span>Total Parcelado no Mês</span>
+          <CardContent className="p-3.5 pt-3.5 pb-3 sm:p-5 sm:pt-5 space-y-1 sm:space-y-1.5">
+            <div className="flex items-center justify-between gap-2 text-xs font-bold uppercase tracking-wider text-[#5E6963] dark:text-[#95A39B]">
+              <span className="truncate">Total Parcelado no Mês</span>
               <Calendar className="w-4 h-4 text-[#075C45] dark:text-[#78D9A6] shrink-0" />
             </div>
-            <div className="text-2xl sm:text-3xl font-extrabold font-display text-[#202724] dark:text-[#F7F4EA] truncate">
+            <div className="text-2xl sm:text-3xl font-extrabold font-display text-[#202724] dark:text-[#F7F4EA] truncate leading-tight">
               {isLoading ? <Skeleton className="h-8 w-28" /> : formatCurrency(monthSummary.totalMonth)}
             </div>
-            <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B] truncate">
+            <p className="text-[11px] leading-tight text-[#5E6963] dark:text-[#95A39B] truncate">
               {monthSummary.count} {monthSummary.count === 1 ? 'parcela com vencimento' : 'parcelas com vencimento'} em{' '}
               {MONTH_NAMES[selectedMonth - 1]}
             </p>
@@ -340,15 +340,15 @@ export function InstallmentsScreen() {
 
         {/* Card 2: PAGO (Parcelas pagas na competência) */}
         <Card className="rounded-2xl border-emerald-500/20 bg-emerald-50/50 dark:bg-emerald-950/20 shadow-xs">
-          <CardContent className="p-4 sm:p-5 space-y-1 sm:space-y-1.5">
-            <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
-              <span>Pago</span>
+          <CardContent className="p-3.5 pt-3.5 pb-3 sm:p-5 sm:pt-5 space-y-1 sm:space-y-1.5">
+            <div className="flex items-center justify-between gap-2 text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
+              <span className="truncate">Pago</span>
               <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
             </div>
-            <div className="text-2xl sm:text-3xl font-extrabold font-display text-emerald-600 dark:text-emerald-400 truncate">
+            <div className="text-2xl sm:text-3xl font-extrabold font-display text-emerald-600 dark:text-emerald-400 truncate leading-tight">
               {isLoading ? <Skeleton className="h-8 w-28" /> : formatCurrency(monthSummary.totalPaid)}
             </div>
-            <p className="text-[11px] text-emerald-700/80 dark:text-emerald-400/80 truncate">
+            <p className="text-[11px] leading-tight text-emerald-700/80 dark:text-emerald-400/80 truncate">
               {monthSummary.paidCount} de {monthSummary.count} pagas neste mês
             </p>
           </CardContent>
@@ -356,15 +356,15 @@ export function InstallmentsScreen() {
 
         {/* Card 3: A PAGAR (Parcelas pendentes/atrasadas na competência) */}
         <Card className="rounded-2xl border-amber-500/20 bg-amber-50/50 dark:bg-amber-950/20 shadow-xs">
-          <CardContent className="p-4 sm:p-5 space-y-1 sm:space-y-1.5">
-            <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300">
-              <span>A Pagar</span>
+          <CardContent className="p-3.5 pt-3.5 pb-3 sm:p-5 sm:pt-5 space-y-1 sm:space-y-1.5">
+            <div className="flex items-center justify-between gap-2 text-xs font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300">
+              <span className="truncate">A Pagar</span>
               <Clock className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
             </div>
-            <div className="text-2xl sm:text-3xl font-extrabold font-display text-amber-700 dark:text-amber-300 truncate">
+            <div className="text-2xl sm:text-3xl font-extrabold font-display text-amber-700 dark:text-amber-300 truncate leading-tight">
               {isLoading ? <Skeleton className="h-8 w-28" /> : formatCurrency(monthSummary.totalPending)}
             </div>
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-amber-700/80 dark:text-amber-400/80">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] leading-tight text-amber-700/80 dark:text-amber-400/80">
               <span className="truncate">Próximas: {formatCurrency(monthSummary.totalUpcoming)}</span>
               {monthSummary.totalOverdue > 0 && (
                 <span className="text-rose-600 dark:text-rose-400 font-semibold truncate">

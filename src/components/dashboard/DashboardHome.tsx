@@ -41,6 +41,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { ActiveTab } from '../../types';
+import { QUICK_ACTION_ITEMS } from '../../lib/constants/quickActions';
 
 interface DashboardHomeProps {
   onSelectTab: (tab: ActiveTab) => void;
@@ -51,6 +52,7 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
   const { theme, toggleTheme } = useTheme();
 
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [isNewMenuOpen, setIsNewMenuOpen] = useState(false);
   const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
 
   // Real Supabase entries and expenses state for current month
@@ -134,206 +136,269 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
   const fullName = profile?.full_name || user?.full_name || user?.email?.split('@')[0] || '';
   const firstName = fullName.trim().split(' ')[0] || 'Usuário';
 
-  // Mensagem e reação dinâmica do mascote baseada no balanço real
-  let mascotReaction: 'welcoming' | 'encouraging' | 'celebrating' | 'alert' = 'welcoming';
-  let mascotMessage = 'Vamos começar? Cadastre suas receitas e despesas para organizar seu mês.';
+  // Mensagem contextual da mascote baseada no estado financeiro real (Section 4)
+  let mascotMessage = 'Vamos começar? Cadastre sua primeira entrada.';
   let mascotActionLabel = 'Ver entradas';
   let mascotActionTab: ActiveTab = 'entries';
 
   const totalOverdueCount = fixedSummary.overdueCount + installmentsSummary.overdueCount;
-  if (totalOverdueCount > 0) {
-    mascotReaction = 'alert';
-    mascotMessage = `Atenção: você tem ${totalOverdueCount} ${
-      totalOverdueCount === 1 ? 'conta ou parcela vencida' : 'contas ou parcelas vencidas'
-    } neste mês. Vale conferir!`;
-    mascotActionLabel = fixedSummary.overdueCount > 0 ? 'Ver gastos fixos' : 'Ver parcelados';
-    mascotActionTab = fixedSummary.overdueCount > 0 ? 'fixed_expenses' : 'installments';
-  } else if (totalReceitas > 0 && totalDespesas > 0 && saldoConsolidado >= 0) {
-    mascotReaction = 'celebrating';
-    mascotMessage = `Excelente! Seu saldo consolidado está positivo em ${formatCurrency(
-      saldoConsolidado
-    )} neste mês. Continue assim!`;
-    mascotActionLabel = 'Ver gastos variáveis';
-    mascotActionTab = 'variable_expenses';
-  } else if (totalDespesas > totalReceitas && totalReceitas > 0) {
-    mascotReaction = 'alert';
-    mascotMessage = `Atenção: suas despesas superam as receitas deste mês em ${formatCurrency(
-      Math.abs(saldoConsolidado)
-    )}. Fique atento ao orçamento!`;
-    mascotActionLabel = 'Ver gastos';
-    mascotActionTab = 'fixed_expenses';
-  } else if (entriesSummary.count > 0 || totalDespesasCount > 0) {
-    mascotReaction = 'encouraging';
-    mascotMessage = 'Seu planejamento deste mês está em andamento. Mantenha os lançamentos em dia!';
-    mascotActionLabel = 'Novo gasto fixo';
-    mascotActionTab = 'fixed_expenses';
+  if (totalOverdueCount > 0 || totalAtrasado > 0) {
+    mascotMessage = totalOverdueCount === 1
+      ? 'Há um compromisso que precisa da sua atenção.'
+      : `Há ${totalOverdueCount} compromissos que precisam da sua atenção.`;
+    mascotActionLabel = 'Ver detalhes';
+    mascotActionTab = fixedSummary.overdueCount > 0 ? 'fixed_expenses' : (installmentsSummary.overdueCount > 0 ? 'installments' : 'movements');
+  } else if (totalProximo > 0) {
+    mascotMessage = 'Você tem compromissos chegando nos próximos dias.';
+    mascotActionLabel = 'Ver movimentações';
+    mascotActionTab = 'movements';
+  } else if (entriesSummary.count === 0 && totalDespesasCount === 0) {
+    mascotMessage = 'Vamos começar? Cadastre sua primeira entrada.';
+    mascotActionLabel = 'Ver entradas';
+    mascotActionTab = 'entries';
+  } else {
+    mascotMessage = 'Seu mês está organizado até aqui.';
+    mascotActionLabel = '';
+    mascotActionTab = 'movements';
   }
 
-  // 8 Quick Access Shortcuts requested in Section 3
-  const quickShortcuts: {
-    id: ActiveTab;
-    label: string;
-    icon: React.ElementType;
-    emoji: string;
-    desc: string;
-  }[] = [
-    { id: 'entries', label: 'Entradas', icon: ArrowUpRight, emoji: '💰', desc: 'Receitas e ganhos' },
-    { id: 'fixed_expenses', label: 'Gastos Fixos', icon: FileText, emoji: '🏠', desc: 'Contas recorrentes' },
-    { id: 'variable_expenses', label: 'Gastos Variáveis', icon: CreditCard, emoji: '💳', desc: 'Despesas diárias' },
-    { id: 'installments', label: 'Parcelados', icon: Calendar, emoji: '📆', desc: 'Faturas e parcelas' },
-    { id: 'investments', label: 'Investimentos', icon: TrendingUp, emoji: '📈', desc: 'Aportes e reservas' },
-    { id: 'goals', label: 'Metas', icon: Target, emoji: '🎯', desc: 'Objetivos futuros' },
-    { id: 'wishlist', label: 'Lista de Desejos', icon: Gift, emoji: '❤️', desc: 'Sonhos e compras' },
-    { id: 'market', label: 'Mercado', icon: ShoppingBag, emoji: '🛒', desc: 'Listas e compras' },
+  // Ações rápidas desktop enxutas (Section 10 - sem duplicar toda a navegação)
+  const desktopQuickActions = [
+    {
+      id: 'entries' as ActiveTab,
+      label: '+ Entrada',
+      desc: 'Receitas e ganhos',
+      icon: ArrowUpRight,
+      color: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 dark:text-emerald-400',
+      hoverBorder: 'hover:border-emerald-500/50',
+    },
+    {
+      id: 'variable_expenses' as ActiveTab,
+      label: '+ Gasto',
+      desc: 'Despesas do dia a dia',
+      icon: CreditCard,
+      color: 'text-rose-600 bg-rose-50 dark:bg-rose-950/40 dark:text-rose-400',
+      hoverBorder: 'hover:border-rose-500/50',
+    },
+    {
+      id: 'installments' as ActiveTab,
+      label: '+ Parcelado',
+      desc: 'Compras em parcelas',
+      icon: Calendar,
+      color: 'text-indigo-600 bg-indigo-50 dark:bg-indigo-950/40 dark:text-indigo-400',
+      hoverBorder: 'hover:border-indigo-500/50',
+    },
+    {
+      id: 'market' as ActiveTab,
+      label: '+ Mercado',
+      desc: 'Listas e compras',
+      icon: ShoppingBag,
+      color: 'text-orange-600 bg-orange-50 dark:bg-orange-950/40 dark:text-orange-400',
+      hoverBorder: 'hover:border-orange-500/50',
+    },
   ];
 
   return (
-    <div className="w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 space-y-6 sm:space-y-8 pb-24 md:pb-8 animate-in fade-in duration-300">
+    <div className="w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 space-y-4 sm:space-y-5 lg:space-y-6 pb-24 md:pb-8 animate-in fade-in duration-300">
       {/* ==================================================
-          1. NOVO HERO INTEGRADO DO DASHBOARD
-          Cabeçalho principal unificado com saudações, ações e a área da dica do Poupagaio
+          1. CABEÇALHO DESKTOP COMPACTO (Section 2)
+          Substitui o antigo bloco gigante por uma barra de topo limpa e funcional
           ================================================== */}
-      <Card className="hidden md:block border-[#E8E4D5] dark:border-[#24312B] bg-white dark:bg-[#18211D] shadow-xs overflow-hidden">
-        <CardContent className="p-5 sm:p-7 space-y-6">
-          {/* Topo do Hero: Saudação do Usuário + Controles de Cabeçalho */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#E8E4D5]/80 dark:border-[#24312B]/80">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-extrabold font-display text-[#202724] dark:text-[#F7F4EA] tracking-tight">
-                Olá, {firstName}! 👋
-              </h1>
-              <p className="text-xs sm:text-sm text-[#5E6963] dark:text-[#95A39B] mt-0.5">
-                Vamos organizar suas finanças?
-              </p>
-            </div>
+      <div className="hidden md:flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl lg:text-3xl font-extrabold font-display text-[#202724] dark:text-[#F7F4EA] tracking-tight">
+            Olá, {firstName}! 👋
+          </h1>
+          <p className="text-xs sm:text-sm text-[#5E6963] dark:text-[#95A39B] mt-0.5">
+            Vamos organizar suas finanças?
+          </p>
+        </div>
 
-            {/* Controles de Cabeçalho: Notificações, Claro/Escuro, Perfil */}
-            <div className="flex items-center gap-2.5 self-start sm:self-center">
-              {/* Botão e Popover de Notificações */}
-              <div className="relative">
-                <button
-                  type="button"
-                  id="header-notifications-btn"
-                  onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
-                  aria-label="Notificações"
-                  className="p-2.5 rounded-xl border border-[#E8E4D5] hover:bg-black/5 dark:border-[#24312B] dark:hover:bg-white/5 text-[#5E6963] dark:text-[#95A39B] transition-colors cursor-pointer relative"
-                >
-                  <Bell className="w-4 h-4" />
-                  <span className="sr-only">Notificações</span>
-                </button>
+        {/* Controles de Cabeçalho: + Novo, Notificações, Tema, Perfil */}
+        <div className="flex items-center gap-2 sm:gap-2.5">
+          {/* Botão Global "+ Novo" no Desktop */}
+          <div className="relative">
+            <button
+              type="button"
+              id="desktop-header-new-btn"
+              onClick={() => setIsNewMenuOpen(!isNewMenuOpen)}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#075C45] hover:bg-[#075C45]/90 text-white dark:bg-[#16A66A] dark:hover:bg-[#16A66A]/90 dark:text-[#101614] text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95"
+            >
+              <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+              <span>+ Novo</span>
+            </button>
 
-                {isNotificationsOpen && (
-                  <div className="absolute right-0 mt-2 w-72 sm:w-80 rounded-2xl border border-[#E8E4D5] dark:border-[#24312B] bg-white dark:bg-[#18211D] p-4 shadow-xl z-50 animate-in fade-in zoom-in-95 duration-150">
-                    <div className="flex items-center justify-between pb-2 border-b border-[#E8E4D5] dark:border-[#24312B]">
-                      <h4 className="text-xs font-bold uppercase tracking-wider text-[#075C45] dark:text-[#78D9A6]">
-                        Notificações
-                      </h4>
-                      <button
-                        type="button"
-                        onClick={() => setIsNotificationsOpen(false)}
-                        className="p-1 text-[#5E6963] dark:text-[#95A39B] hover:text-[#202724] dark:hover:text-[#F7F4EA] cursor-pointer"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                    <div className="py-4 text-center space-y-1">
-                      <p className="text-xs font-semibold text-[#202724] dark:text-[#F7F4EA]">
-                        Tudo em dia!
-                      </p>
-                      <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B]">
-                        Você não tem lembretes ou avisos pendentes no momento.
-                      </p>
-                    </div>
+            {/* Dropdown Menu "+ Novo" */}
+            {isNewMenuOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setIsNewMenuOpen(false)}
+                />
+                <div className="absolute right-0 mt-2 w-64 rounded-2xl border border-[#E2E8E4] dark:border-[#24312B] bg-white dark:bg-[#18211D] p-2 shadow-xl z-50 animate-in fade-in zoom-in-95 duration-150">
+                  <div className="px-2.5 py-1.5 border-b border-[#E2E8E4] dark:border-[#24312B] mb-1 flex items-center justify-between">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#075C45] dark:text-[#78D9A6]">
+                      Novo lançamento
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setIsNewMenuOpen(false)}
+                      className="p-1 text-[#5E6963] dark:text-[#95A39B] hover:text-[#202724] dark:hover:text-[#F7F4EA] cursor-pointer"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
                   </div>
-                )}
-              </div>
-
-              {/* Alternância Claro/Escuro */}
-              <button
-                type="button"
-                id="header-toggle-theme-btn"
-                onClick={toggleTheme}
-                aria-label="Alternar tema claro e escuro"
-                className="p-2.5 rounded-xl border border-[#E8E4D5] hover:bg-black/5 dark:border-[#24312B] dark:hover:bg-white/5 text-[#5E6963] dark:text-[#95A39B] transition-colors cursor-pointer"
-              >
-                {theme === 'light' ? (
-                  <Moon className="w-4 h-4" />
-                ) : (
-                  <Sun className="w-4 h-4 text-[#D6A84B]" />
-                )}
-                <span className="sr-only">Alternar tema</span>
-              </button>
-
-              {/* Acesso ao Perfil */}
-              <button
-                type="button"
-                id="header-profile-btn"
-                onClick={() => onSelectTab('profile')}
-                aria-label="Acessar Perfil"
-                className="flex items-center gap-2 p-1.5 pr-3 rounded-xl border border-[#E8E4D5] hover:bg-black/5 dark:border-[#24312B] dark:hover:bg-white/5 transition-colors cursor-pointer"
-              >
-                <Avatar
-                  name={fullName || user?.email || 'U'}
-                  size="sm"
-                />
-                <span className="text-xs font-semibold text-[#202724] dark:text-[#F7F4EA] hidden sm:inline max-w-[120px] truncate">
-                  {firstName}
-                </span>
-              </button>
-            </div>
-          </div>
-
-          {/* Dica do Poupagaio Integrada (Única Aparição do Mascote no Conteúdo) */}
-          <div className="p-4 sm:p-5 rounded-2xl bg-[#F7F4EA]/60 dark:bg-[#121915]/60 border border-[#E8E4D5] dark:border-[#24312B] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-3.5 min-w-0">
-              {/* Mascote Poupagaio */}
-              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl overflow-hidden border border-[#16A66A]/30 bg-white dark:bg-[#101614] p-1 shrink-0 shadow-xs flex items-center justify-center">
-                <img
-                  src={POUPAGAIO_MASCOT_URL}
-                  alt="Mascote Poupagaio"
-                  referrerPolicy="no-referrer"
-                  className="w-full h-full object-contain"
-                />
-              </div>
-
-              {/* Mensagem e Dica do Poupagaio */}
-              <div className="space-y-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#16A66A]/15 text-[#075C45] dark:bg-[#16A66A]/20 dark:text-[#78D9A6]">
-                    <Sparkles className="w-3 h-3" />
-                    <span>Dica do Poupagaio</span>
-                  </span>
+                  <div className="grid grid-cols-1 gap-0.5 max-h-[360px] overflow-y-auto">
+                    {QUICK_ACTION_ITEMS.map((item) => {
+                      const Icon = item.icon;
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => {
+                            setIsNewMenuOpen(false);
+                            onSelectTab(item.id);
+                          }}
+                          className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-[#F2F5F3] dark:hover:bg-white/5 transition-colors text-left cursor-pointer group"
+                        >
+                          <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${item.color}`}>
+                            <Icon className="w-3.5 h-3.5" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-bold text-[#202724] dark:text-[#F7F4EA] group-hover:text-[#075C45] dark:group-hover:text-[#78D9A6] truncate">
+                              {item.label}
+                            </p>
+                            <p className="text-[10px] text-[#5E6963] dark:text-[#95A39B] truncate">
+                              {item.description}
+                            </p>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-                <p className="text-xs sm:text-sm text-[#202724] dark:text-[#F7F4EA] font-medium leading-snug">
-                  {mascotMessage}
-                </p>
-              </div>
-            </div>
-
-            {/* Ação rápida da Dica */}
-            {mascotActionLabel && (
-              <div className="shrink-0 self-end sm:self-center">
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={() => onSelectTab(mascotActionTab)}
-                  className="gap-1.5 text-xs font-semibold cursor-pointer"
-                >
-                  <span>{mascotActionLabel}</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </Button>
-              </div>
+              </>
             )}
           </div>
-        </CardContent>
-      </Card>
+
+          {/* Sino de Notificações */}
+          <div className="relative">
+            <button
+              type="button"
+              id="header-notifications-btn"
+              onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
+              aria-label="Notificações"
+              className="p-2 rounded-xl border border-[#E2E8E4] hover:bg-black/5 dark:border-[#24312B] dark:hover:bg-white/5 text-[#5E6963] dark:text-[#95A39B] transition-colors cursor-pointer relative"
+            >
+              <Bell className="w-4 h-4" />
+              <span className="sr-only">Notificações</span>
+            </button>
+
+            {isNotificationsOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setIsNotificationsOpen(false)}
+                />
+                <div className="absolute right-0 mt-2 w-72 sm:w-80 rounded-2xl border border-[#E2E8E4] dark:border-[#24312B] bg-white dark:bg-[#18211D] p-4 shadow-xl z-50 animate-in fade-in zoom-in-95 duration-150">
+                  <div className="flex items-center justify-between pb-2 border-b border-[#E2E8E4] dark:border-[#24312B]">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-[#075C45] dark:text-[#78D9A6]">
+                      Notificações
+                    </h4>
+                    <button
+                      type="button"
+                      onClick={() => setIsNotificationsOpen(false)}
+                      className="p-1 text-[#5E6963] dark:text-[#95A39B] hover:text-[#202724] dark:hover:text-[#F7F4EA] cursor-pointer"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  <div className="py-4 text-center space-y-1">
+                    <p className="text-xs font-semibold text-[#202724] dark:text-[#F7F4EA]">
+                      Tudo em dia!
+                    </p>
+                    <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B]">
+                      Você não tem lembretes ou avisos pendentes no momento.
+                    </p>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Alternância Claro/Escuro */}
+          <button
+            type="button"
+            id="header-toggle-theme-btn"
+            onClick={toggleTheme}
+            aria-label="Alternar tema claro e escuro"
+            className="p-2 rounded-xl border border-[#E2E8E4] hover:bg-black/5 dark:border-[#24312B] dark:hover:bg-white/5 text-[#5E6963] dark:text-[#95A39B] transition-colors cursor-pointer"
+          >
+            {theme === 'light' ? (
+              <Moon className="w-4 h-4" />
+            ) : (
+              <Sun className="w-4 h-4 text-[#D6A84B]" />
+            )}
+            <span className="sr-only">Alternar tema</span>
+          </button>
+
+          {/* Acesso ao Perfil */}
+          <button
+            type="button"
+            id="header-profile-btn"
+            onClick={() => onSelectTab('profile')}
+            aria-label="Acessar Perfil"
+            className="flex items-center gap-2 p-1.5 pr-3 rounded-xl border border-[#E2E8E4] hover:bg-black/5 dark:border-[#24312B] dark:hover:bg-white/5 transition-colors cursor-pointer"
+          >
+            <Avatar
+              name={fullName || user?.email || 'U'}
+              size="sm"
+            />
+            <span className="text-xs font-semibold text-[#202724] dark:text-[#F7F4EA] hidden sm:inline max-w-[120px] truncate">
+              {firstName}
+            </span>
+          </button>
+        </div>
+      </div>
 
       {/* ==================================================
-          2. RESUMO FINANCEIRO (Card principal "Saldo do mês")
+          2. DICA DO POUPAGAIO — INSIGHT COMPACTO (Section 3 & 4)
+          Componente horizontal, discreto, útil e contextual
+          ================================================== */}
+      <div className="hidden md:flex items-center justify-between gap-3 px-4 py-2.5 rounded-2xl border border-[#E2E8E4] dark:border-[#24312B] bg-white dark:bg-[#18211D] shadow-2xs">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-8 h-8 rounded-xl overflow-hidden border border-[#16A66A]/30 bg-[#F2F5F3] dark:bg-[#101614] p-0.5 shrink-0 flex items-center justify-center">
+            <img
+              src={POUPAGAIO_MASCOT_URL}
+              alt="Poupagaio"
+              referrerPolicy="no-referrer"
+              className="w-full h-full object-contain"
+            />
+          </div>
+          <p className="text-xs sm:text-sm text-[#202724] dark:text-[#F7F4EA] truncate font-medium">
+            <span className="font-semibold text-[#075C45] dark:text-[#78D9A6] mr-1.5">Poupagaio diz:</span>
+            {mascotMessage}
+          </p>
+        </div>
+        {mascotActionLabel ? (
+          <button
+            type="button"
+            onClick={() => onSelectTab(mascotActionTab)}
+            className="shrink-0 text-xs font-semibold text-[#075C45] hover:text-[#075C45]/80 dark:text-[#78D9A6] dark:hover:text-[#78D9A6]/80 flex items-center gap-1 px-3 py-1.5 rounded-lg hover:bg-[#16A66A]/10 transition-colors cursor-pointer"
+          >
+            <span>{mascotActionLabel}</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        ) : null}
+      </div>
+
+      {/* ==================================================
+          3. RESUMO FINANCEIRO (Section 5: Saldo do Mês no topo da hierarquia)
           ================================================== */}
       {/* DESKTOP VERSION OF SALDO DO MÊS */}
-      <Card className="hidden md:block border-[#E8E4D5] dark:border-[#24312B] bg-white dark:bg-[#18211D] shadow-xs overflow-hidden">
-        <CardContent className="p-5 sm:p-7 space-y-6">
-          <div className="flex items-center justify-between pb-3 border-b border-[#E8E4D5] dark:border-[#24312B]">
+      <Card className="hidden md:block border-[#E2E8E4] dark:border-[#24312B] bg-white dark:bg-[#18211D] shadow-xs overflow-hidden">
+        <CardContent className="p-4 sm:p-5 space-y-4 sm:space-y-5">
+          <div className="flex items-center justify-between pb-3 border-b border-[#E2E8E4] dark:border-[#24312B]">
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-xl bg-[#075C45]/10 text-[#075C45] dark:bg-[#16A66A]/20 dark:text-[#78D9A6] flex items-center justify-center">
                 <Wallet className="w-4 h-4" />
@@ -342,15 +407,15 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
                 Saldo do mês
               </h2>
             </div>
-            <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-[#F7F4EA] dark:bg-[#101614] border border-[#E8E4D5] dark:border-[#24312B] text-[#5E6963] dark:text-[#95A39B]">
+            <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-[#F2F5F3] dark:bg-[#101614] border border-[#E2E8E4] dark:border-[#24312B] text-[#5E6963] dark:text-[#95A39B]">
               Espaço: {currentSpace?.name || 'Pessoal'}
             </span>
           </div>
 
           {/* Indicadores Visuais: Entradas, Despesas, Saldo */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
-            {/* Indicador 1: Saldo Principal com destaque discreto */}
-            <div className="p-5 rounded-2xl bg-gradient-to-br from-[#F7F4EA] via-white to-[#F7F4EA]/40 dark:from-[#121915] dark:via-[#18211D] dark:to-[#121915] border-2 border-[#16A66A]/30 dark:border-[#16A66A]/20 space-y-1.5 shadow-2xs">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 sm:gap-5">
+            {/* Indicador 1: Saldo Principal com destaque visual protagonista */}
+            <div className="p-5 rounded-2xl bg-gradient-to-br from-[#F2F5F3] via-white to-[#F2F5F3]/50 dark:from-[#121915] dark:via-[#18211D] dark:to-[#121915] border-2 border-[#16A66A]/40 dark:border-[#16A66A]/30 space-y-1.5 shadow-2xs">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold uppercase tracking-wider text-[#5E6963] dark:text-[#95A39B]">
                   Saldo Consolidado
@@ -360,7 +425,7 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
                 </span>
               </div>
               <div
-                className={`text-2xl sm:text-3xl font-extrabold font-display ${
+                className={`text-3xl lg:text-[32px] font-extrabold font-display ${
                   saldoConsolidado < 0
                     ? 'text-rose-600 dark:text-rose-400'
                     : 'text-[#075C45] dark:text-[#78D9A6]'
@@ -380,7 +445,7 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
             {/* Indicador 2: Entradas (clicável para abrir Entradas) */}
             <div
               onClick={() => onSelectTab('entries')}
-              className="p-5 rounded-2xl bg-white dark:bg-[#18211D] border border-[#E8E4D5] dark:border-[#24312B] hover:border-[#16A66A]/50 transition-all cursor-pointer space-y-1.5 group"
+              className="p-5 rounded-2xl bg-white dark:bg-[#18211D] border border-[#E2E8E4] dark:border-[#24312B] hover:border-[#16A66A]/50 transition-all cursor-pointer space-y-1.5 group"
             >
               <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-[#5E6963] dark:text-[#95A39B]">
                 <span className="group-hover:text-[#075C45] dark:group-hover:text-[#78D9A6] transition-colors">Entradas</span>
@@ -389,7 +454,7 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
                   Receitas
                 </span>
               </div>
-              <div className="text-2xl sm:text-3xl font-extrabold font-display text-emerald-600 dark:text-emerald-400">
+              <div className="text-2xl sm:text-[26px] font-bold font-display text-emerald-600 dark:text-emerald-400">
                 {formatCurrency(totalReceitas)}
               </div>
               <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B]">
@@ -400,7 +465,7 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
             {/* Indicador 3: Despesas (clicável para abrir Gastos Fixos) */}
             <div
               onClick={() => onSelectTab('fixed_expenses')}
-              className="p-5 rounded-2xl bg-white dark:bg-[#18211D] border border-[#E8E4D5] dark:border-[#24312B] hover:border-rose-500/50 transition-all cursor-pointer space-y-1.5 group"
+              className="p-5 rounded-2xl bg-white dark:bg-[#18211D] border border-[#E2E8E4] dark:border-[#24312B] hover:border-rose-500/50 transition-all cursor-pointer space-y-1.5 group"
             >
               <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-[#5E6963] dark:text-[#95A39B]">
                 <span className="group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors">Despesas</span>
@@ -409,7 +474,7 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
                   Saídas
                 </span>
               </div>
-              <div className="text-2xl sm:text-3xl font-extrabold font-display text-rose-600 dark:text-rose-400">
+              <div className="text-2xl sm:text-[26px] font-bold font-display text-rose-600 dark:text-rose-400">
                 {formatCurrency(totalDespesas)}
               </div>
               <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B]">
@@ -599,20 +664,20 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
       </div>
 
       {/* ==================================================
-          4. CARDS DE ACESSO RÁPIDO (Apenas Desktop / Tablet)
+          4. AÇÕES RÁPIDAS (Desktop / Tablet enxuto - Section 10)
           ================================================== */}
-      <div className="hidden md:block space-y-3">
+      <div className="hidden md:block space-y-2.5">
         <div className="flex items-center justify-between">
-          <h3 className="text-base sm:text-lg font-bold font-display text-[#202724] dark:text-[#F7F4EA]">
-            Acesso rápido
+          <h3 className="text-sm sm:text-base font-bold font-display text-[#202724] dark:text-[#F7F4EA]">
+            Ações rápidas
           </h3>
           <span className="text-xs text-[#5E6963] dark:text-[#95A39B]">
-            Toque para abrir qualquer módulo
+            Lançamentos frequentes
           </span>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 sm:gap-4">
-          {quickShortcuts.map((item) => {
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {desktopQuickActions.map((item) => {
             const Icon = item.icon;
             return (
               <button
@@ -620,18 +685,13 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
                 type="button"
                 id={`shortcut-${item.id}`}
                 onClick={() => onSelectTab(item.id)}
-                className="group p-3.5 sm:p-4 rounded-2xl border border-[#E8E4D5] dark:border-[#24312B] bg-white dark:bg-[#18211D] hover:border-[#16A66A] dark:hover:border-[#16A66A] hover:shadow-md active:scale-[0.98] transition-all text-left flex flex-col justify-between min-h-[96px] cursor-pointer"
+                className={`p-3.5 rounded-2xl border border-[#E2E8E4] dark:border-[#24312B] bg-white dark:bg-[#18211D] ${item.hoverBorder} hover:shadow-xs active:scale-[0.98] transition-all text-left flex items-center gap-3 cursor-pointer group`}
               >
-                <div className="flex items-center justify-between w-full">
-                  <div className="w-9 h-9 rounded-xl bg-[#075C45]/10 text-[#075C45] dark:bg-[#16A66A]/20 dark:text-[#78D9A6] group-hover:bg-[#16A66A] group-hover:text-white flex items-center justify-center transition-colors">
-                    <Icon className="w-4 h-4" />
-                  </div>
-                  <span className="text-base" role="img" aria-label={item.label}>
-                    {item.emoji}
-                  </span>
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${item.color}`}>
+                  <Icon className="w-5 h-5" />
                 </div>
 
-                <div className="pt-2">
+                <div className="min-w-0">
                   <h4 className="font-bold text-xs sm:text-sm text-[#202724] dark:text-[#F7F4EA] group-hover:text-[#075C45] dark:group-hover:text-[#78D9A6] transition-colors leading-tight">
                     {item.label}
                   </h4>
