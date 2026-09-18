@@ -10,13 +10,17 @@ import { entriesService } from '../../lib/services/entries';
 import { fixedExpensesService } from '../../lib/services/fixedExpenses';
 import { variableExpensesService } from '../../lib/services/variableExpenses';
 import { installmentsService, emptyMonthSummary } from '../../lib/services/installments';
+import { goalsService } from '../../lib/services/goals';
 import { formatCurrency } from '../../lib/formatters';
 import {
   EntriesSummary,
   FixedExpensesSummary,
   VariableExpensesSummary,
   InstallmentsMonthSummary,
+  GoalWithProgress,
+  CreateGoalInput,
 } from '../../types';
+import { GoalModal } from '../goals/GoalModal';
 import {
   Bell,
   Sun,
@@ -82,6 +86,7 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
     pendingCount: 0,
   });
   const [installmentsSummary, setInstallmentsSummary] = useState<InstallmentsMonthSummary>(emptyMonthSummary);
+  const [dashboardGoals, setDashboardGoals] = useState<GoalWithProgress[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(false);
 
   useEffect(() => {
@@ -94,11 +99,12 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
       const month = now.getMonth() + 1;
 
       try {
-        const [entriesResult, fixedResult, variableResult, installmentsResult] = await Promise.allSettled([
+        const [entriesResult, fixedResult, variableResult, installmentsResult, goalsResult] = await Promise.allSettled([
           entriesService.getMonthSummary(currentSpace.id, year, month),
           fixedExpensesService.getMonthSummary(currentSpace.id, year, month),
           variableExpensesService.getMonthSummary(currentSpace.id, year, month),
           installmentsService.getMonthSummary(currentSpace.id, year, month),
+          goalsService.getGoalsWithProgress(currentSpace.id),
         ]);
 
         if (isMounted) {
@@ -106,6 +112,7 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
           if (fixedResult.status === 'fulfilled') setFixedSummary(fixedResult.value);
           if (variableResult.status === 'fulfilled') setVariableSummary(variableResult.value);
           if (installmentsResult.status === 'fulfilled') setInstallmentsSummary(installmentsResult.value);
+          if (goalsResult.status === 'fulfilled') setDashboardGoals(goalsResult.value.goals);
           setIsLoadingData(false);
         }
       } catch {
@@ -120,6 +127,17 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
       isMounted = false;
     };
   }, [currentSpace?.id]);
+
+  const handleSaveGoalFromDashboard = async (input: CreateGoalInput) => {
+    if (!currentSpace?.id) return { success: false, error: 'Espaço não selecionado.' };
+    const res = await goalsService.createGoal(input);
+    if (res.success) {
+      const updated = await goalsService.getGoalsWithProgress(currentSpace.id);
+      setDashboardGoals(updated.goals);
+      return { success: true };
+    }
+    return { success: false, error: res.error };
+  };
 
   // Cálculos financeiros reais da competência atual (gastos fixos + variáveis + parcelas do mês)
   const totalReceitas = entriesSummary.totalPlanned;
@@ -720,90 +738,95 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
               </h3>
             </div>
 
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => setIsGoalModalOpen(true)}
-              className="gap-1 text-xs font-semibold cursor-pointer py-1 px-2.5 h-8 sm:h-9"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Criar meta</span>
-            </Button>
-          </div>
-
-          {/* Estado inicial de metas: layout horizontal compacto (60–80px de altura no desktop) */}
-          <div className="py-2.5 px-3.5 sm:py-3 sm:px-4 flex items-center gap-3 rounded-xl sm:rounded-2xl bg-[#EBECEE]/50 dark:bg-[#181B1A]/50 border border-dashed border-[#E2E8E4] dark:border-[#2E3532]">
-            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#16A66A]/10 text-[#075C45] dark:bg-[#16A66A]/20 dark:text-[#78D9A6] flex items-center justify-center shrink-0">
-              <Target className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2">
-                <p className="text-xs sm:text-sm font-bold text-[#202724] dark:text-[#F4F4F5]">
-                  Nenhuma meta criada ainda.
-                </p>
-                <span className="hidden sm:inline text-xs text-[#5E6963]/50 dark:text-[#95A39B]/50">•</span>
-                <p className="text-[11px] sm:text-xs text-[#5E6963] dark:text-[#95A39B] truncate">
-                  Crie objetivos para acompanhar seu progresso.
-                </p>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Modal leve de Aviso "Funcionalidade em desenvolvimento" para "+ Criar meta" */}
-      {isGoalModalOpen && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-in fade-in duration-150">
-          <div className="w-full max-w-md rounded-3xl border border-[#E8E4D5] dark:border-[#24312B] bg-white dark:bg-[#18211D] p-6 space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between pb-2 border-b border-[#E8E4D5] dark:border-[#24312B]">
-              <div className="flex items-center gap-2">
-                <Target className="w-5 h-5 text-[#075C45] dark:text-[#78D9A6]" />
-                <h4 className="font-bold text-base font-display text-[#202724] dark:text-[#F7F4EA]">
-                  Criar Nova Meta
-                </h4>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsGoalModalOpen(false)}
-                className="p-1 rounded-full text-[#5E6963] dark:text-[#95A39B] hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="space-y-3 text-center py-2">
-              <span className="inline-block px-3 py-1 rounded-full bg-[#D6A84B]/15 text-[#8c6511] dark:text-[#F2D58A] text-xs font-bold uppercase tracking-wider">
-                Funcionalidade em desenvolvimento.
-              </span>
-              <p className="text-xs text-[#5E6963] dark:text-[#95A39B] leading-relaxed">
-                O módulo de metas permitirá definir valores-alvo, prazos e aportes mensais sugeridos pelo Poupagaio. A lógica completa será implementada na etapa de Metas.
-              </p>
-            </div>
-
-            <div className="pt-2 flex items-center justify-end gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsGoalModalOpen(false)}
-                className="cursor-pointer"
-              >
-                Fechar
-              </Button>
+            <div className="flex items-center gap-2">
+              {dashboardGoals.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => onSelectTab('goals')}
+                  className="text-xs font-semibold text-[#075C45] dark:text-[#78D9A6] hover:underline cursor-pointer px-2 py-1"
+                >
+                  Ver todas
+                </button>
+              )}
               <Button
                 variant="primary"
                 size="sm"
-                onClick={() => {
-                  setIsGoalModalOpen(false);
-                  onSelectTab('goals');
-                }}
-                className="cursor-pointer"
+                onClick={() => setIsGoalModalOpen(true)}
+                className="gap-1 text-xs font-semibold cursor-pointer py-1 px-2.5 h-8 sm:h-9"
               >
-                Ver Módulo Metas
+                <Plus className="w-3.5 h-3.5" />
+                <span>Criar meta</span>
               </Button>
             </div>
           </div>
-        </div>
-      )}
+
+          {dashboardGoals.length === 0 ? (
+            /* Estado inicial de metas: layout horizontal compacto (60–80px de altura no desktop) */
+            <div className="py-2.5 px-3.5 sm:py-3 sm:px-4 flex items-center gap-3 rounded-xl sm:rounded-2xl bg-[#EBECEE]/50 dark:bg-[#181B1A]/50 border border-dashed border-[#E2E8E4] dark:border-[#2E3532]">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#16A66A]/10 text-[#075C45] dark:bg-[#16A66A]/20 dark:text-[#78D9A6] flex items-center justify-center shrink-0">
+                <Target className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2">
+                  <p className="text-xs sm:text-sm font-bold text-[#202724] dark:text-[#F4F4F5]">
+                    Nenhuma meta criada ainda.
+                  </p>
+                  <span className="hidden sm:inline text-xs text-[#5E6963]/50 dark:text-[#95A39B]/50">•</span>
+                  <p className="text-[11px] sm:text-xs text-[#5E6963] dark:text-[#95A39B] truncate">
+                    Crie objetivos para acompanhar seu progresso.
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* Lista compacta de até 3 metas reais no Dashboard */
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
+              {dashboardGoals.slice(0, 3).map((goal) => {
+                const clamped = Math.min(100, Math.max(0, goal.progressPercentage));
+                return (
+                  <div
+                    key={goal.id}
+                    onClick={() => onSelectTab('goals')}
+                    className="p-3 rounded-xl bg-[#F9FAF9] dark:bg-[#1D211F] border border-[#E2E8E4] dark:border-[#2E3532] hover:border-[#16A66A]/40 transition-all cursor-pointer space-y-2"
+                  >
+                    <div className="flex items-center justify-between gap-1.5">
+                      <h5 className="text-xs font-bold text-[#202724] dark:text-[#F4F4F5] truncate">
+                        {goal.name}
+                      </h5>
+                      <span className="text-[11px] font-bold text-[#075C45] dark:text-[#78D9A6] shrink-0">
+                        {goal.progressPercentage.toFixed(0)}%
+                      </span>
+                    </div>
+
+                    <div className="w-full bg-[#EBECEE] dark:bg-[#2A302D] h-2 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-300 ${
+                          goal.isTargetReached ? 'bg-emerald-500' : 'bg-[#16A66A]'
+                        }`}
+                        style={{ width: `${clamped}%` }}
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between text-[11px] text-[#5E6963] dark:text-[#95A39B]">
+                      <span>{formatCurrency(goal.accumulatedAmount)}</span>
+                      <span>de {formatCurrency(goal.target_amount)}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Modal Real de Nova Meta */}
+      <GoalModal
+        isOpen={isGoalModalOpen}
+        onClose={() => setIsGoalModalOpen(false)}
+        onSave={handleSaveGoalFromDashboard}
+        spaceId={currentSpace?.id || ''}
+      />
+
     </div>
   );
 }

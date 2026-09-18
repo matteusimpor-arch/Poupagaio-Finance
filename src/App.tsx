@@ -9,6 +9,8 @@ import { EntriesScreen } from './components/entries/EntriesScreen';
 import { FixedExpensesScreen } from './components/fixed-expenses/FixedExpensesScreen';
 import { VariableExpensesScreen } from './components/variable-expenses/VariableExpensesScreen';
 import { InstallmentsScreen } from './components/installments/InstallmentsScreen';
+import { GoalsScreen } from './components/goals/GoalsScreen';
+import { WishlistScreen } from './components/wishlist/WishlistScreen';
 import { ModulePlaceholder } from './components/dashboard/ModulePlaceholder';
 import { ProfileScreen } from './components/profile/ProfileScreen';
 import { Skeleton } from './components/ui/skeleton';
@@ -76,6 +78,12 @@ function AppContent() {
     }
     if (currentTab === 'installments') {
       return <InstallmentsScreen />;
+    }
+    if (currentTab === 'goals') {
+      return <GoalsScreen />;
+    }
+    if (currentTab === 'wishlist') {
+      return <WishlistScreen />;
     }
     if (currentTab === 'profile') {
       return <ProfileScreen />;

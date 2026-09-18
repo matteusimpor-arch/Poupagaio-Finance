@@ -302,3 +302,133 @@ export interface InstallmentsGlobalSummary {
   completedPurchasesCount: number;
 }
 
+// ==========================================
+// METAS (GOALS) — ETAPA 3.5.1
+// ==========================================
+export type GoalStatus = 'active' | 'completed' | 'paused';
+
+export interface Goal {
+  id: string;
+  space_id: string;
+  created_by?: string | null;
+  name: string;
+  target_amount: number;
+  target_date?: string | null; // YYYY-MM-DD
+  category: string;
+  status: GoalStatus;
+  notes?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GoalContribution {
+  id: string;
+  goal_id: string;
+  space_id: string;
+  created_by?: string | null;
+  amount: number;
+  contribution_date: string; // YYYY-MM-DD
+  notes?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GoalWithProgress extends Goal {
+  contributions: GoalContribution[];
+  accumulatedAmount: number;
+  progressPercentage: number;
+  remainingAmount: number;
+  contributionsCount: number;
+  isTargetReached: boolean;
+  lastContributionDate?: string | null;
+}
+
+export interface GoalsSummary {
+  totalTarget: number;        // Total das metas (target_amount)
+  totalAccumulated: number;   // Total acumulado em aportes
+  totalRemaining: number;     // Falta alcançar: max(totalTarget - totalAccumulated, 0)
+  goalsCount: number;
+  activeCount: number;
+  completedCount: number;
+  pausedCount: number;
+}
+
+export interface CreateGoalInput {
+  space_id: string;
+  name: string;
+  target_amount: number;
+  target_date?: string | null;
+  category?: string;
+  status?: GoalStatus;
+  notes?: string | null;
+}
+
+export interface UpdateGoalInput {
+  name?: string;
+  target_amount?: number;
+  target_date?: string | null;
+  category?: string;
+  status?: GoalStatus;
+  notes?: string | null;
+}
+
+export interface CreateGoalContributionInput {
+  goal_id: string;
+  space_id: string;
+  amount: number;
+  contribution_date: string; // YYYY-MM-DD
+  notes?: string | null;
+}
+
+// ==========================================
+// LISTA DE DESEJOS (WISHLIST) — ETAPA 3.5.2
+// ==========================================
+export type WishlistStatus = 'active' | 'purchased' | 'archived';
+
+export type WishlistPriority = 'low' | 'medium' | 'high';
+
+export interface WishlistItem {
+  id: string;
+  space_id: string;
+  created_by: string;
+  name: string;
+  estimated_amount: number;
+  category: string;
+  priority: WishlistPriority;
+  desired_date?: string | null; // YYYY-MM-DD
+  status: WishlistStatus;
+  notes?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WishlistSummary {
+  activeCount: number;         // Desejos ativos
+  totalEstimatedAmount: number; // Valor estimado total dos itens ativos
+  highPriorityCount: number;   // Quantidade de desejos ativos com prioridade alta
+  purchasedCount: number;      // Comprados
+  archivedCount: number;       // Arquivados
+  totalCount: number;          // Total geral
+}
+
+export interface CreateWishlistItemInput {
+  space_id: string;
+  name: string;
+  estimated_amount: number;
+  category?: string;
+  priority?: WishlistPriority;
+  desired_date?: string | null;
+  status?: WishlistStatus;
+  notes?: string | null;
+}
+
+export interface UpdateWishlistItemInput {
+  name?: string;
+  estimated_amount?: number;
+  category?: string;
+  priority?: WishlistPriority;
+  desired_date?: string | null;
+  status?: WishlistStatus;
+  notes?: string | null;
+}
+
