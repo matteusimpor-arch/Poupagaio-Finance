@@ -12,6 +12,7 @@ import { InstallmentsScreen } from './components/installments/InstallmentsScreen
 import { GoalsScreen } from './components/goals/GoalsScreen';
 import { WishlistScreen } from './components/wishlist/WishlistScreen';
 import { MarketScreen } from './components/market/MarketScreen';
+import { InvestmentsScreen } from './components/investments/InvestmentsScreen';
 import { ModulePlaceholder } from './components/dashboard/ModulePlaceholder';
 import { ProfileScreen } from './components/profile/ProfileScreen';
 import { Skeleton } from './components/ui/skeleton';
@@ -88,6 +89,9 @@ function AppContent() {
     }
     if (currentTab === 'market') {
       return <MarketScreen />;
+    }
+    if (currentTab === 'investments') {
+      return <InvestmentsScreen />;
     }
     if (currentTab === 'profile') {
       return <ProfileScreen />;

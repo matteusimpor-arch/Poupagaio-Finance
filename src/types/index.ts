@@ -521,3 +521,105 @@ export interface UpdateShoppingListItemInput {
   notes?: string | null;
 }
 
+// ==========================================
+// INVESTIMENTOS (INVESTMENTS) — ETAPA 3.7
+// ==========================================
+export type InvestmentCategory = 
+  | 'fixed_income'
+  | 'fund'
+  | 'stock'
+  | 'reit'
+  | 'etf'
+  | 'crypto'
+  | 'pension'
+  | 'savings'
+  | 'other';
+
+export type InvestmentStatus = 'active' | 'closed' | 'archived';
+
+export type InvestmentTransactionType = 'contribution' | 'withdrawal';
+
+export interface Investment {
+  id: string;
+  space_id: string;
+  created_by?: string | null;
+  name: string;
+  category: InvestmentCategory;
+  institution?: string | null;
+  ticker?: string | null;
+  current_value: number;
+  notes?: string | null;
+  status: InvestmentStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface InvestmentTransaction {
+  id: string;
+  investment_id: string;
+  space_id: string;
+  created_by?: string | null;
+  type: InvestmentTransactionType;
+  amount: number;
+  transaction_date: string; // YYYY-MM-DD
+  notes?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface InvestmentWithCalculations extends Investment {
+  transactions: InvestmentTransaction[];
+  totalContributions: number; // Aportes (R$)
+  totalWithdrawals: number;     // Resgates (R$)
+  netContributed: number;      // Capital líquido aportado = Aportes - Resgates
+  nominalResult: number;       // Resultado nominal = Valor atual - Capital líquido aportado
+  nominalReturnPercentage: number | null; // % Nominal = ((Valor atual - Capital líquido) / Capital líquido) * 100 se Capital líquido > 0
+}
+
+export interface InvestmentsSummary {
+  netContributedTotal: number;  // Capital líquido aportado total (soma das posições ativas)
+  currentValueTotal: number;    // Patrimônio atual (soma de current_value dos ativos)
+  nominalResultTotal: number;   // Resultado nominal total = currentValueTotal - netContributedTotal
+  activeCount: number;
+  closedCount: number;
+  archivedCount: number;
+}
+
+export interface CreateInvestmentInput {
+  space_id: string;
+  name: string;
+  category: InvestmentCategory;
+  institution?: string | null;
+  ticker?: string | null;
+  current_value?: number;
+  notes?: string | null;
+  status?: InvestmentStatus;
+}
+
+export interface UpdateInvestmentInput {
+  name?: string;
+  category?: InvestmentCategory;
+  institution?: string | null;
+  ticker?: string | null;
+  current_value?: number;
+  notes?: string | null;
+  status?: InvestmentStatus;
+}
+
+export interface CreateInvestmentTransactionInput {
+  investment_id: string;
+  space_id: string;
+  type: InvestmentTransactionType;
+  amount: number;
+  transaction_date: string; // YYYY-MM-DD
+  notes?: string | null;
+}
+
+export interface UpdateInvestmentTransactionInput {
+  type?: InvestmentTransactionType;
+  amount?: number;
+  transaction_date?: string; // YYYY-MM-DD
+  notes?: string | null;
+}
+
+

@@ -11,6 +11,7 @@ import { fixedExpensesService } from '../../lib/services/fixedExpenses';
 import { variableExpensesService } from '../../lib/services/variableExpenses';
 import { installmentsService, emptyMonthSummary } from '../../lib/services/installments';
 import { goalsService } from '../../lib/services/goals';
+import { investmentsService, emptyInvestmentsSummary } from '../../lib/services/investments';
 import { formatCurrency } from '../../lib/formatters';
 import {
   EntriesSummary,
@@ -19,6 +20,7 @@ import {
   InstallmentsMonthSummary,
   GoalWithProgress,
   CreateGoalInput,
+  InvestmentsSummary,
 } from '../../types';
 import { GoalModal } from '../goals/GoalModal';
 import {
@@ -87,6 +89,7 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
   });
   const [installmentsSummary, setInstallmentsSummary] = useState<InstallmentsMonthSummary>(emptyMonthSummary);
   const [dashboardGoals, setDashboardGoals] = useState<GoalWithProgress[]>([]);
+  const [investmentsSummary, setInvestmentsSummary] = useState<InvestmentsSummary>(emptyInvestmentsSummary);
   const [isLoadingData, setIsLoadingData] = useState(false);
 
   useEffect(() => {
@@ -99,12 +102,13 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
       const month = now.getMonth() + 1;
 
       try {
-        const [entriesResult, fixedResult, variableResult, installmentsResult, goalsResult] = await Promise.allSettled([
+        const [entriesResult, fixedResult, variableResult, installmentsResult, goalsResult, investmentsResult] = await Promise.allSettled([
           entriesService.getMonthSummary(currentSpace.id, year, month),
           fixedExpensesService.getMonthSummary(currentSpace.id, year, month),
           variableExpensesService.getMonthSummary(currentSpace.id, year, month),
           installmentsService.getMonthSummary(currentSpace.id, year, month),
           goalsService.getGoalsWithProgress(currentSpace.id),
+          investmentsService.getSummary(currentSpace.id),
         ]);
 
         if (isMounted) {
@@ -113,6 +117,7 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
           if (variableResult.status === 'fulfilled') setVariableSummary(variableResult.value);
           if (installmentsResult.status === 'fulfilled') setInstallmentsSummary(installmentsResult.value);
           if (goalsResult.status === 'fulfilled') setDashboardGoals(goalsResult.value.goals);
+          if (investmentsResult.status === 'fulfilled') setInvestmentsSummary(investmentsResult.value);
           setIsLoadingData(false);
         }
       } catch {
@@ -724,7 +729,78 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
       </div>
 
       {/* ==================================================
-          5. METAS (Card "Minhas metas")
+          5. INVESTIMENTOS (Card "Meus investimentos")
+          ================================================== */}
+      <Card className="border-[#E2E8E4] dark:border-[#2E3532] bg-white dark:bg-[#232725] shadow-xs">
+        <CardContent className="p-3.5 sm:p-4 space-y-2.5 sm:space-y-3">
+          <div className="flex items-center justify-between pb-2 sm:pb-2.5 border-b border-[#E2E8E4] dark:border-[#2E3532]">
+            <div className="flex items-center gap-2 sm:gap-2.5">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-[#075C45]/10 text-[#075C45] dark:bg-[#16A66A]/20 dark:text-[#78D9A6] flex items-center justify-center shrink-0">
+                <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              </div>
+              <h3 className="text-sm sm:text-base font-bold font-display text-[#202724] dark:text-[#F4F4F5]">
+                Meus investimentos
+              </h3>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => onSelectTab('investments')}
+              className="text-xs font-semibold text-[#075C45] dark:text-[#78D9A6] hover:underline cursor-pointer px-2 py-1"
+            >
+              Ver carteira
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            <div
+              onClick={() => onSelectTab('investments')}
+              className="p-3 rounded-xl bg-[#F9FAF9] dark:bg-[#1D211F] border border-[#E2E8E4] dark:border-[#2E3532] hover:border-[#16A66A]/40 transition-all cursor-pointer space-y-0.5"
+            >
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#5E6963] dark:text-[#95A39B]">
+                Patrimônio Atual
+              </span>
+              <p className="text-base font-bold text-[#075C45] dark:text-[#78D9A6] font-display">
+                {formatCurrency(investmentsSummary.currentValueTotal)}
+              </p>
+            </div>
+
+            <div
+              onClick={() => onSelectTab('investments')}
+              className="p-3 rounded-xl bg-[#F9FAF9] dark:bg-[#1D211F] border border-[#E2E8E4] dark:border-[#2E3532] hover:border-[#16A66A]/40 transition-all cursor-pointer space-y-0.5"
+            >
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#5E6963] dark:text-[#95A39B]">
+                Capital Aportado
+              </span>
+              <p className="text-base font-bold text-[#202724] dark:text-[#F4F4F5] font-display">
+                {formatCurrency(investmentsSummary.netContributedTotal)}
+              </p>
+            </div>
+
+            <div
+              onClick={() => onSelectTab('investments')}
+              className="p-3 rounded-xl bg-[#F9FAF9] dark:bg-[#1D211F] border border-[#E2E8E4] dark:border-[#2E3532] hover:border-[#16A66A]/40 transition-all cursor-pointer space-y-0.5"
+            >
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#5E6963] dark:text-[#95A39B]">
+                Resultado Nominal
+              </span>
+              <p
+                className={`text-base font-bold font-display ${
+                  investmentsSummary.nominalResultTotal >= 0
+                    ? 'text-emerald-600 dark:text-emerald-400'
+                    : 'text-rose-600 dark:text-rose-400'
+                }`}
+              >
+                {investmentsSummary.nominalResultTotal >= 0 ? '+' : ''}
+                {formatCurrency(investmentsSummary.nominalResultTotal)}
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ==================================================
+          6. METAS (Card "Minhas metas")
           ================================================== */}
       <Card className="border-[#E2E8E4] dark:border-[#2E3532] bg-white dark:bg-[#232725] shadow-xs">
         <CardContent className="p-3.5 sm:p-4 space-y-2.5 sm:space-y-3">

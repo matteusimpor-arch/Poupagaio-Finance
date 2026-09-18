@@ -324,8 +324,9 @@ export function MarketListCard({
             </div>
           </div>
 
-          {/* RESUMO COMPACTO DE MODO COMPRA (QUANDO EM COMPRA) */}
+          {/* RESUMO DE ACORDO COM O STATUS DA LISTA */}
           {isShopping ? (
+            /* 1. MODO COMPRA (status === 'shopping') */
             <div className="mt-3 p-3 sm:p-4 rounded-xl bg-white dark:bg-[#1E2220] border border-amber-200 dark:border-amber-800/80 shadow-xs grid grid-cols-2 sm:grid-cols-3 gap-2.5">
               {/* Orçamento */}
               <div className="p-2.5 rounded-lg bg-amber-50/60 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/40">
@@ -338,7 +339,7 @@ export function MarketListCard({
                 </p>
               </div>
 
-              {/* Carrinho (Total Real Acumulado) */}
+              {/* Carrinho (Total Real Atual) */}
               <div className="p-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60">
                 <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-800 dark:text-emerald-300 flex items-center gap-1">
                   <ShoppingCart className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
@@ -396,8 +397,85 @@ export function MarketListCard({
                 </p>
               </div>
             </div>
+          ) : isCompleted || isArchived ? (
+            /* 2. MODO CONCLUÍDA / HISTÓRICO (status === 'completed' || status === 'archived') */
+            <div className="mt-4 pt-3.5 border-t border-neutral-100 dark:border-neutral-800/80 grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              {/* Orçamento */}
+              <div className="p-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-900/60 border border-neutral-100 dark:border-neutral-800">
+                <span className="text-[10px] font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+                  Orçamento
+                </span>
+                <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 mt-0.5">
+                  {budget !== null ? formatCurrency(budget) : '—'}
+                </p>
+              </div>
+
+              {/* Total Gasto */}
+              <div className="p-2.5 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/50">
+                <span className="text-[10px] font-medium uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+                  Total Gasto
+                </span>
+                <p className="text-sm font-bold text-emerald-700 dark:text-emerald-300 mt-0.5">
+                  {formatCurrency(totalActual)}
+                </p>
+              </div>
+
+              {/* Economia / Resultado do Orçamento */}
+              <div
+                className={`p-2.5 rounded-xl border ${
+                  budget === null
+                    ? 'bg-neutral-50 dark:bg-neutral-900/60 border-neutral-100 dark:border-neutral-800'
+                    : totalActual > budget
+                    ? 'bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-900/50'
+                    : 'bg-emerald-50/70 dark:bg-emerald-950/30 border-emerald-100 dark:border-emerald-900/50'
+                }`}
+              >
+                <span className="text-[10px] font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+                  {budget === null
+                    ? 'Resultado'
+                    : totalActual < budget
+                    ? 'Economia'
+                    : totalActual > budget
+                    ? 'Resultado'
+                    : 'Resultado'}
+                </span>
+                <p
+                  className={`text-sm font-bold mt-0.5 ${
+                    budget === null
+                      ? 'text-neutral-400 dark:text-neutral-500 text-xs font-normal'
+                      : totalActual < budget
+                      ? 'text-emerald-700 dark:text-emerald-300'
+                      : totalActual > budget
+                      ? 'text-rose-600 dark:text-rose-400'
+                      : 'text-emerald-700 dark:text-emerald-300 text-xs font-medium'
+                  }`}
+                >
+                  {budget === null
+                    ? '—'
+                    : totalActual < budget
+                    ? formatCurrency(budget - totalActual)
+                    : totalActual > budget
+                    ? `Acima do orçamento: ${formatCurrency(totalActual - budget)}`
+                    : 'Orçamento utilizado integralmente'}
+                </p>
+              </div>
+
+              {/* Progresso de Itens Comprados */}
+              <div className="p-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-900/60 border border-neutral-100 dark:border-neutral-800 flex flex-col justify-center">
+                <div className="flex items-center justify-between text-[11px] font-medium text-neutral-600 dark:text-neutral-400 mb-1">
+                  <span>Itens Comprados</span>
+                  <span>{checkedItems}/{totalItems}</span>
+                </div>
+                <div className="w-full h-1.5 rounded-full bg-neutral-200 dark:bg-neutral-800 overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-emerald-500 transition-all duration-300"
+                    style={{ width: `${progressPercent}%` }}
+                  />
+                </div>
+              </div>
+            </div>
           ) : (
-            /* BARRA PADRÃO EM PLANEJAMENTO OU HISTÓRICO */
+            /* 3. MODO PLANEJAMENTO (status === 'active') */
             <div className="mt-4 pt-3.5 border-t border-neutral-100 dark:border-neutral-800/80 grid grid-cols-2 sm:grid-cols-4 gap-2.5">
               {/* Orçamento */}
               <div className="p-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-900/60 border border-neutral-100 dark:border-neutral-800">
