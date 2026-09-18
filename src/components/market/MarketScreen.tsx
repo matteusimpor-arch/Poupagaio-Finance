@@ -40,8 +40,8 @@ export function MarketScreen() {
   const [isTableMissing, setIsTableMissing] = useState(false);
   const [userFriendlyError, setUserFriendlyError] = useState<string | null>(null);
 
-  // Filtro de status: 'active' | 'completed' | 'archived'
-  const [statusFilter, setStatusFilter] = useState<ShoppingListStatus>('active');
+  // Filtro de status: 'active' | 'shopping' | 'completed' | 'archived' | 'all'
+  const [statusFilter, setStatusFilter] = useState<ShoppingListStatus | 'all'>('active');
 
   // Modais de Lista
   const [isListModalOpen, setIsListModalOpen] = useState(false);
@@ -155,7 +155,7 @@ export function MarketScreen() {
     }
   };
 
-  // Reabrir Lista
+  // Reabrir Lista (ou Voltar ao Planejamento)
   const handleReopenList = async (list: ShoppingListWithItems) => {
     if (!currentSpace?.id) return;
     try {
@@ -167,6 +167,40 @@ export function MarketScreen() {
       }
     } catch {
       setUserFriendlyError('Falha ao reabrir lista.');
+    }
+  };
+
+  // Iniciar Compra no Mercado
+  const handleStartShopping = async (list: ShoppingListWithItems) => {
+    if (!currentSpace?.id) return;
+    try {
+      const res = await marketService.startShoppingList(list.id, currentSpace.id);
+      if (res.success) {
+        setStatusFilter('shopping'); // Alterna para aba "Em Compra" para foco imediato
+        await loadMarketData();
+      } else if (res.error) {
+        setUserFriendlyError(res.error);
+      }
+    } catch {
+      setUserFriendlyError('Falha ao iniciar compra.');
+    }
+  };
+
+  // Atualizar Quantidade de um Item
+  const handleUpdateItemQuantity = async (item: ShoppingListItem, newQty: number) => {
+    if (!currentSpace?.id || newQty <= 0) return;
+    try {
+      const res = await marketService.updateShoppingListItem(
+        item.id,
+        item.shopping_list_id,
+        currentSpace.id,
+        { quantity: newQty }
+      );
+      if (res.item) {
+        await loadMarketData();
+      }
+    } catch {
+      await loadMarketData();
     }
   };
 
@@ -413,7 +447,7 @@ export function MarketScreen() {
       )}
 
       {/* Filtros de Status (Abas Simplificadas) */}
-      <div className="flex items-center gap-1.5 p-1 rounded-xl bg-neutral-100 dark:bg-neutral-900/80 border border-neutral-200 dark:border-neutral-800 w-fit">
+      <div className="flex flex-wrap items-center gap-1.5 p-1 rounded-xl bg-neutral-100 dark:bg-neutral-900/80 border border-neutral-200 dark:border-neutral-800 w-fit">
         <button
           id="tab-market-active"
           type="button"
@@ -424,7 +458,20 @@ export function MarketScreen() {
               : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200'
           }`}
         >
-          Ativas
+          Planejamento
+        </button>
+        <button
+          id="tab-market-shopping"
+          type="button"
+          onClick={() => setStatusFilter('shopping')}
+          className={`px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
+            statusFilter === 'shopping'
+              ? 'bg-amber-500 text-white shadow-2xs font-semibold'
+              : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200'
+          }`}
+        >
+          <ShoppingCart className="w-3.5 h-3.5" />
+          Em Compra
         </button>
         <button
           id="tab-market-completed"
@@ -449,6 +496,18 @@ export function MarketScreen() {
           }`}
         >
           Arquivadas
+        </button>
+        <button
+          id="tab-market-all"
+          type="button"
+          onClick={() => setStatusFilter('all')}
+          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+            statusFilter === 'all'
+              ? 'bg-white dark:bg-[#1E2220] text-neutral-900 dark:text-neutral-100 shadow-xs'
+              : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200'
+          }`}
+        >
+          Todas
         </button>
       </div>
 
@@ -512,8 +571,10 @@ export function MarketScreen() {
               onDeleteList={(l) => setListToDelete(l)}
               onArchiveList={handleArchiveList}
               onReopenList={handleReopenList}
+              onStartShopping={handleStartShopping}
               onCompleteList={(l) => setListToComplete(l)}
               onUpdateItemActualPrice={handleUpdateItemActualPrice}
+              onUpdateItemQuantity={handleUpdateItemQuantity}
             />
           ))}
         </div>

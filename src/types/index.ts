@@ -435,7 +435,7 @@ export interface UpdateWishlistItemInput {
 // ==========================================
 // MERCADO (SHOPPING LISTS) — ETAPA 3.6
 // ==========================================
-export type ShoppingListStatus = 'active' | 'completed' | 'archived';
+export type ShoppingListStatus = 'active' | 'shopping' | 'completed' | 'archived';
 
 export interface ShoppingList {
   id: string;
@@ -443,6 +443,7 @@ export interface ShoppingList {
   created_by: string | null;
   name: string;
   shopping_date?: string | null; // YYYY-MM-DD
+  budget_amount?: number | null;
   status: ShoppingListStatus;
   notes?: string | null;
   completed_at?: string | null;
@@ -483,12 +484,14 @@ export interface CreateShoppingListInput {
   space_id: string;
   name: string;
   shopping_date?: string | null;
+  budget_amount?: number | null;
   notes?: string | null;
 }
 
 export interface UpdateShoppingListInput {
   name?: string;
   shopping_date?: string | null;
+  budget_amount?: number | null;
   notes?: string | null;
   status?: ShoppingListStatus;
   completed_at?: string | null;

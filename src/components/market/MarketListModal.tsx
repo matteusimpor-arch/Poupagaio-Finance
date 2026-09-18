@@ -5,7 +5,7 @@ import {
   UpdateShoppingListInput,
 } from '../../types';
 import { Button } from '../ui/button';
-import { X, ShoppingBag, Calendar, FileText, AlertCircle } from 'lucide-react';
+import { X, ShoppingBag, Calendar, FileText, AlertCircle, DollarSign } from 'lucide-react';
 
 interface MarketListModalProps {
   isOpen: boolean;
@@ -26,6 +26,7 @@ export function MarketListModal({
 }: MarketListModalProps) {
   const [name, setName] = useState('');
   const [shoppingDate, setShoppingDate] = useState('');
+  const [budgetAmount, setBudgetAmount] = useState('');
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -34,10 +35,16 @@ export function MarketListModal({
     if (listToEdit) {
       setName(listToEdit.name);
       setShoppingDate(listToEdit.shopping_date || '');
+      setBudgetAmount(
+        listToEdit.budget_amount !== undefined && listToEdit.budget_amount !== null
+          ? String(listToEdit.budget_amount)
+          : ''
+      );
       setNotes(listToEdit.notes || '');
     } else {
       setName('');
       setShoppingDate(new Date().toISOString().split('T')[0]);
+      setBudgetAmount('');
       setNotes('');
     }
     setErrorMessage(null);
@@ -53,6 +60,15 @@ export function MarketListModal({
       return;
     }
 
+    const parsedBudget = budgetAmount.trim()
+      ? parseFloat(budgetAmount.replace(',', '.'))
+      : null;
+
+    if (parsedBudget !== null && (isNaN(parsedBudget) || parsedBudget < 0)) {
+      setErrorMessage('Por favor, informe um valor de orçamento válido (maior ou igual a zero).');
+      return;
+    }
+
     setIsSubmitting(true);
     setErrorMessage(null);
 
@@ -62,6 +78,7 @@ export function MarketListModal({
         res = await onSave({
           name: trimmedName,
           shopping_date: shoppingDate || null,
+          budget_amount: parsedBudget,
           notes: notes.trim() || null,
         });
       } else {
@@ -69,6 +86,7 @@ export function MarketListModal({
           space_id: spaceId,
           name: trimmedName,
           shopping_date: shoppingDate || null,
+          budget_amount: parsedBudget,
           notes: notes.trim() || null,
         });
       }
@@ -161,6 +179,29 @@ export function MarketListModal({
               onChange={(e) => setShoppingDate(e.target.value)}
               className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 transition-colors"
             />
+          </div>
+
+          {/* Orçamento da Compra */}
+          <div>
+            <label
+              htmlFor="market-list-budget"
+              className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1.5 flex items-center gap-1.5"
+            >
+              <DollarSign className="w-3.5 h-3.5 text-emerald-500" />
+              Orçamento da Compra (R$) (Opcional)
+            </label>
+            <input
+              id="market-list-budget"
+              type="text"
+              inputMode="decimal"
+              value={budgetAmount}
+              onChange={(e) => setBudgetAmount(e.target.value)}
+              placeholder="Ex: 500,00"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 transition-colors"
+            />
+            <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1">
+              Defina um limite para acompanhar o valor restante durante as compras
+            </p>
           </div>
 
           {/* Observações */}

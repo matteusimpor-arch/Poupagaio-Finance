@@ -12,6 +12,7 @@ import {
   Check,
   CheckCircle2,
   Plus,
+  Minus,
   Edit2,
   Trash2,
   Archive,
@@ -21,11 +22,15 @@ import {
   ChevronDown,
   ChevronUp,
   ShoppingBag,
+  ShoppingCart,
   MoreVertical,
   CheckSquare,
   Square,
   Tag,
   DollarSign,
+  Play,
+  ArrowLeft,
+  AlertTriangle,
 } from 'lucide-react';
 
 interface MarketListCardProps {
@@ -40,8 +45,10 @@ interface MarketListCardProps {
   onDeleteList: (list: ShoppingListWithItems) => void;
   onArchiveList: (list: ShoppingListWithItems) => void;
   onReopenList: (list: ShoppingListWithItems) => void;
+  onStartShopping: (list: ShoppingListWithItems) => void;
   onCompleteList: (list: ShoppingListWithItems) => void;
   onUpdateItemActualPrice: (item: ShoppingListItem, newPrice: number) => void;
+  onUpdateItemQuantity: (item: ShoppingListItem, newQty: number) => void;
 }
 
 export function MarketListCard({
@@ -55,23 +62,35 @@ export function MarketListCard({
   onDeleteList,
   onArchiveList,
   onReopenList,
+  onStartShopping,
   onCompleteList,
   onUpdateItemActualPrice,
+  onUpdateItemQuantity,
 }: MarketListCardProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const [showMenu, setShowMenu] = useState(false);
   const [quickItemName, setQuickItemName] = useState('');
   const [quickItemQty, setQuickItemQty] = useState('1');
   const [isAddingQuick, setIsAddingQuick] = useState(false);
-  const [editingPriceItemId, setEditingPriceItemId] = useState<string | null>(null);
-  const [tempPriceValue, setTempPriceValue] = useState('');
 
   const isCompleted = list.status === 'completed';
   const isArchived = list.status === 'archived';
   const isActive = list.status === 'active';
+  const isShopping = list.status === 'shopping';
 
   const { totalEstimated, totalActual, totalItems, checkedItems } = list.totals;
   const progressPercent = totalItems > 0 ? Math.round((checkedItems / totalItems) * 100) : 0;
+
+  const hasBudget = list.budget_amount !== null && list.budget_amount !== undefined && list.budget_amount >= 0;
+  const budget = hasBudget ? (list.budget_amount as number) : null;
+
+  // Em Planejamento: Disponível Previsto = Orçamento - Total Estimado
+  const availableEstimated = budget !== null ? budget - totalEstimated : null;
+
+  // No Mercado (Carrinho): Restante ou Acima do Orçamento
+  const isOverBudget = budget !== null && totalActual > budget;
+  const budgetRemaining = budget !== null ? budget - totalActual : null;
+  const budgetOverAmount = budget !== null && totalActual > budget ? totalActual - budget : null;
 
   const handleQuickAdd = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,22 +115,24 @@ export function MarketListCard({
     }
   };
 
-  const handleSavePrice = (item: ShoppingListItem) => {
-    const val = parseFloat(tempPriceValue.replace(',', '.'));
-    if (!isNaN(val) && val >= 0) {
-      onUpdateItemActualPrice(item, val);
-    }
-    setEditingPriceItemId(null);
-  };
-
   return (
     <Card
       id={`market-list-card-${list.id}`}
-      className="bg-white dark:bg-[#1E2220] border-neutral-200 dark:border-neutral-800 shadow-xs hover:shadow-md transition-all duration-200 overflow-hidden"
+      className={`bg-white dark:bg-[#1E2220] border transition-all duration-200 overflow-hidden ${
+        isShopping
+          ? 'border-amber-300 dark:border-amber-700/80 shadow-md ring-1 ring-amber-500/20'
+          : 'border-neutral-200 dark:border-neutral-800 shadow-xs hover:shadow-md'
+      }`}
     >
       <CardContent className="p-0">
         {/* Cabeçalho da Lista */}
-        <div className="p-4 sm:p-5 border-b border-neutral-100 dark:border-neutral-800/80">
+        <div
+          className={`p-4 sm:p-5 border-b ${
+            isShopping
+              ? 'bg-gradient-to-r from-amber-50/80 via-orange-50/50 to-amber-50/80 dark:from-amber-950/30 dark:via-orange-950/20 dark:to-amber-950/30 border-amber-200 dark:border-amber-800/60'
+              : 'border-neutral-100 dark:border-neutral-800/80'
+          }`}
+        >
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0">
               <div className="flex flex-wrap items-center gap-2 mb-1.5">
@@ -122,7 +143,13 @@ export function MarketListCard({
                 {/* Status Badges */}
                 {isActive && (
                   <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60">
-                    Ativa
+                    Planejamento
+                  </span>
+                )}
+                {isShopping && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-semibold bg-amber-500 text-white shadow-2xs animate-pulse">
+                    <ShoppingCart className="w-3 h-3" />
+                    Em Compra
                   </span>
                 )}
                 {isCompleted && (
@@ -148,7 +175,7 @@ export function MarketListCard({
                   </div>
                 )}
                 {list.completed_at && (
-                  <div className="flex items-center gap-1 text-blue-600 dark:text-blue-400">
+                  <div className="flex items-center gap-1 text-blue-600 dark:text-blue-400 font-medium">
                     <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
                     <span>Finalizada em {formatDateBR(list.completed_at.split('T')[0])}</span>
                   </div>
@@ -162,18 +189,33 @@ export function MarketListCard({
               </div>
             </div>
 
-            {/* Menu de Ações da Lista */}
-            <div className="flex items-center gap-1 shrink-0 relative">
+            {/* Menu de Ações Principais da Lista */}
+            <div className="flex items-center gap-1.5 shrink-0 relative">
+              {/* Botão DESTACADO "Iniciar Compra" em Modo Planejamento */}
               {isActive && (
+                <Button
+                  id={`btn-start-shopping-${list.id}`}
+                  variant="default"
+                  size="sm"
+                  onClick={() => onStartShopping(list)}
+                  className="bg-orange-600 hover:bg-orange-700 text-white text-xs h-8.5 px-3.5 rounded-xl shadow-xs font-semibold flex items-center gap-1.5"
+                >
+                  <ShoppingCart className="w-3.5 h-3.5" />
+                  <span>Iniciar compra</span>
+                </Button>
+              )}
+
+              {/* Botão DESTACADO "Finalizar Compra" em Modo Compra */}
+              {isShopping && (
                 <Button
                   id={`btn-complete-list-${list.id}`}
                   variant="default"
                   size="sm"
                   onClick={() => onCompleteList(list)}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-8 px-3 rounded-lg shadow-2xs font-medium"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-8.5 px-3.5 rounded-xl shadow-xs font-semibold flex items-center gap-1.5"
                 >
-                  <Check className="w-3.5 h-3.5 mr-1" />
-                  Finalizar compra
+                  <Check className="w-4 h-4" />
+                  <span>Finalizar compra</span>
                 </Button>
               )}
 
@@ -191,10 +233,10 @@ export function MarketListCard({
 
                 {showMenu && (
                   <div
-                    className="absolute right-0 top-full mt-1 w-44 bg-white dark:bg-[#1E2220] rounded-xl shadow-lg border border-neutral-200 dark:border-neutral-700 py-1 z-30 animate-in fade-in zoom-in-95 duration-150"
+                    className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-[#1E2220] rounded-xl shadow-lg border border-neutral-200 dark:border-neutral-700 py-1 z-30 animate-in fade-in zoom-in-95 duration-150"
                     onClick={() => setShowMenu(false)}
                   >
-                    {isActive && (
+                    {(isActive || isShopping) && (
                       <>
                         <button
                           id={`btn-add-item-modal-${list.id}`}
@@ -212,6 +254,16 @@ export function MarketListCard({
                           <Edit2 className="w-3.5 h-3.5 text-neutral-500" />
                           Editar dados da lista
                         </button>
+                        {isShopping && (
+                          <button
+                            id={`btn-pause-shopping-${list.id}`}
+                            onClick={() => onReopenList(list)}
+                            className="w-full text-left px-3 py-2 text-xs text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40 flex items-center gap-2"
+                          >
+                            <ArrowLeft className="w-3.5 h-3.5" />
+                            Voltar ao planejamento
+                          </button>
+                        )}
                         <button
                           id={`btn-archive-list-${list.id}`}
                           onClick={() => onArchiveList(list)}
@@ -230,7 +282,7 @@ export function MarketListCard({
                         className="w-full text-left px-3 py-2 text-xs text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 flex items-center gap-2"
                       >
                         <RotateCcw className="w-3.5 h-3.5 text-blue-600" />
-                        Reabrir lista
+                        Reabrir no Planejamento
                       </button>
                     )}
 
@@ -272,60 +324,152 @@ export function MarketListCard({
             </div>
           </div>
 
-          {/* Barra de Totais e Progresso */}
-          <div className="mt-4 pt-3.5 border-t border-neutral-100 dark:border-neutral-800/80 grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="p-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-900/60 border border-neutral-100 dark:border-neutral-800">
-              <span className="text-[10px] font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
-                Itens no Carrinho
-              </span>
-              <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 mt-0.5">
-                {checkedItems} <span className="text-xs font-normal text-neutral-500">de {totalItems}</span>
-              </p>
-            </div>
-
-            <div className="p-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-900/60 border border-neutral-100 dark:border-neutral-800">
-              <span className="text-[10px] font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
-                Total Estimado
-              </span>
-              <p className="text-sm font-semibold text-neutral-700 dark:text-neutral-300 mt-0.5">
-                {formatCurrency(totalEstimated)}
-              </p>
-            </div>
-
-            <div className="p-2.5 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/50">
-              <span className="text-[10px] font-medium uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
-                Total Real
-              </span>
-              <p className="text-sm font-bold text-emerald-700 dark:text-emerald-300 mt-0.5">
-                {formatCurrency(totalActual)}
-              </p>
-            </div>
-
-            <div className="p-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-900/60 border border-neutral-100 dark:border-neutral-800 flex flex-col justify-center">
-              <div className="flex items-center justify-between text-[11px] font-medium text-neutral-600 dark:text-neutral-400 mb-1">
-                <span>Progresso</span>
-                <span>{progressPercent}%</span>
+          {/* RESUMO COMPACTO DE MODO COMPRA (QUANDO EM COMPRA) */}
+          {isShopping ? (
+            <div className="mt-3 p-3 sm:p-4 rounded-xl bg-white dark:bg-[#1E2220] border border-amber-200 dark:border-amber-800/80 shadow-xs grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+              {/* Orçamento */}
+              <div className="p-2.5 rounded-lg bg-amber-50/60 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/40">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-amber-800 dark:text-amber-300 flex items-center gap-1">
+                  <DollarSign className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+                  Orçamento
+                </span>
+                <p className="text-sm font-bold text-neutral-900 dark:text-neutral-100 mt-0.5">
+                  {budget !== null ? formatCurrency(budget) : 'Sem orçamento'}
+                </p>
               </div>
-              <div className="w-full h-1.5 rounded-full bg-neutral-200 dark:bg-neutral-800 overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-emerald-500 transition-all duration-300"
-                  style={{ width: `${progressPercent}%` }}
-                />
+
+              {/* Carrinho (Total Real Acumulado) */}
+              <div className="p-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-800 dark:text-emerald-300 flex items-center gap-1">
+                  <ShoppingCart className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                  Carrinho
+                </span>
+                <p className="text-sm font-bold text-emerald-700 dark:text-emerald-300 mt-0.5">
+                  {formatCurrency(totalActual)}
+                </p>
+              </div>
+
+              {/* Restante ou Acima do Orçamento */}
+              <div
+                className={`p-2.5 rounded-lg border col-span-2 sm:col-span-1 ${
+                  budget === null
+                    ? 'bg-neutral-50 dark:bg-neutral-900/60 border-neutral-100 dark:border-neutral-800'
+                    : isOverBudget
+                    ? 'bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-900/60'
+                    : 'bg-emerald-50/80 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-900/50'
+                }`}
+              >
+                <span
+                  className={`text-[10px] font-semibold uppercase tracking-wider ${
+                    budget === null
+                      ? 'text-neutral-500'
+                      : isOverBudget
+                      ? 'text-rose-700 dark:text-rose-300 flex items-center gap-1'
+                      : 'text-emerald-800 dark:text-emerald-300'
+                  }`}
+                >
+                  {budget === null ? (
+                    'Restante'
+                  ) : isOverBudget ? (
+                    <>
+                      <AlertTriangle className="w-3 h-3 text-rose-600" />
+                      Acima do Orçamento
+                    </>
+                  ) : (
+                    'Restante'
+                  )}
+                </span>
+                <p
+                  className={`text-sm font-bold mt-0.5 ${
+                    budget === null
+                      ? 'text-neutral-400 dark:text-neutral-500 text-xs font-normal'
+                      : isOverBudget
+                      ? 'text-rose-700 dark:text-rose-300'
+                      : 'text-emerald-700 dark:text-emerald-300'
+                  }`}
+                >
+                  {budget === null
+                    ? 'Ilimitado'
+                    : isOverBudget
+                    ? `${formatCurrency(budgetOverAmount!)} acima`
+                    : formatCurrency(budgetRemaining!)}
+                </p>
               </div>
             </div>
-          </div>
+          ) : (
+            /* BARRA PADRÃO EM PLANEJAMENTO OU HISTÓRICO */
+            <div className="mt-4 pt-3.5 border-t border-neutral-100 dark:border-neutral-800/80 grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              {/* Orçamento */}
+              <div className="p-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-900/60 border border-neutral-100 dark:border-neutral-800">
+                <span className="text-[10px] font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+                  Orçamento
+                </span>
+                <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 mt-0.5">
+                  {budget !== null ? formatCurrency(budget) : '—'}
+                </p>
+              </div>
+
+              {/* Total Estimado */}
+              <div className="p-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-900/60 border border-neutral-100 dark:border-neutral-800">
+                <span className="text-[10px] font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+                  Total Estimado
+                </span>
+                <p className="text-sm font-semibold text-neutral-700 dark:text-neutral-300 mt-0.5">
+                  {formatCurrency(totalEstimated)}
+                </p>
+              </div>
+
+              {/* Disponível Previsto (Orçamento - Total Estimado) */}
+              <div
+                className={`p-2.5 rounded-xl border ${
+                  availableEstimated !== null && availableEstimated < 0
+                    ? 'bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-900/50'
+                    : 'bg-emerald-50/70 dark:bg-emerald-950/30 border-emerald-100 dark:border-emerald-900/50'
+                }`}
+              >
+                <span className="text-[10px] font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+                  Disponível Previsto
+                </span>
+                <p
+                  className={`text-sm font-bold mt-0.5 ${
+                    availableEstimated === null
+                      ? 'text-neutral-400'
+                      : availableEstimated < 0
+                      ? 'text-rose-600 dark:text-rose-400'
+                      : 'text-emerald-700 dark:text-emerald-300'
+                  }`}
+                >
+                  {availableEstimated !== null ? formatCurrency(availableEstimated) : '—'}
+                </p>
+              </div>
+
+              {/* Progresso de Itens */}
+              <div className="p-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-900/60 border border-neutral-100 dark:border-neutral-800 flex flex-col justify-center">
+                <div className="flex items-center justify-between text-[11px] font-medium text-neutral-600 dark:text-neutral-400 mb-1">
+                  <span>Itens no Carrinho</span>
+                  <span>{checkedItems}/{totalItems}</span>
+                </div>
+                <div className="w-full h-1.5 rounded-full bg-neutral-200 dark:bg-neutral-800 overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-emerald-500 transition-all duration-300"
+                    style={{ width: `${progressPercent}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Corpo: Lista de Itens (Expandível) */}
         {isExpanded && (
           <div className="p-4 sm:p-5 space-y-3">
-            {/* Adicionar Item Rápido (Somente quando ativa) */}
-            {isActive && (
+            {/* Adicionar Item Rápido (Somente quando em Planejamento ou Compra) */}
+            {(isActive || isShopping) && (
               <form onSubmit={handleQuickAdd} className="flex items-center gap-2 pb-2">
                 <input
                   id={`input-quick-item-name-${list.id}`}
                   type="text"
-                  placeholder="+ Adicionar item rápido..."
+                  placeholder="+ Adicionar produto..."
                   value={quickItemName}
                   onChange={(e) => setQuickItemName(e.target.value)}
                   className="flex-1 px-3 py-2 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 text-xs focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 transition-colors"
@@ -350,30 +494,19 @@ export function MarketListCard({
                   <Plus className="w-3.5 h-3.5 mr-1" />
                   Adicionar
                 </Button>
-                <Button
-                  id={`btn-open-item-modal-${list.id}`}
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onOpenAddItemModal(list)}
-                  className="h-8.5 px-2.5 rounded-xl text-neutral-600 dark:text-neutral-300 text-xs font-medium shrink-0"
-                  title="Abrir modal com categoria, unidade e preços estimados"
-                >
-                  Detalhado
-                </Button>
               </form>
             )}
 
-            {/* Aviso quando lista está concluída / leitura */}
+            {/* Banner de Aviso de Conclusão */}
             {isCompleted && (
               <div className="p-3 rounded-xl bg-blue-50/60 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/40 text-xs text-blue-700 dark:text-blue-300 flex items-center justify-between">
-                <span>Esta compra foi finalizada. Os itens estão em modo histórico.</span>
+                <span>Esta compra foi finalizada. Os itens estão salvos no histórico.</span>
                 <button
                   id={`btn-reopen-list-inline-${list.id}`}
                   onClick={() => onReopenList(list)}
                   className="text-xs font-medium text-blue-800 dark:text-blue-200 underline hover:no-underline ml-2 shrink-0"
                 >
-                  Reabrir lista
+                  Reabrir no Planejamento
                 </button>
               </div>
             )}
@@ -384,113 +517,132 @@ export function MarketListCard({
                 Nenhum item adicionado nesta lista ainda.
               </div>
             ) : (
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 {list.items.map((item) => {
                   const hasEst =
                     item.estimated_unit_price !== null && item.estimated_unit_price !== undefined;
                   const hasAct =
                     item.actual_unit_price !== null && item.actual_unit_price !== undefined;
-                  const isEditingPrice = editingPriceItemId === item.id;
+
+                  const lineTotalActual =
+                    hasAct ? Math.round(item.quantity * Math.round(item.actual_unit_price! * 100)) / 100 : null;
 
                   return (
                     <div
                       key={item.id}
                       id={`market-item-row-${item.id}`}
-                      className={`group flex items-center justify-between gap-2 p-2.5 rounded-xl transition-colors ${
+                      className={`group flex items-center justify-between gap-2.5 p-3 rounded-xl transition-all ${
                         item.is_checked
-                          ? 'bg-neutral-50/80 dark:bg-neutral-900/40 opacity-75'
-                          : 'bg-white dark:bg-neutral-900/90 hover:bg-neutral-50 dark:hover:bg-neutral-900 border border-neutral-100 dark:border-neutral-800/80'
+                          ? 'bg-emerald-50/40 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30'
+                          : 'bg-white dark:bg-neutral-900 hover:bg-neutral-50 dark:hover:bg-neutral-900/80 border border-neutral-100 dark:border-neutral-800'
                       }`}
                     >
-                      {/* Checkbox Touch Target Otimizado para Mobile (min 44px) */}
+                      {/* Checkbox Otimizado para Toque no Celular (Min 44x44px) */}
                       <button
                         id={`btn-toggle-item-${item.id}`}
                         type="button"
                         onClick={() => onToggleItem(item, !item.is_checked)}
-                        className="w-9 h-9 -ml-1 rounded-lg flex items-center justify-center text-neutral-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors shrink-0"
-                        title={item.is_checked ? 'Desmarcar' : 'Marcar como comprado'}
+                        className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-neutral-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors shrink-0 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+                        title={item.is_checked ? 'Desmarcar produto' : 'Marcar como comprado'}
                       >
                         {item.is_checked ? (
-                          <CheckSquare className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                          <CheckSquare className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
                         ) : (
-                          <Square className="w-5 h-5 text-neutral-400 hover:text-emerald-500" />
+                          <Square className="w-6 h-6 text-neutral-400 hover:text-emerald-500" />
                         )}
                       </button>
 
-                      {/* Informações do Item */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
+                      {/* Informações do Produto */}
+                      <div className="flex-1 min-w-0 space-y-0.5">
+                        <div className="flex flex-wrap items-center gap-2">
                           <span
-                            className={`text-sm font-medium truncate ${
+                            className={`text-sm font-semibold truncate ${
                               item.is_checked
                                 ? 'line-through text-neutral-400 dark:text-neutral-500'
-                                : 'text-neutral-800 dark:text-neutral-200'
+                                : 'text-neutral-900 dark:text-neutral-100'
                             }`}
                           >
                             {item.name}
                           </span>
-                          <span className="text-xs font-semibold px-1.5 py-0.5 rounded-md bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 shrink-0">
-                            {item.quantity} {item.unit || 'un'}
-                          </span>
                         </div>
 
-                        {/* Metadados: Categoria, Preços, Notas */}
-                        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[11px] text-neutral-400 dark:text-neutral-500 mt-0.5">
+                        {/* Detalhes e Comparativo de Preço Estimado */}
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-neutral-500 dark:text-neutral-400">
                           {item.category && item.category !== 'Geral' && (
-                            <span>{item.category}</span>
+                            <span className="text-[11px] font-medium px-1.5 py-0.2 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300">
+                              {item.category}
+                            </span>
                           )}
                           {hasEst && (
-                            <span>Est: {formatCurrency(item.estimated_unit_price!)}/{item.unit || 'un'}</span>
+                            <span className="text-[11px] text-neutral-400">
+                              Est: {formatCurrency(item.estimated_unit_price!)}/{item.unit || 'un'}
+                            </span>
                           )}
-                          {item.notes && <span className="italic">"{item.notes}"</span>}
+                          {item.notes && <span className="italic text-[11px]">"{item.notes}"</span>}
                         </div>
                       </div>
 
-                      {/* Preço Real e Ações */}
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        {/* Editor Rápido de Preço Real */}
-                        {isEditingPrice ? (
-                          <div className="flex items-center gap-1">
-                            <input
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              value={tempPriceValue}
-                              onChange={(e) => setTempPriceValue(e.target.value)}
-                              placeholder="0,00"
-                              autoFocus
-                              className="w-16 px-1.5 py-1 text-xs rounded-lg border border-emerald-500 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 text-right focus:outline-none"
-                            />
+                      {/* Ajuste Rápido de Quantidade & Preço Unitário Real */}
+                      <div className="flex items-center gap-2 shrink-0">
+                        {/* Controles Rápido de Quantidade */}
+                        {(isActive || isShopping) && (
+                          <div className="flex items-center rounded-lg border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 overflow-hidden">
                             <button
                               type="button"
-                              onClick={() => handleSavePrice(item)}
-                              className="p-1 rounded-md bg-emerald-600 text-white text-xs hover:bg-emerald-700"
+                              onClick={() => onUpdateItemQuantity(item, Math.max(0.5, item.quantity - 1))}
+                              className="w-7 h-7 flex items-center justify-center text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-800 text-xs font-bold"
+                              title="Diminuir quantidade"
                             >
-                              <Check className="w-3.5 h-3.5" />
+                              <Minus className="w-3 h-3" />
+                            </button>
+                            <span className="px-2 text-xs font-semibold text-neutral-800 dark:text-neutral-200 min-w-[28px] text-center">
+                              {item.quantity} {item.unit || 'un'}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => onUpdateItemQuantity(item, item.quantity + 1)}
+                              className="w-7 h-7 flex items-center justify-center text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-800 text-xs font-bold"
+                              title="Aumentar quantidade"
+                            >
+                              <Plus className="w-3 h-3" />
                             </button>
                           </div>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (isCompleted) return;
-                              setEditingPriceItemId(item.id);
-                              setTempPriceValue(
-                                item.actual_unit_price !== null && item.actual_unit_price !== undefined
-                                  ? String(item.actual_unit_price)
-                                  : ''
-                              );
-                            }}
-                            className={`text-xs font-semibold px-2 py-1 rounded-lg transition-colors ${
-                              hasAct
-                                ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100'
-                                : 'text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800'
-                            }`}
-                            title="Clique para editar o preço real unitário pago"
-                          >
-                            {hasAct ? formatCurrency(item.actual_unit_price!) : '+ Preço real'}
-                          </button>
                         )}
+
+                        {/* Campo para Informar/Editar Preço Real Unitário */}
+                        <div className="flex flex-col items-end">
+                          {!isCompleted ? (
+                            <div className="flex items-center gap-1">
+                              <span className="text-[10px] text-neutral-400 font-medium">R$</span>
+                              <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                defaultValue={hasAct ? item.actual_unit_price! : ''}
+                                key={`price-${item.id}-${item.actual_unit_price}`}
+                                onBlur={(e) => {
+                                  const val = parseFloat(e.target.value.replace(',', '.'));
+                                  if (!isNaN(val) && val >= 0) {
+                                    onUpdateItemActualPrice(item, val);
+                                  }
+                                }}
+                                placeholder="Preço"
+                                className="w-18 px-2 py-1 text-xs font-semibold rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 text-right focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                              />
+                            </div>
+                          ) : (
+                            <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400">
+                              {hasAct ? formatCurrency(item.actual_unit_price!) : '—'}
+                            </span>
+                          )}
+
+                          {/* Subtotal da linha */}
+                          {lineTotalActual !== null && lineTotalActual > 0 && (
+                            <span className="text-[10px] font-medium text-neutral-500 dark:text-neutral-400 mt-0.5">
+                              Subtotal: {formatCurrency(lineTotalActual)}
+                            </span>
+                          )}
+                        </div>
 
                         {/* Botões de Ação do Item */}
                         {!isCompleted && (
@@ -509,7 +661,7 @@ export function MarketListCard({
                               type="button"
                               onClick={() => onDeleteItem(item)}
                               className="p-1.5 rounded-lg text-neutral-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
-                              title="Remover item"
+                              title="Remover produto"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
@@ -527,3 +679,4 @@ export function MarketListCard({
     </Card>
   );
 }
+

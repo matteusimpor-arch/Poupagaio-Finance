@@ -141,6 +141,10 @@ export const marketService = {
         created_by: l.created_by,
         name: l.name,
         shopping_date: l.shopping_date || null,
+        budget_amount:
+          l.budget_amount !== null && l.budget_amount !== undefined
+            ? Number(l.budget_amount)
+            : null,
         status: (l.status as ShoppingListStatus) || 'active',
         notes: l.notes || null,
         completed_at: l.completed_at || null,
@@ -258,6 +262,10 @@ export const marketService = {
         created_by: user.id,
         name: trimmedName,
         shopping_date: input.shopping_date ? input.shopping_date.trim() : null,
+        budget_amount:
+          input.budget_amount !== undefined && input.budget_amount !== null
+            ? Number(input.budget_amount)
+            : null,
         status: 'active',
         notes: input.notes?.trim() || null,
       };
@@ -279,6 +287,10 @@ export const marketService = {
         created_by: data.created_by,
         name: data.name,
         shopping_date: data.shopping_date || null,
+        budget_amount:
+          data.budget_amount !== null && data.budget_amount !== undefined
+            ? Number(data.budget_amount)
+            : null,
         status: data.status,
         notes: data.notes || null,
         completed_at: data.completed_at || null,
@@ -328,6 +340,12 @@ export const marketService = {
       if (input.shopping_date !== undefined) {
         payload.shopping_date = input.shopping_date ? input.shopping_date.trim() : null;
       }
+      if (input.budget_amount !== undefined) {
+        payload.budget_amount =
+          input.budget_amount !== null && !isNaN(Number(input.budget_amount))
+            ? Number(input.budget_amount)
+            : null;
+      }
       if (input.notes !== undefined) {
         payload.notes = input.notes ? input.notes.trim() : null;
       }
@@ -355,6 +373,23 @@ export const marketService = {
     } catch (err: any) {
       return { isTableMissing: false, error: err.message || 'Erro ao atualizar lista.' };
     }
+  },
+
+  /**
+   * Inicia a compra (muda status para 'shopping').
+   * Não apaga itens nem zera preços estimados nem altera valores financeiros.
+   */
+  async startShoppingList(
+    id: string,
+    spaceId: string
+  ): Promise<{ success: boolean; error?: string; isTableMissing: boolean }> {
+    return this.updateShoppingList(id, spaceId, {
+      status: 'shopping',
+    }).then((res) => ({
+      success: !res.error && !res.isTableMissing,
+      error: res.error,
+      isTableMissing: res.isTableMissing,
+    }));
   },
 
   /**
