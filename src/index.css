@@ -4,32 +4,36 @@
 
 @layer base {
   :root {
-    --bg-page: #F7F9F7;
+    --bg-page: #F3F4F4;
     --card-bg: #FFFFFF;
-    --card-border: #E2E8E4;
-    --text-main: #202724;
-    --text-muted: #5E6963;
+    --surface-secondary: #EBECEE;
+    --surface-elevated: #FFFFFF;
+    --card-border: #E2E5E4;
+    --text-main: #1F2421;
+    --text-muted: #5D6661;
     --color-emerald-deep: #075C45;
     --color-emerald-main: #16A66A;
     --color-emerald-light: #78D9A6;
     --color-gold: #D6A84B;
     --color-champagne: #F2D58A;
-    --color-cream: #F2F5F3;
-    --color-graphite: #202724;
+    --color-cream: #EBECEE;
+    --color-graphite: #1F2421;
   }
 
   .dark {
-    --bg-page: #121212;
-    --card-bg: #1A1A1A;
-    --card-border: rgba(255, 255, 255, 0.12);
+    --bg-page: #181B1A;
+    --card-bg: #232725;
+    --surface-secondary: #2B302E;
+    --surface-elevated: #323835;
+    --card-border: #2E3532;
     --text-main: #F4F4F5;
-    --text-muted: #A1A1AA;
+    --text-muted: #9BA5A0;
     --color-emerald-deep: #0E744B;
     --color-emerald-main: #10B981;
     --color-emerald-light: #34D399;
     --color-gold: #F59E0B;
     --color-champagne: #FDE047;
-    --color-cream: #1A1A1A;
+    --color-cream: #232725;
     --color-graphite: #F4F4F5;
   }
 
@@ -37,15 +41,15 @@
   *::selection,
   input::selection,
   textarea::selection {
-    background-color: rgba(59, 130, 246, 0.22);
-    color: #111827;
+    background-color: rgba(22, 166, 106, 0.22);
+    color: #075C45;
   }
 
   .dark ::selection,
   .dark *::selection,
   .dark input::selection,
   .dark textarea::selection {
-    background-color: rgba(100, 149, 237, 0.22);
+    background-color: rgba(120, 217, 166, 0.25);
     color: #FFFFFF;
   }
 
@@ -60,5 +64,46 @@
     font-family: 'Space Grotesk', 'Plus Jakarta Sans', sans-serif;
   }
 }
+
+/* ==========================================================================
+   GLOBAL PALETTE HARMONIZATION TOKENS
+   Overrides legacy arbitrary colors to strictly enforce the new global theme:
+   - Light: Neutral cold light gray #F3F4F4 (no beige/yellowish cream), crisp #FFFFFF cards, #E2E5E4 borders
+   - Dark: Neutral graphite/dark gray #181B1A (no pure black), #232725 cards, #2E3532 borders
+   ========================================================================== */
+
+.bg-\[\#F7F4EA\],
+.bg-\[\#F7F9F7\] {
+  background-color: var(--bg-page) !important;
+}
+
+.bg-\[\#F2F5F3\] {
+  background-color: var(--surface-secondary) !important;
+}
+
+.border-\[\#E8E4D5\],
+.border-\[\#E2E8E4\] {
+  border-color: var(--card-border) !important;
+}
+
+.dark .dark\:bg-\[\#101614\],
+.dark .dark\:bg-\[\#121212\],
+.dark .dark\:bg-\[\#111614\],
+.dark .dark\:bg-\[\#141C18\],
+.dark .dark\:bg-\[\#121915\] {
+  background-color: var(--bg-page) !important;
+}
+
+.dark .dark\:bg-\[\#18211D\],
+.dark .dark\:bg-\[\#1A1A1A\],
+.dark .dark\:bg-\[\#1E2220\],
+.dark .dark\:bg-\[\#222226\] {
+  background-color: var(--card-bg) !important;
+}
+
+.dark .dark\:border-\[\#24312B\] {
+  border-color: var(--card-border) !important;
+}
+
 
 

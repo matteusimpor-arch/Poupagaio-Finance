@@ -92,13 +92,14 @@ export function Shell({ currentTab, onSelectTab, children }: ShellProps) {
   };
 
   return (
-    <div className="min-h-screen w-full flex bg-[#F7F4EA] dark:bg-[#101614] text-[#202724] dark:text-[#F7F4EA] transition-colors duration-200">
-      {/* DESKTOP SIDEBAR (Visible on md and up) */}
-      <aside className="hidden md:flex flex-col w-64 lg:w-72 border-r border-[#E8E4D5] dark:border-[#24312B] bg-white dark:bg-[#141C18] p-5 shrink-0 justify-between select-none">
-        <div className="space-y-5 overflow-y-auto max-h-[calc(100vh-140px)] pr-1">
+    <div className="h-[100dvh] w-full flex bg-[#F3F4F4] dark:bg-[#181B1A] text-[#202724] dark:text-[#F4F4F5] transition-colors duration-200 overflow-hidden">
+      {/* DESKTOP SIDEBAR (Visible on md and up, fixed 100dvh with independent scroll) */}
+      <aside className="hidden md:flex flex-col w-64 lg:w-72 h-[100dvh] border-r border-[#E2E8E4] dark:border-[#2E3532] bg-white dark:bg-[#1E2220] p-4 lg:p-5 shrink-0 select-none z-20">
+        {/* Top Header: Brand & Space Selector (shrink-0) */}
+        <div className="shrink-0 space-y-4 pb-2">
           {/* Brand Header */}
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl overflow-hidden border-2 border-[#16A66A]/30 bg-[#F7F4EA] dark:bg-[#18211D] p-0.5 shrink-0 shadow-sm">
+            <div className="w-10 h-10 rounded-xl overflow-hidden border-2 border-[#16A66A]/30 bg-[#F3F4F4] dark:bg-[#232725] p-0.5 shrink-0 shadow-2xs">
               <img
                 src={POUPAGAIO_MASCOT_URL}
                 alt="Poupagaio Mascot"
@@ -117,56 +118,56 @@ export function Shell({ currentTab, onSelectTab, children }: ShellProps) {
           </div>
 
           {/* Space Selector */}
-          <div className="pt-1">
+          <div>
             <SpaceSelector />
           </div>
-
-          {/* Navigation Groups */}
-          <nav className="space-y-3 pt-1">
-            {sidebarNavGroups.map((group) => (
-              <div key={group.title} className="space-y-0.5">
-                <p className="px-3 text-[10px] font-bold uppercase tracking-wider text-[#5E6963]/75 dark:text-[#95A39B]/65 select-none">
-                  {group.title}
-                </p>
-                <div className="space-y-0.5">
-                  {group.items.map((item) => {
-                    const Icon = item.icon;
-                    const isActive = currentTab === item.id;
-                    return (
-                      <button
-                        key={item.id}
-                        id={`nav-desktop-${item.id}`}
-                        onClick={() => handleNavClick(item.id)}
-                        type="button"
-                        className={`w-full flex items-center justify-between px-3 py-2 rounded-xl font-medium text-xs transition-all duration-150 cursor-pointer ${
-                          isActive
-                            ? 'bg-[#075C45] text-white shadow-xs dark:bg-[#16A66A] dark:text-[#101614]'
-                            : 'hover:bg-black/5 text-[#202724] dark:hover:bg-white/5 dark:text-[#F7F4EA]'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2.5">
-                          <Icon className={`w-4 h-4 ${isActive ? 'text-white dark:text-[#101614]' : 'text-[#16A66A]'}`} />
-                          <span>{item.label}</span>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-          </nav>
         </div>
 
-        {/* Bottom Sidebar: User Profile & Preferences */}
-        <div className="space-y-3 pt-4 border-t border-[#E8E4D5] dark:border-[#24312B] shrink-0">
+        {/* Navigation Groups: Independent scroll (flex-1 min-h-0 overflow-y-auto) */}
+        <nav className="flex-1 min-h-0 overflow-y-auto py-2 pr-1 space-y-3">
+          {sidebarNavGroups.map((group) => (
+            <div key={group.title} className="space-y-0.5">
+              <p className="px-3 text-[10px] font-bold uppercase tracking-wider text-[#5E6963]/75 dark:text-[#95A39B]/65 select-none">
+                {group.title}
+              </p>
+              <div className="space-y-0.5">
+                {group.items.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = currentTab === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      id={`nav-desktop-${item.id}`}
+                      onClick={() => handleNavClick(item.id)}
+                      type="button"
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-xl font-medium text-xs transition-all duration-150 cursor-pointer ${
+                        isActive
+                          ? 'bg-[#075C45] text-white shadow-xs dark:bg-[#16A66A] dark:text-[#101614]'
+                          : 'hover:bg-black/5 text-[#202724] dark:hover:bg-white/5 dark:text-[#F4F4F5]'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <Icon className={`w-4 h-4 ${isActive ? 'text-white dark:text-[#101614]' : 'text-[#16A66A]'}`} />
+                        <span>{item.label}</span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </nav>
+
+        {/* Bottom Sidebar: User Profile & Preferences (shrink-0, permanently accessible!) */}
+        <div className="shrink-0 pt-3 border-t border-[#E2E8E4] dark:border-[#2E3532] space-y-2.5">
           <button
             type="button"
             id="nav-desktop-profile"
             onClick={() => handleNavClick('profile')}
-            className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-colors cursor-pointer text-left ${
+            className={`w-full flex items-center gap-3 p-2 rounded-xl transition-colors cursor-pointer text-left ${
               currentTab === 'profile'
                 ? 'bg-[#16A66A]/15 text-[#075C45] dark:bg-[#16A66A]/25 dark:text-[#78D9A6]'
-                : 'hover:bg-black/5 text-[#202724] dark:hover:bg-white/5 dark:text-[#F7F4EA]'
+                : 'hover:bg-black/5 text-[#202724] dark:hover:bg-white/5 dark:text-[#F4F4F5]'
             }`}
           >
             <Avatar
@@ -184,13 +185,13 @@ export function Shell({ currentTab, onSelectTab, children }: ShellProps) {
             <User className="w-4 h-4 text-[#5E6963] dark:text-[#95A39B]" />
           </button>
 
-          <div className="flex items-center justify-between pt-1">
+          <div className="flex items-center justify-between pt-0.5">
             <button
               type="button"
               id="sidebar-toggle-theme"
               onClick={toggleTheme}
               aria-label="Alternar tema"
-              className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-[#E8E4D5] hover:bg-black/5 dark:border-[#24312B] dark:hover:bg-white/5 text-xs text-[#5E6963] dark:text-[#95A39B] cursor-pointer transition-colors"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-[#E2E8E4] hover:bg-black/5 dark:border-[#2E3532] dark:hover:bg-white/5 text-xs text-[#5E6963] dark:text-[#95A39B] cursor-pointer transition-colors"
             >
               {theme === 'light' ? (
                 <>
@@ -220,9 +221,9 @@ export function Shell({ currentTab, onSelectTab, children }: ShellProps) {
       </aside>
 
       {/* MAIN CONTENT AREA */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 h-[100dvh] overflow-hidden">
         {/* MOBILE TOP BAR */}
-        <header className="md:hidden flex items-center justify-between px-4 py-2.5 pt-[calc(0.625rem+env(safe-area-inset-top))] border-b border-[#E2E8E4] dark:border-[#24312B] bg-white dark:bg-[#141C18] sticky top-0 z-30">
+        <header className="md:hidden flex items-center justify-between px-4 py-2.5 pt-[calc(0.625rem+env(safe-area-inset-top))] border-b border-[#E2E8E4] dark:border-[#2E3532] bg-white dark:bg-[#1E2220] sticky top-0 z-30">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl overflow-hidden border border-[#16A66A]/30 bg-[#F2F5F3] dark:bg-[#18211D] p-0.5 shrink-0">
               <img
@@ -291,20 +292,20 @@ export function Shell({ currentTab, onSelectTab, children }: ShellProps) {
         </header>
 
         {/* MOBILE SPACE SELECTOR BAR */}
-        <div className="md:hidden px-3.5 py-1.5 border-b border-[#E2E8E4] dark:border-[#24312B] bg-[#F2F5F3]/80 dark:bg-[#101614]/80 backdrop-blur-sm">
+        <div className="md:hidden px-3.5 py-1.5 border-b border-[#E2E8E4] dark:border-[#2E3532] bg-[#EBECEE]/80 dark:bg-[#181B1A]/80 backdrop-blur-sm">
           <SpaceSelector />
         </div>
 
         {/* SUPABASE SCHEMA NOTICE */}
         <SupabaseSchemaNotice />
 
-        {/* SCROLLABLE VIEW CONTAINER */}
-        <main className="flex-1 overflow-y-auto px-3.5 py-3.5 sm:px-6 sm:py-6 md:p-8 pb-24 md:pb-8">
+        {/* SCROLLABLE VIEW CONTAINER (flex-1 min-h-0 overflow-y-auto) */}
+        <main className="flex-1 min-h-0 overflow-y-auto px-3.5 py-3 sm:px-6 sm:py-5 md:px-8 md:py-6 pb-24 md:pb-8">
           {children}
         </main>
 
         {/* MOBILE BOTTOM NAVIGATION (5 Ícones com + Central) */}
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 border-t border-[#E2E8E4] dark:border-[#24312B] bg-white/95 dark:bg-[#141C18]/95 backdrop-blur-md px-2 py-1.5 pb-[calc(0.5rem+env(safe-area-inset-bottom))] z-40 flex items-center justify-between">
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 border-t border-[#E2E8E4] dark:border-[#2E3532] bg-white/95 dark:bg-[#1E2220]/95 backdrop-blur-md px-2 py-1.5 pb-[calc(0.5rem+env(safe-area-inset-bottom))] z-40 flex items-center justify-between">
           {/* Item 1: Início */}
           <button
             type="button"
@@ -313,7 +314,7 @@ export function Shell({ currentTab, onSelectTab, children }: ShellProps) {
             className={`flex flex-col items-center justify-center flex-1 py-1 transition-colors cursor-pointer ${
               currentTab === 'home'
                 ? 'text-[#075C45] dark:text-[#78D9A6] font-bold'
-                : 'text-[#5E6963] dark:text-[#95A39B] hover:text-[#202724] dark:hover:text-[#F7F4EA]'
+                : 'text-[#5E6963] dark:text-[#95A39B] hover:text-[#202724] dark:hover:text-[#F4F4F5]'
             }`}
           >
             <Home className={`w-5 h-5 ${currentTab === 'home' ? 'stroke-[2.5]' : 'stroke-2'}`} />
@@ -328,7 +329,7 @@ export function Shell({ currentTab, onSelectTab, children }: ShellProps) {
             className={`flex flex-col items-center justify-center flex-1 py-1 transition-colors cursor-pointer ${
               currentTab === 'movements'
                 ? 'text-[#075C45] dark:text-[#78D9A6] font-bold'
-                : 'text-[#5E6963] dark:text-[#95A39B] hover:text-[#202724] dark:hover:text-[#F7F4EA]'
+                : 'text-[#5E6963] dark:text-[#95A39B] hover:text-[#202724] dark:hover:text-[#F4F4F5]'
             }`}
           >
             <ArrowLeftRight className={`w-5 h-5 ${currentTab === 'movements' ? 'stroke-[2.5]' : 'stroke-2'}`} />
@@ -342,7 +343,7 @@ export function Shell({ currentTab, onSelectTab, children }: ShellProps) {
               id="nav-mobile-plus-action"
               onClick={() => setIsActionSheetOpen(true)}
               aria-label="Abrir ações rápidas"
-              className="w-12 h-12 rounded-full bg-[#16A66A] hover:bg-[#075C45] text-white flex items-center justify-center shadow-md -mt-5 border-4 border-[#F7F4EA] dark:border-[#101614] transition-all cursor-pointer active:scale-95"
+              className="w-12 h-12 rounded-full bg-[#16A66A] hover:bg-[#075C45] text-white flex items-center justify-center shadow-md -mt-5 border-4 border-[#F3F4F4] dark:border-[#181B1A] transition-all cursor-pointer active:scale-95"
             >
               <Plus className="w-6 h-6 stroke-[2.5]" />
             </button>

@@ -199,14 +199,14 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
   ];
 
   return (
-    <div className="w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 space-y-4 sm:space-y-5 lg:space-y-6 pb-24 md:pb-8 animate-in fade-in duration-300">
+    <div className="w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 space-y-3 sm:space-y-3.5 md:space-y-4 pb-24 md:pb-8 animate-in fade-in duration-300">
       {/* ==================================================
           1. CABEÇALHO DESKTOP COMPACTO (Section 2)
           Substitui o antigo bloco gigante por uma barra de topo limpa e funcional
           ================================================== */}
       <div className="hidden md:flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-extrabold font-display text-[#202724] dark:text-[#F7F4EA] tracking-tight">
+          <h1 className="text-2xl lg:text-3xl font-extrabold font-display text-[#202724] dark:text-[#F4F4F5] tracking-tight">
             Olá, {firstName}! 👋
           </h1>
           <p className="text-xs sm:text-sm text-[#5E6963] dark:text-[#95A39B] mt-0.5">
@@ -365,9 +365,9 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
           2. DICA DO POUPAGAIO — INSIGHT COMPACTO (Section 3 & 4)
           Componente horizontal, discreto, útil e contextual
           ================================================== */}
-      <div className="hidden md:flex items-center justify-between gap-3 px-4 py-2.5 rounded-2xl border border-[#E2E8E4] dark:border-[#24312B] bg-white dark:bg-[#18211D] shadow-2xs">
+      <div className="hidden md:flex items-center justify-between gap-3 px-4 py-2 rounded-2xl border border-[#E2E8E4] dark:border-[#2E3532] bg-white dark:bg-[#232725] shadow-2xs">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="w-8 h-8 rounded-xl overflow-hidden border border-[#16A66A]/30 bg-[#F2F5F3] dark:bg-[#101614] p-0.5 shrink-0 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-xl overflow-hidden border border-[#16A66A]/30 bg-[#EBECEE] dark:bg-[#181B1A] p-0.5 shrink-0 flex items-center justify-center">
             <img
               src={POUPAGAIO_MASCOT_URL}
               alt="Poupagaio"
@@ -375,7 +375,7 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
               className="w-full h-full object-contain"
             />
           </div>
-          <p className="text-xs sm:text-sm text-[#202724] dark:text-[#F7F4EA] truncate font-medium">
+          <p className="text-xs sm:text-sm text-[#202724] dark:text-[#F4F4F5] truncate font-medium">
             <span className="font-semibold text-[#075C45] dark:text-[#78D9A6] mr-1.5">Poupagaio diz:</span>
             {mascotMessage}
           </p>
@@ -396,26 +396,26 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
           3. RESUMO FINANCEIRO (Section 5: Saldo do Mês no topo da hierarquia)
           ================================================== */}
       {/* DESKTOP VERSION OF SALDO DO MÊS */}
-      <Card className="hidden md:block border-[#E2E8E4] dark:border-[#24312B] bg-white dark:bg-[#18211D] shadow-xs overflow-hidden">
-        <CardContent className="p-4 sm:p-5 space-y-4 sm:space-y-5">
-          <div className="flex items-center justify-between pb-3 border-b border-[#E2E8E4] dark:border-[#24312B]">
+      <Card className="hidden md:block border-[#E2E8E4] dark:border-[#2E3532] bg-white dark:bg-[#232725] shadow-xs overflow-hidden">
+        <CardContent className="p-4 sm:p-4.5 space-y-3 sm:space-y-3.5">
+          <div className="flex items-center justify-between pb-2.5 border-b border-[#E2E8E4] dark:border-[#2E3532]">
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-xl bg-[#075C45]/10 text-[#075C45] dark:bg-[#16A66A]/20 dark:text-[#78D9A6] flex items-center justify-center">
                 <Wallet className="w-4 h-4" />
               </div>
-              <h2 className="text-base sm:text-lg font-bold font-display text-[#202724] dark:text-[#F7F4EA]">
+              <h2 className="text-base sm:text-lg font-bold font-display text-[#202724] dark:text-[#F4F4F5]">
                 Saldo do mês
               </h2>
             </div>
-            <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-[#F2F5F3] dark:bg-[#101614] border border-[#E2E8E4] dark:border-[#24312B] text-[#5E6963] dark:text-[#95A39B]">
+            <span className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-[#EBECEE] dark:bg-[#181B1A] border border-[#E2E8E4] dark:border-[#2E3532] text-[#5E6963] dark:text-[#95A39B]">
               Espaço: {currentSpace?.name || 'Pessoal'}
             </span>
           </div>
 
           {/* Indicadores Visuais: Entradas, Despesas, Saldo */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 sm:gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
             {/* Indicador 1: Saldo Principal com destaque visual protagonista */}
-            <div className="p-5 rounded-2xl bg-gradient-to-br from-[#F2F5F3] via-white to-[#F2F5F3]/50 dark:from-[#121915] dark:via-[#18211D] dark:to-[#121915] border-2 border-[#16A66A]/40 dark:border-[#16A66A]/30 space-y-1.5 shadow-2xs">
+            <div className="p-4 sm:p-4.5 rounded-2xl bg-gradient-to-br from-[#EBECEE]/70 via-white to-[#EBECEE]/40 dark:from-[#1E2220] dark:via-[#232725] dark:to-[#1E2220] border-2 border-[#16A66A]/40 dark:border-[#16A66A]/30 space-y-1 shadow-2xs">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold uppercase tracking-wider text-[#5E6963] dark:text-[#95A39B]">
                   Saldo Consolidado
@@ -425,7 +425,7 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
                 </span>
               </div>
               <div
-                className={`text-3xl lg:text-[32px] font-extrabold font-display ${
+                className={`text-2xl sm:text-3xl lg:text-[32px] font-extrabold font-display ${
                   saldoConsolidado < 0
                     ? 'text-rose-600 dark:text-rose-400'
                     : 'text-[#075C45] dark:text-[#78D9A6]'
@@ -445,7 +445,7 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
             {/* Indicador 2: Entradas (clicável para abrir Entradas) */}
             <div
               onClick={() => onSelectTab('entries')}
-              className="p-5 rounded-2xl bg-white dark:bg-[#18211D] border border-[#E2E8E4] dark:border-[#24312B] hover:border-[#16A66A]/50 transition-all cursor-pointer space-y-1.5 group"
+              className="p-4 sm:p-4.5 rounded-2xl bg-white dark:bg-[#232725] border border-[#E2E8E4] dark:border-[#2E3532] hover:border-[#16A66A]/50 transition-all cursor-pointer space-y-1 group"
             >
               <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-[#5E6963] dark:text-[#95A39B]">
                 <span className="group-hover:text-[#075C45] dark:group-hover:text-[#78D9A6] transition-colors">Entradas</span>
@@ -454,7 +454,7 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
                   Receitas
                 </span>
               </div>
-              <div className="text-2xl sm:text-[26px] font-bold font-display text-emerald-600 dark:text-emerald-400">
+              <div className="text-xl sm:text-2xl font-bold font-display text-emerald-600 dark:text-emerald-400">
                 {formatCurrency(totalReceitas)}
               </div>
               <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B]">
@@ -465,7 +465,7 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
             {/* Indicador 3: Despesas (clicável para abrir Gastos Fixos) */}
             <div
               onClick={() => onSelectTab('fixed_expenses')}
-              className="p-5 rounded-2xl bg-white dark:bg-[#18211D] border border-[#E2E8E4] dark:border-[#24312B] hover:border-rose-500/50 transition-all cursor-pointer space-y-1.5 group"
+              className="p-4 sm:p-4.5 rounded-2xl bg-white dark:bg-[#232725] border border-[#E2E8E4] dark:border-[#2E3532] hover:border-rose-500/50 transition-all cursor-pointer space-y-1 group"
             >
               <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-[#5E6963] dark:text-[#95A39B]">
                 <span className="group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors">Despesas</span>
@@ -474,7 +474,7 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
                   Saídas
                 </span>
               </div>
-              <div className="text-2xl sm:text-[26px] font-bold font-display text-rose-600 dark:text-rose-400">
+              <div className="text-xl sm:text-2xl font-bold font-display text-rose-600 dark:text-rose-400">
                 {formatCurrency(totalDespesas)}
               </div>
               <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B]">
@@ -539,9 +539,9 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
       {/* ==================================================
           3. SITUAÇÃO DO MÊS ("Este mês" com Pago, Próximo, Atrasado)
           ================================================== */}
-      <div className="space-y-2.5">
+      <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm sm:text-lg font-bold font-display text-[#202724] dark:text-[#F7F4EA]">
+          <h3 className="text-sm sm:text-base font-bold font-display text-[#202724] dark:text-[#F4F4F5]">
             Este mês
           </h3>
           <span className="text-[11px] sm:text-xs text-[#5E6963] dark:text-[#95A39B]">
@@ -549,12 +549,12 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
           </span>
         </div>
 
-        {/* DESKTOP VIEW: 3 Large Cards */}
-        <div className="hidden md:grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
+        {/* DESKTOP VIEW: 3 Cards */}
+        <div className="hidden md:grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
           {/* Indicador Pago (Verde) */}
           <div
             onClick={() => onSelectTab('fixed_expenses')}
-            className="p-5 rounded-2xl border border-emerald-500/20 bg-emerald-50/50 dark:bg-emerald-950/20 space-y-2 cursor-pointer hover:border-emerald-500/50 transition-all"
+            className="p-4 rounded-2xl border border-emerald-500/20 bg-emerald-50/50 dark:bg-emerald-950/20 space-y-1.5 cursor-pointer hover:border-emerald-500/50 transition-all"
           >
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
@@ -575,7 +575,7 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
           {/* Indicador Próximo (Amarelo / Dourado) */}
           <div
             onClick={() => onSelectTab('fixed_expenses')}
-            className="p-5 rounded-2xl border border-[#D6A84B]/30 bg-[#F7F4EA] dark:bg-[#D6A84B]/10 space-y-2 cursor-pointer hover:border-[#D6A84B]/60 transition-all"
+            className="p-4 rounded-2xl border border-[#D6A84B]/30 bg-[#FFFDF8] dark:bg-[#D6A84B]/10 space-y-1.5 cursor-pointer hover:border-[#D6A84B]/60 transition-all"
           >
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold uppercase tracking-wider text-[#8c6511] dark:text-[#F2D58A]">
@@ -596,7 +596,7 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
           {/* Indicador Atrasado (Vermelho) */}
           <div
             onClick={() => onSelectTab('fixed_expenses')}
-            className="p-5 rounded-2xl border border-rose-500/20 bg-rose-50/50 dark:bg-rose-950/20 space-y-2 cursor-pointer hover:border-rose-500/50 transition-all"
+            className="p-4 rounded-2xl border border-rose-500/20 bg-rose-50/50 dark:bg-rose-950/20 space-y-1.5 cursor-pointer hover:border-rose-500/50 transition-all"
           >
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold uppercase tracking-wider text-rose-800 dark:text-rose-300">
@@ -666,9 +666,9 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
       {/* ==================================================
           4. AÇÕES RÁPIDAS (Desktop / Tablet enxuto - Section 10)
           ================================================== */}
-      <div className="hidden md:block space-y-2.5">
+      <div className="hidden md:block space-y-2">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm sm:text-base font-bold font-display text-[#202724] dark:text-[#F7F4EA]">
+          <h3 className="text-sm sm:text-base font-bold font-display text-[#202724] dark:text-[#F4F4F5]">
             Ações rápidas
           </h3>
           <span className="text-xs text-[#5E6963] dark:text-[#95A39B]">
@@ -676,7 +676,7 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
           </span>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
           {desktopQuickActions.map((item) => {
             const Icon = item.icon;
             return (
@@ -685,14 +685,14 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
                 type="button"
                 id={`shortcut-${item.id}`}
                 onClick={() => onSelectTab(item.id)}
-                className={`p-3.5 rounded-2xl border border-[#E2E8E4] dark:border-[#24312B] bg-white dark:bg-[#18211D] ${item.hoverBorder} hover:shadow-xs active:scale-[0.98] transition-all text-left flex items-center gap-3 cursor-pointer group`}
+                className={`p-3 rounded-2xl border border-[#E2E8E4] dark:border-[#2E3532] bg-white dark:bg-[#232725] ${item.hoverBorder} hover:shadow-xs active:scale-[0.98] transition-all text-left flex items-center gap-3 cursor-pointer group`}
               >
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${item.color}`}>
-                  <Icon className="w-5 h-5" />
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${item.color}`}>
+                  <Icon className="w-4.5 h-4.5" />
                 </div>
 
                 <div className="min-w-0">
-                  <h4 className="font-bold text-xs sm:text-sm text-[#202724] dark:text-[#F7F4EA] group-hover:text-[#075C45] dark:group-hover:text-[#78D9A6] transition-colors leading-tight">
+                  <h4 className="font-bold text-xs sm:text-sm text-[#202724] dark:text-[#F4F4F5] group-hover:text-[#075C45] dark:group-hover:text-[#78D9A6] transition-colors leading-tight">
                     {item.label}
                   </h4>
                   <p className="text-[10px] sm:text-[11px] text-[#5E6963] dark:text-[#95A39B] truncate mt-0.5">
@@ -708,14 +708,14 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
       {/* ==================================================
           5. METAS (Card "Minhas metas")
           ================================================== */}
-      <Card className="border-[#E2E8E4] dark:border-[#24312B] bg-white dark:bg-[#18211D] shadow-xs">
-        <CardContent className="p-4 pt-4 sm:p-6 space-y-3 sm:space-y-4">
-          <div className="flex items-center justify-between pb-2.5 sm:pb-3 border-b border-[#E2E8E4] dark:border-[#24312B]">
+      <Card className="border-[#E2E8E4] dark:border-[#2E3532] bg-white dark:bg-[#232725] shadow-xs">
+        <CardContent className="p-4 pt-4 sm:p-5 space-y-3 sm:space-y-3.5">
+          <div className="flex items-center justify-between pb-2.5 sm:pb-3 border-b border-[#E2E8E4] dark:border-[#2E3532]">
             <div className="flex items-center gap-2 sm:gap-2.5">
               <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-[#D6A84B]/15 text-[#b07d17] dark:bg-[#D6A84B]/25 dark:text-[#F2D58A] flex items-center justify-center shrink-0">
                 <Target className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </div>
-              <h3 className="text-sm sm:text-base font-bold font-display text-[#202724] dark:text-[#F7F4EA]">
+              <h3 className="text-sm sm:text-base font-bold font-display text-[#202724] dark:text-[#F4F4F5]">
                 Minhas metas
               </h3>
             </div>
@@ -732,11 +732,11 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
           </div>
 
           {/* Estado inicial de metas */}
-          <div className="py-3 px-3 sm:py-6 sm:px-4 text-center flex flex-col items-center justify-center space-y-1.5 sm:space-y-2 rounded-xl sm:rounded-2xl bg-[#F2F5F3]/70 dark:bg-[#101614]/50 border border-dashed border-[#E2E8E4] dark:border-[#24312B]">
-            <div className="w-7 h-7 sm:w-10 sm:h-10 rounded-full bg-[#16A66A]/10 text-[#075C45] dark:bg-[#16A66A]/20 dark:text-[#78D9A6] flex items-center justify-center shrink-0">
-              <Target className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
+          <div className="py-3 px-3 sm:py-5 sm:px-4 text-center flex flex-col items-center justify-center space-y-1.5 sm:space-y-2 rounded-xl sm:rounded-2xl bg-[#EBECEE]/50 dark:bg-[#181B1A]/50 border border-dashed border-[#E2E8E4] dark:border-[#2E3532]">
+            <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-full bg-[#16A66A]/10 text-[#075C45] dark:bg-[#16A66A]/20 dark:text-[#78D9A6] flex items-center justify-center shrink-0">
+              <Target className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5" />
             </div>
-            <p className="text-xs sm:text-sm font-bold text-[#202724] dark:text-[#F7F4EA]">
+            <p className="text-xs sm:text-sm font-bold text-[#202724] dark:text-[#F4F4F5]">
               Nenhuma meta criada ainda.
             </p>
             <p className="text-[11px] sm:text-xs text-[#5E6963] dark:text-[#95A39B] max-w-sm leading-snug">
