@@ -216,4 +216,41 @@ export const monthlyClosuresService = {
       return { success: false, error: err?.message || 'Falha ao processar o fechamento do mês.' };
     }
   },
+
+  /**
+   * Reabre o mês excluindo exclusivamente o snapshot de fechamento correspondente em monthly_closures.
+   * Não altera nem exclui nenhuma entrada ou despesa financeira.
+   */
+  async reopenMonth(
+    closureId: string,
+    spaceId: string
+  ): Promise<{
+    success: boolean;
+    error?: string;
+  }> {
+    if (!supabase) {
+      return { success: false, error: 'Supabase não inicializado.' };
+    }
+
+    if (!closureId || !spaceId) {
+      return { success: false, error: 'Identificador do fechamento e do espaço são obrigatórios.' };
+    }
+
+    try {
+      const { error } = await supabase
+        .from('monthly_closures')
+        .delete()
+        .eq('id', closureId)
+        .eq('space_id', spaceId);
+
+      if (error) {
+        console.warn('Erro ao reabrir mês (excluir fechamento):', error.message || error);
+        return { success: false, error: error.message || 'Erro ao reabrir competência no banco.' };
+      }
+
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Falha ao reabrir a competência.' };
+    }
+  },
 };

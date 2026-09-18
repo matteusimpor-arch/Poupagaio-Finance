@@ -1,10 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { monthlyClosuresService, emptyClosureSummary } from '../../lib/services/monthlyClosures';
+import { spaceService } from '../../lib/services/space';
 import { MonthlyClosure, MonthlyClosureSummary } from '../../types';
 import { formatCurrency, formatDateBR } from '../../lib/formatters';
 import { SupabaseSchemaNotice } from '../layout/SupabaseSchemaNotice';
 import { CloseMonthModal } from './CloseMonthModal';
+import { ClosureDetailModal } from './ClosureDetailModal';
+import { ReopenMonthModal } from './ReopenMonthModal';
 import { Card, CardContent } from '../ui/card';
 import { Button } from '../ui/button';
 import { Skeleton } from '../ui/skeleton';
@@ -52,6 +55,8 @@ export function ClosingScreen() {
   const [summary, setSummary] = useState<MonthlyClosureSummary>(emptyClosureSummary);
   const [history, setHistory] = useState<MonthlyClosure[]>([]);
 
+  const [userRole, setUserRole] = useState<string | null>(null);
+
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -59,8 +64,35 @@ export function ClosingScreen() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
+  // Estados dos Modais de Resumo Histórico e Reabertura
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState<boolean>(false);
+  const [detailClosure, setDetailClosure] = useState<MonthlyClosure | null>(null);
+  const [detailLabel, setDetailLabel] = useState<string>('');
+
+  const [isReopenModalOpen, setIsReopenModalOpen] = useState<boolean>(false);
+  const [reopenClosure, setReopenClosure] = useState<MonthlyClosure | null>(null);
+  const [isReopening, setIsReopening] = useState<boolean>(false);
+
   const billingCycle = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}`;
   const billingCycleLabel = `${MONTH_NAMES_PT[selectedMonth - 1]} de ${selectedYear}`;
+
+  // Auditoria de Role do usuário para permissões na interface
+  useEffect(() => {
+    async function fetchUserRole() {
+      if (!currentSpace?.id || !user?.id) return;
+      if (currentSpace.owner_id === user.id) {
+        setUserRole('owner');
+        return;
+      }
+      const members = await spaceService.getSpaceMembers(currentSpace.id);
+      const myMember = members.find((m) => m.user_id === user.id);
+      setUserRole(myMember?.role || 'member');
+    }
+    fetchUserRole();
+  }, [currentSpace?.id, currentSpace?.owner_id, user?.id]);
+
+  const canReopen =
+    currentSpace?.owner_id === user?.id || userRole === 'owner' || userRole === 'admin';
 
   const loadData = useCallback(async () => {
     if (!currentSpace?.id) return;
@@ -85,7 +117,7 @@ export function ClosingScreen() {
       setHistory(historyRes.closures);
 
       if (closureRes.closure) {
-        // Mês fechado: utiliza o snapshot armazenado
+        // Mês fechado: utiliza exclusivamente o snapshot armazenado
         const c = closureRes.closure;
         setSummary({
           total_income: Number(c.total_income) || 0,
@@ -96,7 +128,7 @@ export function ClosingScreen() {
           final_balance: Number(c.final_balance) || 0,
         });
       } else {
-        // Mês aberto: calcula os totais ao vivo reutilizando os serviços
+        // Mês aberto: calcula os totais ao vivo
         const liveSummary = await monthlyClosuresService.calculateMonthSummary(
           currentSpace.id,
           selectedYear,
@@ -145,10 +177,6 @@ export function ClosingScreen() {
     const res = await monthlyClosuresService.closeMonth({
       space_id: currentSpace.id,
       billing_cycle: billingCycle,
-      total_income: summary.total_income,
-      total_fixed_expenses: summary.total_fixed_expenses,
-      total_variable_expenses: summary.total_variable_expenses,
-      total_installments: summary.total_installments,
     });
 
     setIsSubmitting(false);
@@ -157,12 +185,49 @@ export function ClosingScreen() {
       setIsConfirmModalOpen(false);
       setClosure(res.closure);
       setSuccessMessage(`Mês de ${billingCycleLabel} encerrado com sucesso!`);
-      // Recarrega o histórico
-      const historyRes = await monthlyClosuresService.getMonthlyClosuresHistory(currentSpace.id);
-      if (historyRes.closures) setHistory(historyRes.closures);
+      await loadData();
     } else {
       if (res.isTableMissing) setIsTableMissing(true);
       setErrorMessage(res.error || 'Não foi possível realizar o fechamento do mês.');
+    }
+  };
+
+  // Handler para abrir o detalhe do resumo histórico
+  const handleOpenDetail = (c: MonthlyClosure) => {
+    const [hYear, hMonth] = c.billing_cycle.split('-').map(Number);
+    const label = `${MONTH_NAMES_PT[hMonth - 1]} de ${hYear}`;
+    setDetailClosure(c);
+    setDetailLabel(label);
+    setIsDetailModalOpen(true);
+  };
+
+  // Handler para abrir confirmação de reabertura
+  const handleOpenReopenConfirm = (c: MonthlyClosure) => {
+    setReopenClosure(c);
+    setIsReopenModalOpen(true);
+  };
+
+  // Executar a reabertura via DELETE no Supabase
+  const handleConfirmReopen = async () => {
+    if (!reopenClosure || !currentSpace?.id) return;
+    setIsReopening(true);
+    setErrorMessage(null);
+
+    const res = await monthlyClosuresService.reopenMonth(reopenClosure.id, currentSpace.id);
+    setIsReopening(false);
+
+    if (res.success) {
+      const [rYear, rMonth] = reopenClosure.billing_cycle.split('-').map(Number);
+      const rLabel = `${MONTH_NAMES_PT[rMonth - 1]} de ${rYear}`;
+
+      setIsReopenModalOpen(false);
+      setIsDetailModalOpen(false);
+      setReopenClosure(null);
+      setDetailClosure(null);
+      setSuccessMessage(`Competência ${rLabel} reaberta com sucesso. Os lançamentos foram mantidos.`);
+      await loadData();
+    } else {
+      setErrorMessage(res.error || 'Não foi possível reabrir a competência.');
     }
   };
 
@@ -380,14 +445,40 @@ export function ClosingScreen() {
                 </div>
               </div>
 
-              {/* Ação de Fechamento ou Aviso de Encerramento */}
+              {/* Ação de Fechamento ou Ações do Mês Fechado */}
               <div className="pt-4 border-t border-[#E2E8E4] dark:border-[#2E3532] flex flex-col sm:flex-row items-center justify-between gap-3">
                 {closure ? (
-                  <div className="w-full p-3 rounded-xl bg-[#F9FAF9] dark:bg-[#181B1A] border border-[#E2E8E4] dark:border-[#2E3532] flex items-center gap-2.5 text-xs text-[#5E6963] dark:text-[#95A39B]">
-                    <Info className="w-4 h-4 text-cyan-600 dark:text-cyan-400 shrink-0" />
-                    <span>
-                      Esta competência foi encerrada e teve seu resultado registrado no histórico de fechamentos.
-                    </span>
+                  <div className="w-full p-3.5 rounded-xl bg-[#F9FAF9] dark:bg-[#181B1A] border border-[#E2E8E4] dark:border-[#2E3532] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5 text-xs text-[#5E6963] dark:text-[#95A39B]">
+                      <Info className="w-4 h-4 text-cyan-600 dark:text-cyan-400 shrink-0" />
+                      <span>
+                        Esta competência foi encerrada e seu resultado está salvo no histórico.
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleOpenDetail(closure)}
+                        className="text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <FileText className="w-3.5 h-3.5" />
+                        <span>Ver Resumo</span>
+                      </Button>
+                      {canReopen && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleOpenReopenConfirm(closure)}
+                          className="border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
+                        >
+                          <Unlock className="w-3.5 h-3.5" />
+                          <span>Reabrir Mês</span>
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 ) : (
                   <>
@@ -467,18 +558,29 @@ export function ClosingScreen() {
                     </span>
                   </div>
 
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setSelectedYear(hYear);
-                      setSelectedMonth(hMonth);
-                    }}
-                    className="w-full text-xs h-8 cursor-pointer mt-1"
-                  >
-                    Ver Resumo
-                  </Button>
+                  <div className="flex items-center gap-2 pt-1">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleOpenDetail(item)}
+                      className="flex-1 text-xs h-8 cursor-pointer font-semibold"
+                    >
+                      Resumo
+                    </Button>
+                    {canReopen && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleOpenReopenConfirm(item)}
+                        className="text-xs h-8 cursor-pointer border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 px-2.5"
+                        title="Reabrir este mês"
+                      >
+                        <Unlock className="w-3.5 h-3.5" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
               );
             })}
@@ -494,6 +596,33 @@ export function ClosingScreen() {
         summary={summary}
         billingCycleLabel={billingCycleLabel}
         isSubmitting={isSubmitting}
+      />
+
+      {/* Modal de Detalhe / Resumo do Snapshot Histórico */}
+      <ClosureDetailModal
+        isOpen={isDetailModalOpen}
+        onClose={() => setIsDetailModalOpen(false)}
+        closure={detailClosure}
+        billingCycleLabel={detailLabel}
+        canReopen={canReopen}
+        onOpenReopenConfirm={() => {
+          if (detailClosure) handleOpenReopenConfirm(detailClosure);
+        }}
+      />
+
+      {/* Modal de Confirmação para Reabrir Mês */}
+      <ReopenMonthModal
+        isOpen={isReopenModalOpen}
+        onClose={() => setIsReopenModalOpen(false)}
+        onConfirm={handleConfirmReopen}
+        billingCycleLabel={
+          reopenClosure
+            ? `${MONTH_NAMES_PT[Number(reopenClosure.billing_cycle.split('-')[1]) - 1]} de ${
+                reopenClosure.billing_cycle.split('-')[0]
+              }`
+            : ''
+        }
+        isSubmitting={isReopening}
       />
     </div>
   );

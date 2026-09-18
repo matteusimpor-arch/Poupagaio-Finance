@@ -13,6 +13,7 @@ import { GoalsScreen } from './components/goals/GoalsScreen';
 import { WishlistScreen } from './components/wishlist/WishlistScreen';
 import { MarketScreen } from './components/market/MarketScreen';
 import { ClosingScreen } from './components/closing/ClosingScreen';
+import { CalendarScreen } from './components/calendar/CalendarScreen';
 import { ModulePlaceholder } from './components/dashboard/ModulePlaceholder';
 import { ProfileScreen } from './components/profile/ProfileScreen';
 import { Skeleton } from './components/ui/skeleton';
@@ -92,6 +93,9 @@ function AppContent() {
     }
     if (currentTab === 'closing') {
       return <ClosingScreen />;
+    }
+    if (currentTab === 'calendar') {
+      return <CalendarScreen onSelectTab={setCurrentTab} />;
     }
     if (currentTab === 'profile') {
       return <ProfileScreen />;

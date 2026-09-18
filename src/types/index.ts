@@ -46,6 +46,7 @@ export type ActiveTab =
   | 'goals' 
   | 'wishlist' 
   | 'closing' 
+  | 'calendar'
   | 'profile';
 
 export type EntryStatus = 'pending' | 'received';
@@ -537,7 +538,7 @@ export interface MonthlyClosure {
   closed_by?: string | null;
   closed_by_name?: string | null;
   created_at: string;
-  updated_at: string;
+  updated_at?: string;
 }
 
 export interface MonthlyClosureSummary {

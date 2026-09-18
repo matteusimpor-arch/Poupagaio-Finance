@@ -105,6 +105,13 @@ const moduleDetails: Record<ActiveTab, { title: string; subtitle: string; icon: 
     description: 'Gerencie suas informações pessoais, altere seu nome e personalize o Poupagaio Finance.',
     highlights: ['Dados da conta', 'Espaços de trabalho', 'Tema claro e escuro'],
   },
+  calendar: {
+    title: 'Calendário Financeiro',
+    subtitle: 'Cronograma mensal de pagamentos',
+    icon: CalendarCheck,
+    description: 'Acompanhe seus compromissos e anote lembretes diários diretamente no calendário.',
+    highlights: ['Visão diária de vencimentos', 'Anotações por data', 'Filtros rápidos de status'],
+  },
 };
 
 export function ModulePlaceholder({ tab, onSelectTab }: ModulePlaceholderProps) {

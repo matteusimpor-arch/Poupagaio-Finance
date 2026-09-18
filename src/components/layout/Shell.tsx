@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useTheme } from '../../hooks/useTheme';
 import { POUPAGAIO_MASCOT_URL } from '../../assets/mascot';
 import { SpaceSelector } from './SpaceSelector';
 import { SupabaseSchemaNotice } from './SupabaseSchemaNotice';
 import { Avatar } from '../ui/avatar';
+import { checklistService, FinancialAlert } from '../../lib/services/checklist';
+import { formatCurrency } from '../../lib/formatters';
 import {
   Home,
   ArrowUpRight,
@@ -24,6 +26,8 @@ import {
   X,
   Plus,
   Bell,
+  AlertCircle,
+  Clock,
 } from 'lucide-react';
 import { ActiveTab } from '../../types';
 import { QUICK_ACTION_ITEMS } from '../../lib/constants/quickActions';
@@ -40,11 +44,29 @@ interface NavGroup {
 }
 
 export function Shell({ currentTab, onSelectTab, children }: ShellProps) {
-  const { user, profile, signOut } = useAuth();
+  const { user, profile, currentSpace, signOut } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const [isActionSheetOpen, setIsActionSheetOpen] = useState(false);
   const [isMobileNotificationsOpen, setIsMobileNotificationsOpen] = useState(false);
+  const [alerts, setAlerts] = useState<FinancialAlert[]>([]);
+
+  useEffect(() => {
+    async function loadAlerts() {
+      if (!currentSpace?.id) return;
+      const now = new Date();
+      try {
+        const res = await checklistService.getMonthlyChecklist(currentSpace.id, now.getFullYear(), now.getMonth() + 1);
+        setAlerts(res.alerts);
+      } catch (e) {
+        console.warn('Erro ao carregar alertas na barra de navegação:', e);
+      }
+    }
+    loadAlerts();
+    // Atualiza a cada 60 segundos
+    const interval = setInterval(loadAlerts, 60000);
+    return () => clearInterval(interval);
+  }, [currentSpace?.id]);
 
   const sidebarNavGroups: NavGroup[] = [
     {
@@ -247,14 +269,18 @@ export function Shell({ currentTab, onSelectTab, children }: ShellProps) {
                 className="p-2 rounded-xl border border-[#E2E8E4] hover:bg-black/5 dark:border-[#24312B] dark:hover:bg-white/5 text-[#5E6963] dark:text-[#95A39B] cursor-pointer relative"
               >
                 <Bell className="w-4 h-4" />
+                {alerts.length > 0 && (
+                  <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-rose-600 rounded-full ring-2 ring-white dark:ring-[#1E2220]" />
+                )}
                 <span className="sr-only">Notificações</span>
               </button>
 
               {isMobileNotificationsOpen && (
-                <div className="absolute right-0 mt-2 w-72 rounded-2xl border border-[#E2E8E4] dark:border-[#24312B] bg-white dark:bg-[#18211D] p-4 shadow-xl z-50 animate-in fade-in zoom-in-95 duration-150">
+                <div className="absolute right-0 mt-2 w-80 rounded-2xl border border-[#E2E8E4] dark:border-[#24312B] bg-white dark:bg-[#18211D] p-4 shadow-xl z-50 animate-in fade-in zoom-in-95 duration-150">
                   <div className="flex items-center justify-between pb-2 border-b border-[#E2E8E4] dark:border-[#24312B]">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-[#075C45] dark:text-[#78D9A6]">
-                      Notificações
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-[#075C45] dark:text-[#78D9A6] flex items-center gap-1.5">
+                      <Bell className="w-3.5 h-3.5 text-[#16A66A]" />
+                      Alertas Ativos ({alerts.length})
                     </h4>
                     <button
                       type="button"
@@ -264,14 +290,65 @@ export function Shell({ currentTab, onSelectTab, children }: ShellProps) {
                       <X className="w-3.5 h-3.5" />
                     </button>
                   </div>
-                  <div className="py-3 text-center space-y-1">
-                    <p className="text-xs font-semibold text-[#202724] dark:text-[#F7F4EA]">
-                      Tudo em dia!
-                    </p>
-                    <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B]">
-                      Você não tem lembretes ou avisos pendentes.
-                    </p>
-                  </div>
+                  
+                  {alerts.length === 0 ? (
+                    <div className="py-5 text-center space-y-1">
+                      <p className="text-xs font-semibold text-[#202724] dark:text-[#F7F4EA]">
+                        Tudo em dia!
+                      </p>
+                      <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B]">
+                        Você não tem lembretes ou avisos pendentes.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="py-2 divide-y divide-[#E2E8E4]/50 dark:divide-[#24312B]/50 max-h-[280px] overflow-y-auto">
+                      {alerts.slice(0, 5).map((alert) => (
+                        <div
+                          key={alert.id}
+                          onClick={() => {
+                            setIsMobileNotificationsOpen(false);
+                            onSelectTab('calendar');
+                          }}
+                          className="py-2.5 text-left cursor-pointer hover:bg-black/2 dark:hover:bg-white/2 transition-colors flex items-start gap-2.5"
+                        >
+                          {alert.severity === 'critical' ? (
+                            <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 mt-0.5 shrink-0" />
+                          ) : (
+                            <Clock className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-bold text-[#202724] dark:text-[#F4F4F5] truncate">
+                              {alert.title}
+                            </p>
+                            <p className="text-[10px] text-[#5E6963] dark:text-[#95A39B]">
+                              Vence em: {alert.dueDate.split('-').reverse().join('/')} • {formatCurrency(alert.amount)}
+                            </p>
+                          </div>
+                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0 ${
+                            alert.severity === 'critical'
+                              ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-400'
+                              : 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-400'
+                          }`}>
+                            {alert.badgeText}
+                          </span>
+                        </div>
+                      ))}
+                      {alerts.length > 5 && (
+                        <div className="pt-2 text-center">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsMobileNotificationsOpen(false);
+                              onSelectTab('calendar');
+                            }}
+                            className="text-[11px] font-bold text-[#16A66A] hover:underline"
+                          >
+                            Ver mais {alerts.length - 5} alertas no Calendário →
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>

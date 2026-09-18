@@ -1,6 +1,6 @@
 -- ==============================================================================
--- POUPAGAIO FINANCE — ETAPA 3.5: FECHAMENTO DO MÊS (MIGRATION FINAL REVISADA)
--- Criação da tabela e RPC transacional estritamente autoritativa no servidor:
+-- POUPAGAIO FINANCE — ETAPA 3.5: FECHAMENTO DO MÊS (MIGRATION FINAL)
+-- Tabela e RPC transacional estritamente autoritativa no servidor:
 --   1. public.monthly_closures (Registro imutável do snapshot de fechamento)
 --   2. public.fn_close_month (RPC transacional atômica com cálculo 100% no servidor)
 -- ==============================================================================
@@ -21,30 +21,8 @@ CREATE TABLE IF NOT EXISTS public.monthly_closures (
     closed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     closed_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     CONSTRAINT unique_space_billing_cycle UNIQUE (space_id, billing_cycle)
 );
-
--- Índice de auditoria por usuário responsável pelo fechamento
--- Nota: O índice para (space_id, billing_cycle) é gerado automaticamente pela constraint UNIQUE acima.
-CREATE INDEX IF NOT EXISTS idx_monthly_closures_closed_by ON public.monthly_closures(closed_by);
-
--- Trigger de Imutabilidade do Snapshot: Impede qualquer alteração após o fechamento
-CREATE OR REPLACE FUNCTION public.handle_monthly_closures_updated_at()
-RETURNS TRIGGER
-LANGUAGE plpgsql
-SET search_path = public, pg_temp
-AS $$
-BEGIN
-    RAISE EXCEPTION 'Imutabilidade violada: Registros de fechamento mensal são snapshots históricos e não podem ser alterados via UPDATE.';
-    RETURN NULL;
-END;
-$$;
-
-DROP TRIGGER IF EXISTS trg_monthly_closures_updated_at ON public.monthly_closures;
-CREATE TRIGGER trg_monthly_closures_updated_at
-    BEFORE UPDATE ON public.monthly_closures
-    FOR EACH ROW EXECUTE FUNCTION public.handle_monthly_closures_updated_at();
 
 -- Habilitação de RLS
 ALTER TABLE public.monthly_closures ENABLE ROW LEVEL SECURITY;
@@ -91,7 +69,7 @@ WITH CHECK (
     )
 );
 
--- 3. UPDATE: PROIBIDO. Não há política de UPDATE (Imutabilidade estrita).
+-- 3. UPDATE: PROIBIDO (Sem política de UPDATE)
 DROP POLICY IF EXISTS "Membros autorizados podem atualizar fechamento do espaço" ON public.monthly_closures;
 
 -- 4. DELETE: Somente proprietários ou administradores do espaço
@@ -113,7 +91,7 @@ USING (
     )
 );
 
--- Permissões de Tabela
+-- Permissões de Tabela: UPDATE revogado para garantir imutabilidade absoluta
 REVOKE ALL ON TABLE public.monthly_closures FROM PUBLIC;
 REVOKE ALL ON TABLE public.monthly_closures FROM anon;
 GRANT SELECT, INSERT, DELETE ON TABLE public.monthly_closures TO authenticated;
@@ -121,7 +99,7 @@ GRANT SELECT, INSERT, DELETE ON TABLE public.monthly_closures TO authenticated;
 
 -- ------------------------------------------------------------------------------
 -- 2. RPC TRANSACIONAL ATÔMICA E AUTORITATIVA DE FECHAMENTO (public.fn_close_month)
---    Assinatura estrita: (p_space_id, p_billing_cycle).
+--    Assinatura estrita: (p_space_id UUID, p_billing_cycle VARCHAR(7)).
 --    Cálculo 100% no servidor diretamente das tabelas oficiais, sem exceções mascaradas.
 -- ------------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.fn_close_month(
@@ -135,8 +113,8 @@ SET search_path = public, pg_temp
 AS $$
 DECLARE
     v_closed_by UUID;
-    v_year INT;
     v_month INT;
+    v_cycle_date DATE;
     
     v_calc_income NUMERIC(12, 2) := 0.00;
     v_calc_fixed NUMERIC(12, 2) := 0.00;
@@ -158,11 +136,16 @@ BEGIN
         RAISE EXCEPTION 'Competência inválida. Formato esperado: YYYY-MM (ex: 2026-09).';
     END IF;
 
-    -- Extrair ano e mês numéricos
-    v_year := split_part(p_billing_cycle, '-', 1)::integer;
+    -- Extrair mês numérico para despesas anuais e converter para data no dia 1
     v_month := split_part(p_billing_cycle, '-', 2)::integer;
+    v_cycle_date := to_date(p_billing_cycle || '-01', 'YYYY-MM-DD');
 
-    -- 3. Validar autorização no espaço financeiro
+    -- 3. Bloquear fechamento de competências futuras (Permite apenas mês atual ou anteriores)
+    IF v_cycle_date > date_trunc('month', CURRENT_DATE) THEN
+        RAISE EXCEPTION 'Não é permitido realizar o fechamento de competências futuras (%).', p_billing_cycle;
+    END IF;
+
+    -- 4. Validar autorização do usuário no espaço financeiro
     IF NOT EXISTS (
         SELECT 1 FROM public.space_members
         WHERE space_id = p_space_id
@@ -176,7 +159,7 @@ BEGIN
         RAISE EXCEPTION 'Acesso negado: Você não possui autorização para fechar a competência neste espaço.';
     END IF;
 
-    -- 4. Validar prévia de fechamento duplicado
+    -- 5. Validar prévia de fechamento duplicado (Constraint UNIQUE garante concorrência)
     IF EXISTS (
         SELECT 1 FROM public.monthly_closures
         WHERE space_id = p_space_id AND billing_cycle = p_billing_cycle
@@ -184,7 +167,7 @@ BEGIN
         RAISE EXCEPTION 'Esta competência (%) já se encontra fechada para este espaço.', p_billing_cycle;
     END IF;
 
-    -- 5. CÁLCULOS AUTORITATIVOS DIRETAMENTE DAS TABELAS OFICIAIS (SEM TRATAMENTO DE ERRO SILENCIOSO)
+    -- 6. CÁLCULOS AUTORITATIVOS DIRETAMENTE DAS TABELAS OFICIAIS (SEM TRATAMENTO SILENCIOSO DE ERRO)
 
     -- A) ENTRADAS (public.entries): Soma de todas as receitas lançadas para o mês
     SELECT COALESCE(SUM(amount), 0.00)
@@ -193,7 +176,9 @@ BEGIN
     WHERE space_id = p_space_id
       AND to_char(date, 'YYYY-MM') = p_billing_cycle;
 
-    -- B) GASTOS FIXOS (public.fixed_expenses): Soma de todos os gastos fixos vigentes na competência (mensais ou anuais do mês)
+    -- B) GASTOS FIXOS (public.fixed_expenses): Regra V1
+    -- Nota: O fechamento utiliza a configuração de gastos fixos existente no momento em que a competência é fechada.
+    -- O snapshot gravado em monthly_closures preserva esse resultado e não muda posteriormente.
     SELECT COALESCE(SUM(amount), 0.00)
     INTO v_calc_fixed
     FROM public.fixed_expenses
@@ -218,7 +203,7 @@ BEGIN
     v_total_expenses := ROUND(v_calc_fixed + v_calc_variable + v_calc_installments, 2);
     v_final_balance := ROUND(v_calc_income - v_total_expenses, 2);
 
-    -- 6. Inserção atômica do snapshot de fechamento no banco
+    -- 7. Inserção atômica do snapshot de fechamento no banco
     INSERT INTO public.monthly_closures (
         space_id,
         billing_cycle,
