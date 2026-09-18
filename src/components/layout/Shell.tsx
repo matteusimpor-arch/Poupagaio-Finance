@@ -13,7 +13,6 @@ import {
   FileText,
   Calendar,
   ShoppingBag,
-  TrendingUp,
   Target,
   Gift,
   CalendarCheck,
@@ -69,7 +68,6 @@ export function Shell({ currentTab, onSelectTab, children }: ShellProps) {
       title: 'Organização',
       items: [
         { id: 'market', label: 'Mercado', icon: ShoppingBag },
-        { id: 'investments', label: 'Investimentos', icon: TrendingUp },
         { id: 'goals', label: 'Metas', icon: Target },
         { id: 'wishlist', label: 'Lista de Desejos', icon: Gift },
       ],

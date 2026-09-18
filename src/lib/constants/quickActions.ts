@@ -5,7 +5,6 @@ import {
   CreditCard,
   Calendar,
   ShoppingBag,
-  TrendingUp,
   Target,
   Gift,
   CalendarCheck,
@@ -55,13 +54,6 @@ export const QUICK_ACTION_ITEMS: QuickActionItem[] = [
     description: 'Listas e compras',
     icon: ShoppingBag,
     color: 'text-orange-600 bg-orange-50 dark:bg-orange-950/40 dark:text-orange-400',
-  },
-  {
-    id: 'investments',
-    label: 'Investimentos',
-    description: 'Aplicações e resgates',
-    icon: TrendingUp,
-    color: 'text-blue-600 bg-blue-50 dark:bg-blue-950/40 dark:text-blue-400',
   },
   {
     id: 'goals',

@@ -18,7 +18,7 @@ const CATEGORY_SUGGESTIONS = [
   'Renda extra',
   'Venda',
   'Reembolso',
-  'Investimentos',
+  'Rendimentos',
   'Benefício',
   'Presente',
   'Outros',

@@ -7,7 +7,6 @@ import {
   CreditCard,
   FileText,
   ShoppingBag,
-  TrendingUp,
   Target,
   Gift,
   CalendarCheck,
@@ -63,13 +62,6 @@ const moduleDetails: Record<ActiveTab, { title: string; subtitle: string; icon: 
     icon: ShoppingBag,
     description: 'Organize listas de compras e compare preços para economizar nas idas ao supermercado.',
     highlights: ['Listas inteligentes', 'Histórico de preços', 'Estimativa de gasto'],
-  },
-  investments: {
-    title: 'Investimentos',
-    subtitle: 'Patrimônio e rentabilidade',
-    icon: TrendingUp,
-    description: 'Acompanhe a evolução do seu patrimônio em renda fixa, variável e reservas de emergência.',
-    highlights: ['Evolução patrimonial', 'Alocação de ativos', 'Dividendos e proventos'],
   },
   goals: {
     title: 'Metas',
