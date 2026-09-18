@@ -432,3 +432,89 @@ export interface UpdateWishlistItemInput {
   notes?: string | null;
 }
 
+// ==========================================
+// MERCADO (SHOPPING LISTS) — ETAPA 3.6
+// ==========================================
+export type ShoppingListStatus = 'active' | 'completed' | 'archived';
+
+export interface ShoppingList {
+  id: string;
+  space_id: string;
+  created_by: string | null;
+  name: string;
+  shopping_date?: string | null; // YYYY-MM-DD
+  status: ShoppingListStatus;
+  notes?: string | null;
+  completed_at?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ShoppingListItem {
+  id: string;
+  shopping_list_id: string;
+  space_id: string;
+  created_by: string | null;
+  name: string;
+  quantity: number;
+  unit?: string | null;
+  estimated_unit_price?: number | null;
+  actual_unit_price?: number | null;
+  is_checked: boolean;
+  category?: string | null;
+  notes?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ShoppingListTotals {
+  totalEstimated: number;
+  totalActual: number;
+  totalItems: number;
+  checkedItems: number;
+}
+
+export interface ShoppingListWithItems extends ShoppingList {
+  items: ShoppingListItem[];
+  totals: ShoppingListTotals;
+}
+
+export interface CreateShoppingListInput {
+  space_id: string;
+  name: string;
+  shopping_date?: string | null;
+  notes?: string | null;
+}
+
+export interface UpdateShoppingListInput {
+  name?: string;
+  shopping_date?: string | null;
+  notes?: string | null;
+  status?: ShoppingListStatus;
+  completed_at?: string | null;
+}
+
+export interface CreateShoppingListItemInput {
+  shopping_list_id: string;
+  space_id: string;
+  name: string;
+  quantity: number;
+  unit?: string | null;
+  estimated_unit_price?: number | null;
+  actual_unit_price?: number | null;
+  is_checked?: boolean;
+  category?: string | null;
+  notes?: string | null;
+}
+
+export interface UpdateShoppingListItemInput {
+  name?: string;
+  quantity?: number;
+  unit?: string | null;
+  estimated_unit_price?: number | null;
+  actual_unit_price?: number | null;
+  is_checked?: boolean;
+  category?: string | null;
+  notes?: string | null;
+}
+

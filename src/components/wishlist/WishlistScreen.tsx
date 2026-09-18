@@ -7,15 +7,12 @@ import {
   WishlistPriority,
   CreateWishlistItemInput,
   UpdateWishlistItemInput,
-  CreateGoalInput,
 } from '../../types';
 import { wishlistService, emptyWishlistSummary } from '../../lib/services/wishlist';
-import { goalsService } from '../../lib/services/goals';
 import { formatCurrency } from '../../lib/formatters';
 import { WishlistCard } from './WishlistCard';
 import { WishlistModal } from './WishlistModal';
 import { DeleteWishlistConfirmModal } from './DeleteWishlistConfirmModal';
-import { GoalModal } from '../goals/GoalModal';
 import { Button } from '../ui/button';
 import { Card, CardContent } from '../ui/card';
 import { Skeleton } from '../ui/skeleton';
@@ -54,10 +51,6 @@ export function WishlistScreen() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<WishlistItem | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-
-  // Modal explícito de Meta (para ação opcional "Transformar em Meta")
-  const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
-  const [goalPrefill, setGoalPrefill] = useState<CreateGoalInput | null>(null);
 
   // Copiar SQL caso tabela não exista
   const [copiedSql, setCopiedSql] = useState(false);
@@ -156,37 +149,6 @@ export function WishlistScreen() {
       setUserFriendlyError('Falha ao excluir o desejo.');
     } finally {
       setIsDeleting(false);
-    }
-  };
-
-  // Transformar em meta (Ação explícita reutilizando o fluxo oficial de criação de Meta)
-  const handleOpenConvertToGoal = (item: WishlistItem) => {
-    if (!currentSpace?.id) return;
-    setGoalPrefill({
-      space_id: currentSpace.id,
-      name: item.name,
-      target_amount: item.estimated_amount,
-      target_date: item.desired_date || null,
-      category: item.category,
-      status: 'active',
-      notes: item.notes ? `Originado da Lista de Desejos: ${item.notes}` : 'Originado da Lista de Desejos',
-    });
-    setIsGoalModalOpen(true);
-  };
-
-  const handleSaveGoalConversion = async (
-    input: CreateGoalInput
-  ): Promise<{ success: boolean; error?: string }> => {
-    try {
-      const res = await goalsService.createGoal(input);
-      if (res.success) {
-        setIsGoalModalOpen(false);
-        setGoalPrefill(null);
-        return { success: true };
-      }
-      return { success: false, error: res.error };
-    } catch (err: any) {
-      return { success: false, error: err.message || 'Erro ao criar meta.' };
     }
   };
 
@@ -473,7 +435,6 @@ export function WishlistScreen() {
                 setItemToDelete(it);
                 setIsDeleteModalOpen(true);
               }}
-              onConvertToGoal={handleOpenConvertToGoal}
             />
           ))}
         </div>
@@ -504,38 +465,6 @@ export function WishlistScreen() {
         item={itemToDelete}
         isDeleting={isDeleting}
       />
-
-      {/* Modal Explícito para Conversão em Meta (se acionado) */}
-      {currentSpace?.id && isGoalModalOpen && (
-        <GoalModal
-          isOpen={isGoalModalOpen}
-          onClose={() => {
-            setIsGoalModalOpen(false);
-            setGoalPrefill(null);
-          }}
-          onSave={async (goalInput) => {
-            const res = await handleSaveGoalConversion(goalInput as CreateGoalInput);
-            return res;
-          }}
-          spaceId={currentSpace.id}
-          goalToEdit={
-            goalPrefill
-              ? {
-                  id: '',
-                  space_id: currentSpace.id,
-                  name: goalPrefill.name,
-                  target_amount: goalPrefill.target_amount,
-                  target_date: goalPrefill.target_date || null,
-                  category: goalPrefill.category || 'Geral',
-                  status: 'active',
-                  notes: goalPrefill.notes || null,
-                  created_at: new Date().toISOString(),
-                  updated_at: new Date().toISOString(),
-                }
-              : null
-          }
-        />
-      )}
     </div>
   );
 }

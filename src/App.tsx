@@ -11,6 +11,7 @@ import { VariableExpensesScreen } from './components/variable-expenses/VariableE
 import { InstallmentsScreen } from './components/installments/InstallmentsScreen';
 import { GoalsScreen } from './components/goals/GoalsScreen';
 import { WishlistScreen } from './components/wishlist/WishlistScreen';
+import { MarketScreen } from './components/market/MarketScreen';
 import { ModulePlaceholder } from './components/dashboard/ModulePlaceholder';
 import { ProfileScreen } from './components/profile/ProfileScreen';
 import { Skeleton } from './components/ui/skeleton';
@@ -84,6 +85,9 @@ function AppContent() {
     }
     if (currentTab === 'wishlist') {
       return <WishlistScreen />;
+    }
+    if (currentTab === 'market') {
+      return <MarketScreen />;
     }
     if (currentTab === 'profile') {
       return <ProfileScreen />;

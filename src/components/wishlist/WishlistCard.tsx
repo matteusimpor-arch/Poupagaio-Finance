@@ -20,7 +20,6 @@ import {
   CheckCircle2,
   Archive,
   RotateCcw,
-  Target,
 } from 'lucide-react';
 
 interface WishlistCardProps {
@@ -29,7 +28,6 @@ interface WishlistCardProps {
   onEdit: (item: WishlistItem) => void;
   onUpdateStatus: (item: WishlistItem, newStatus: WishlistStatus) => void;
   onDelete: (item: WishlistItem) => void;
-  onConvertToGoal?: (item: WishlistItem) => void;
 }
 
 export function WishlistCard({
@@ -37,7 +35,6 @@ export function WishlistCard({
   onEdit,
   onUpdateStatus,
   onDelete,
-  onConvertToGoal,
 }: WishlistCardProps) {
   // Ícone contextual sutil por categoria
   const getCategoryIcon = (category: string) => {
@@ -227,21 +224,6 @@ export function WishlistCard({
               >
                 <RotateCcw className="w-3.5 h-3.5 mr-1" />
                 Reativar
-              </Button>
-            )}
-
-            {/* Opção para transformar em meta (se callback fornecido) */}
-            {onConvertToGoal && item.status === 'active' && (
-              <Button
-                id={`btn-convert-goal-${item.id}`}
-                variant="ghost"
-                size="sm"
-                onClick={() => onConvertToGoal(item)}
-                className="h-7 px-2 text-xs text-teal-700 dark:text-teal-300 hover:bg-teal-50 dark:hover:bg-teal-950/40"
-                title="Transformar este desejo em uma Meta financeira"
-              >
-                <Target className="w-3.5 h-3.5 mr-1 text-teal-600" />
-                Virar Meta
               </Button>
             )}
           </div>
