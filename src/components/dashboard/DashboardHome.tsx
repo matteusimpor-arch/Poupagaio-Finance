@@ -225,7 +225,7 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
               className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#075C45] hover:bg-[#075C45]/90 text-white dark:bg-[#16A66A] dark:hover:bg-[#16A66A]/90 dark:text-[#101614] text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95"
             >
               <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-              <span>+ Novo</span>
+              <span>Novo</span>
             </button>
 
             {/* Dropdown Menu "+ Novo" */}
@@ -727,7 +727,7 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
               className="gap-1 text-xs font-semibold cursor-pointer py-1 px-2.5 h-8 sm:h-9"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>+ Criar meta</span>
+              <span>Criar meta</span>
             </Button>
           </div>
 
