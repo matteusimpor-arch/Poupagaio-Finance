@@ -166,23 +166,23 @@ export function InstallmentPurchaseModal({
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-installment-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3.5 sm:p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-200"
     >
-      <div className="relative w-full max-w-lg rounded-3xl bg-white dark:bg-[#18211D] border border-[#E8E4D5] dark:border-[#24312B] shadow-2xl p-6 sm:p-7 max-h-[90vh] overflow-y-auto">
+      <div className="relative w-full max-w-lg rounded-2xl sm:rounded-3xl bg-white dark:bg-[#18211D] border border-[#E2E8E4] dark:border-[#24312B] shadow-2xl p-4 sm:p-7 max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-[#E8E4D5] dark:border-[#24312B]">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-[#075C45]/10 text-[#075C45] dark:bg-[#16A66A]/20 dark:text-[#78D9A6] flex items-center justify-center">
+        <div className="flex items-center justify-between pb-3.5 sm:pb-4 border-b border-[#E2E8E4] dark:border-[#24312B]">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-[#075C45]/10 text-[#075C45] dark:bg-[#16A66A]/20 dark:text-[#78D9A6] flex items-center justify-center shrink-0">
               <Calculator className="w-5 h-5" />
             </div>
-            <div>
+            <div className="min-w-0">
               <h3
                 id="modal-installment-title"
-                className="text-lg font-bold font-display text-[#202724] dark:text-[#F7F4EA]"
+                className="text-base sm:text-lg font-bold font-display text-[#202724] dark:text-[#F7F4EA] truncate"
               >
                 {isEditing ? 'Editar Compra Parcelada' : 'Nova Compra Parcelada'}
               </h3>
-              <p className="text-xs text-[#5E6963] dark:text-[#95A39B]">
+              <p className="text-xs text-[#5E6963] dark:text-[#95A39B] truncate sm:whitespace-normal">
                 {isEditing
                   ? 'Atualize os dados da sua obrigação'
                   : 'Cadastre a compra para gerar todas as parcelas'}
@@ -193,7 +193,7 @@ export function InstallmentPurchaseModal({
             type="button"
             onClick={onClose}
             aria-label="Fechar"
-            className="p-1.5 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 text-[#5E6963] dark:text-[#95A39B] transition-colors cursor-pointer"
+            className="p-1.5 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 text-[#5E6963] dark:text-[#95A39B] transition-colors cursor-pointer shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
