@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '../../hooks/useAuth';
+import { supabase } from '../../lib/supabase';
 import { monthlyClosuresService } from '../../lib/services/monthlyClosures';
 import { entriesService } from '../../lib/services/entries';
 import { fixedExpensesService } from '../../lib/services/fixedExpenses';
@@ -33,6 +34,7 @@ import {
   AlertTriangle,
   History,
   X,
+  Download,
 } from 'lucide-react';
 
 // Tipos locais para organizar os dados compilados por mês
@@ -74,6 +76,14 @@ export function ReportsScreen() {
   const [closuresHistory, setClosuresHistory] = useState<MonthlyClosure[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Estados de dados brutos carregados em lote para exportação CSV e análise de performance
+  const [rawEntries, setRawEntries] = useState<any[]>([]);
+  const [rawVarExpenses, setRawVarExpenses] = useState<any[]>([]);
+  const [rawFixedExpenses, setRawFixedExpenses] = useState<any[]>([]);
+  const [rawPayments, setRawPayments] = useState<any[]>([]);
+  const [rawInstallments, setRawInstallments] = useState<any[]>([]);
+  const [rawPurchases, setRawPurchases] = useState<any[]>([]);
 
   // Estados para Modal de Detalhamento Mensal
   const [selectedDetailMonth, setSelectedDetailMonth] = useState<MonthReportData | null>(null);
@@ -138,7 +148,7 @@ export function ReportsScreen() {
     return list;
   }, [preset, customStartYear, customStartMonth, customEndYear, customEndMonth]);
 
-  // Carrega todos os dados de forma paralela e otimizada (sem N+1 de requisições sequenciais bloqueantes)
+  // Carrega todos os dados de forma paralela e otimizada (sem N+1 de requisições sequenciais de rede)
   const loadReportsData = useCallback(async () => {
     if (!currentSpace?.id) return;
     setIsLoading(true);
@@ -150,37 +160,100 @@ export function ReportsScreen() {
       const closures = closuresRes.closures || [];
       setClosuresHistory(closures);
 
-      // 2. Resolve cada mês do período mapeado de forma concorrente
-      const reportsPromise = cyclesToLoad.map(async (item) => {
+      // 2. Se houver ciclos a carregar, busca todo o período em lote de forma otimizada
+      let entriesData: any[] = [];
+      let varExpensesData: any[] = [];
+      let fixedExpensesData: any[] = [];
+      let paymentsData: any[] = [];
+      let installmentsData: any[] = [];
+      let purchasesData: any[] = [];
+
+      if (cyclesToLoad.length > 0 && supabase) {
+        const sortedCycles = [...cyclesToLoad].sort((a, b) => a.cycle.localeCompare(b.cycle));
+        const firstCycle = sortedCycles[0].cycle;
+        const lastCycle = sortedCycles[sortedCycles.length - 1].cycle;
+
+        const startDate = `${firstCycle}-01`;
+        const [lastYear, lastMonth] = lastCycle.split('-').map(Number);
+        const lastDay = new Date(lastYear, lastMonth, 0).getDate();
+        const endDate = `${lastCycle}-${String(lastDay).padStart(2, '0')}`;
+
+        const [
+          entriesRes,
+          varRes,
+          fixedRes,
+          paymentsRes,
+          instRes,
+          purchasesRes
+        ] = await Promise.all([
+          supabase.from('entries').select('*').eq('space_id', currentSpace.id).gte('date', startDate).lte('date', endDate),
+          supabase.from('variable_expenses').select('*').eq('space_id', currentSpace.id).gte('date', startDate).lte('date', endDate),
+          supabase.from('fixed_expenses').select('*').eq('space_id', currentSpace.id),
+          supabase.from('fixed_expense_payments').select('*').eq('space_id', currentSpace.id).gte('billing_cycle', firstCycle).lte('billing_cycle', lastCycle),
+          supabase.from('installments').select('*').eq('space_id', currentSpace.id).gte('due_date', startDate).lte('due_date', endDate),
+          supabase.from('installment_purchases').select('*').eq('space_id', currentSpace.id),
+        ]);
+
+        entriesData = entriesRes.data || [];
+        varExpensesData = varRes.data || [];
+        fixedExpensesData = fixedRes.data || [];
+        paymentsData = paymentsRes.data || [];
+        installmentsData = instRes.data || [];
+        purchasesData = purchasesRes.data || [];
+      }
+
+      setRawEntries(entriesData);
+      setRawVarExpenses(varExpensesData);
+      setRawFixedExpenses(fixedExpensesData);
+      setRawPayments(paymentsData);
+      setRawInstallments(installmentsData);
+      setRawPurchases(purchasesData);
+
+      // 3. Monta o relatório compilado para cada mês do período
+      const compiledReports = cyclesToLoad.map((item) => {
         const closedMatch = closures.find((c) => c.billing_cycle === item.cycle);
 
         if (closedMatch) {
-          // Mês Fechado: usa estritamente os valores gravados no snapshot oficial
-          const summary: MonthlyClosureSummary = {
-            total_income: Number(closedMatch.total_income) || 0,
-            total_fixed_expenses: Number(closedMatch.total_fixed_expenses) || 0,
-            total_variable_expenses: Number(closedMatch.total_variable_expenses) || 0,
-            total_installments: Number(closedMatch.total_installments) || 0,
-            total_expenses: Number(closedMatch.total_expenses) || 0,
-            final_balance: Number(closedMatch.final_balance) || 0,
-          };
-
+          // Mês Fechado: usa estritamente os valores do snapshot gravado na tabela monthly_closures
           return {
             cycle: item.cycle,
             year: item.year,
             month: item.month,
             label: getMonthYearLabel(item.year, item.month),
             isClosed: true,
-            summary,
+            summary: {
+              total_income: Number(closedMatch.total_income) || 0,
+              total_fixed_expenses: Number(closedMatch.total_fixed_expenses) || 0,
+              total_variable_expenses: Number(closedMatch.total_variable_expenses) || 0,
+              total_installments: Number(closedMatch.total_installments) || 0,
+              total_expenses: Number(closedMatch.total_expenses) || 0,
+              final_balance: Number(closedMatch.final_balance) || 0,
+            },
             closureDetails: closedMatch,
           } as MonthReportData;
         } else {
-          // Mês Aberto: calcula dinamicamente com os serviços financeiros
-          const liveSummary = await monthlyClosuresService.calculateMonthSummary(
-            currentSpace.id,
-            item.year,
-            item.month
-          );
+          // Mês Aberto: calcula dinamicamente a partir dos dados do lote em memória
+          const cyclePrefix = `${item.year}-${String(item.month).padStart(2, '0')}`;
+
+          const monthEntries = entriesData.filter((e: any) => e.date.startsWith(cyclePrefix));
+          const totalIncome = monthEntries.reduce((acc, e) => acc + (Number(e.amount) || 0), 0);
+
+          const monthVar = varExpensesData.filter((v: any) => v.date.startsWith(cyclePrefix));
+          const totalVariable = monthVar.reduce((acc, v) => acc + (Number(v.amount) || 0), 0);
+
+          const monthInst = installmentsData.filter((i: any) => i.due_date.startsWith(cyclePrefix));
+          const totalInstallments = monthInst.reduce((acc, i) => acc + (Number(i.amount) || 0), 0);
+
+          const applicableFixed = fixedExpensesData.filter((f: any) => {
+            if (f.recurrence === 'yearly') {
+              return f.due_month === item.month;
+            }
+            return true;
+          });
+          const totalFixed = applicableFixed.reduce((acc, f) => acc + (Number(f.amount) || 0), 0);
+
+          const totalExpenses = Number((totalFixed + totalVariable + totalInstallments).toFixed(2));
+          const finalBalance = Number((totalIncome - totalExpenses).toFixed(2));
 
           return {
             cycle: item.cycle,
@@ -188,13 +261,19 @@ export function ReportsScreen() {
             month: item.month,
             label: getMonthYearLabel(item.year, item.month),
             isClosed: false,
-            summary: liveSummary,
+            summary: {
+              total_income: Number(totalIncome.toFixed(2)),
+              total_fixed_expenses: Number(totalFixed.toFixed(2)),
+              total_variable_expenses: Number(totalVariable.toFixed(2)),
+              total_installments: Number(totalInstallments.toFixed(2)),
+              total_expenses: totalExpenses,
+              final_balance: finalBalance,
+            },
             closureDetails: null,
           } as MonthReportData;
         }
       });
 
-      const compiledReports = await Promise.all(reportsPromise);
       setReportMonths(compiledReports);
     } catch (err: any) {
       console.error('Erro ao carregar os relatórios financeiros:', err);
@@ -287,23 +366,121 @@ export function ReportsScreen() {
     setPreset(newPreset);
   };
 
-  // Cores de Comprometimento com base nos patamares saudáveis recomendados
-  const getCommitmentColorClass = (percent: number) => {
-    if (percent <= 50) return 'text-emerald-600 dark:text-emerald-400';
-    if (percent <= 70) return 'text-amber-500 dark:text-amber-400';
-    return 'text-rose-500 dark:text-rose-400';
-  };
+  // Exportação robusta para CSV com BOM UTF-8 e formato compatível com Excel nacional
+  const handleExportCSV = () => {
+    if (reportMonths.length === 0) return;
 
-  const getCommitmentBgClass = (percent: number) => {
-    if (percent <= 50) return 'bg-emerald-600 dark:bg-emerald-400';
-    if (percent <= 70) return 'bg-amber-500 dark:bg-amber-400';
-    return 'bg-rose-500 dark:bg-rose-400';
-  };
+    const rows: string[][] = [];
+    const todayStr = new Date().toISOString().split('T')[0];
 
-  const getCommitmentBadgeText = (percent: number) => {
-    if (percent <= 50) return 'Excelente';
-    if (percent <= 70) return 'Moderado';
-    return 'Alto risco';
+    // Para cada ciclo no período selecionado (do mais antigo ao mais recente para ficar na ordem cronológica)
+    const sortedCycles = [...cyclesToLoad].sort((a, b) => a.cycle.localeCompare(b.cycle));
+
+    for (const item of sortedCycles) {
+      const cyclePrefix = `${item.year}-${String(item.month).padStart(2, '0')}`;
+      const compLabel = getMonthYearLabel(item.year, item.month);
+
+      // 1. Receitas (Entradas)
+      const monthEntries = rawEntries.filter((e: any) => e.date.startsWith(cyclePrefix));
+      for (const ent of monthEntries) {
+        rows.push([
+          compLabel,
+          'Entrada',
+          ent.category || 'Outros',
+          ent.description,
+          String(Number(ent.amount).toFixed(2)).replace('.', ','),
+          ent.status === 'received' ? 'Recebido' : 'Pendente'
+        ]);
+      }
+
+      // 2. Gastos Fixos
+      const applicableFixed = rawFixedExpenses.filter((f: any) => {
+        if (f.recurrence === 'yearly') {
+          return f.due_month === item.month;
+        }
+        return true;
+      });
+      for (const f of applicableFixed) {
+        const payment = rawPayments.find((p: any) => p.fixed_expense_id === f.id && p.billing_cycle === item.cycle);
+        const isPaid = !!payment;
+
+        // Vencimento do mês
+        const validDueDay = Math.min(Math.max(1, f.due_day), new Date(item.year, item.month, 0).getDate());
+        const dueDateStr = `${item.year}-${String(item.month).padStart(2, '0')}-${String(validDueDay).padStart(2, '0')}`;
+
+        let statusText = 'Pendente';
+        if (isPaid) {
+          statusText = 'Pago';
+        } else if (dueDateStr < todayStr) {
+          statusText = 'Atrasado';
+        }
+
+        rows.push([
+          compLabel,
+          'Gasto Fixo',
+          f.category || 'Outros',
+          f.description,
+          String(Number(f.amount).toFixed(2)).replace('.', ','),
+          statusText
+        ]);
+      }
+
+      // 3. Gastos Variáveis
+      const monthVar = rawVarExpenses.filter((v: any) => v.date.startsWith(cyclePrefix));
+      for (const v of monthVar) {
+        rows.push([
+          compLabel,
+          'Gasto Variável',
+          v.category || 'Outros',
+          v.description,
+          String(Number(v.amount).toFixed(2)).replace('.', ','),
+          v.status === 'paid' ? 'Pago' : 'Pendente'
+        ]);
+      }
+
+      // 4. Parcelados
+      const monthInst = rawInstallments.filter((i: any) => i.due_date.startsWith(cyclePrefix));
+      for (const inst of monthInst) {
+        const purchase = rawPurchases.find((p: any) => p.id === inst.purchase_id);
+        const desc = purchase 
+          ? `${purchase.description} (${inst.installment_number}/${purchase.installment_count})`
+          : `Parcela #${inst.installment_number}`;
+
+        let statusText = 'Pendente';
+        if (inst.status === 'paid') {
+          statusText = 'Pago';
+        } else if (inst.due_date < todayStr) {
+          statusText = 'Atrasado';
+        }
+
+        rows.push([
+          compLabel,
+          'Parcelamento',
+          purchase?.category || 'Outros',
+          desc,
+          String(Number(inst.amount).toFixed(2)).replace('.', ','),
+          statusText
+        ]);
+      }
+    }
+
+    // Gerar o conteúdo CSV
+    const headers = ['Competência', 'Tipo', 'Categoria', 'Descrição', 'Valor', 'Situação'];
+    const csvContent = [
+      headers.map(h => `"${h}"`).join(';'),
+      ...rows.map(r => r.map(val => `"${String(val).replace(/"/g, '""')}"`).join(';'))
+    ].join('\r\n');
+
+    // Download do arquivo com BOM UTF-8 para suporte de acentuação no Excel
+    const BOM = new Uint8Array([0xEF, 0xBB, 0xBF]);
+    const blob = new Blob([BOM, csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `Poupagaio_Relatorio_Financeiro_${preset}_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   // Constantes e cálculos de desenho para o Gráfico SVG de Evolução Financeira
@@ -404,63 +581,73 @@ export function ReportsScreen() {
           </p>
         </div>
 
-        {/* Seletor de Período Preset */}
-        <div className="flex flex-wrap items-center gap-1.5 bg-[#F3F4F4] dark:bg-[#151817] p-1 rounded-xl">
-          <button
-            type="button"
-            onClick={() => handlePresetChange('current_month')}
-            className={`px-3 py-1.5 rounded-lg text-[11px] font-bold cursor-pointer transition-all ${
-              preset === 'current_month'
-                ? 'bg-white dark:bg-[#1E2220] text-[#075C45] dark:text-[#78D9A6] shadow-2xs'
-                : 'text-[#5E6963] dark:text-[#95A39B] hover:text-[#202724] dark:hover:text-[#F4F4F5]'
-            }`}
+        {/* Seletor de Período Preset & Exportar */}
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-1.5 bg-[#F3F4F4] dark:bg-[#151817] p-1 rounded-xl">
+            <button
+              type="button"
+              onClick={() => handlePresetChange('current_month')}
+              className={`px-3 py-1.5 rounded-lg text-[11px] font-bold cursor-pointer transition-all ${
+                preset === 'current_month'
+                  ? 'bg-white dark:bg-[#1E2220] text-[#075C45] dark:text-[#78D9A6] shadow-2xs'
+                  : 'text-[#5E6963] dark:text-[#95A39B] hover:text-[#202724] dark:hover:text-[#F4F4F5]'
+              }`}
+            >
+              Mês Atual
+            </button>
+            <button
+              type="button"
+              onClick={() => handlePresetChange('last_3_months')}
+              className={`px-3 py-1.5 rounded-lg text-[11px] font-bold cursor-pointer transition-all ${
+                preset === 'last_3_months'
+                  ? 'bg-white dark:bg-[#1E2220] text-[#075C45] dark:text-[#78D9A6] shadow-2xs'
+                  : 'text-[#5E6963] dark:text-[#95A39B] hover:text-[#202724] dark:hover:text-[#F4F4F5]'
+              }`}
+            >
+              3 Meses
+            </button>
+            <button
+              type="button"
+              onClick={() => handlePresetChange('last_6_months')}
+              className={`px-3 py-1.5 rounded-lg text-[11px] font-bold cursor-pointer transition-all ${
+                preset === 'last_6_months'
+                  ? 'bg-white dark:bg-[#1E2220] text-[#075C45] dark:text-[#78D9A6] shadow-2xs'
+                  : 'text-[#5E6963] dark:text-[#95A39B] hover:text-[#202724] dark:hover:text-[#F4F4F5]'
+              }`}
+            >
+              6 Meses
+            </button>
+            <button
+              type="button"
+              onClick={() => handlePresetChange('current_year')}
+              className={`px-3 py-1.5 rounded-lg text-[11px] font-bold cursor-pointer transition-all ${
+                preset === 'current_year'
+                  ? 'bg-white dark:bg-[#1E2220] text-[#075C45] dark:text-[#78D9A6] shadow-2xs'
+                  : 'text-[#5E6963] dark:text-[#95A39B] hover:text-[#202724] dark:hover:text-[#F4F4F5]'
+              }`}
+            >
+              Este Ano
+            </button>
+            <button
+              type="button"
+              onClick={() => handlePresetChange('custom')}
+              className={`px-3 py-1.5 rounded-lg text-[11px] font-bold cursor-pointer transition-all ${
+                preset === 'custom'
+                  ? 'bg-white dark:bg-[#1E2220] text-[#075C45] dark:text-[#78D9A6] shadow-2xs'
+                  : 'text-[#5E6963] dark:text-[#95A39B] hover:text-[#202724] dark:hover:text-[#F4F4F5]'
+              }`}
+            >
+              Personalizado
+            </button>
+          </div>
+
+          <Button
+            onClick={handleExportCSV}
+            className="bg-[#075C45] hover:bg-[#054131] text-white flex items-center gap-1.5 px-3 py-1.5 h-9 rounded-xl text-xs font-bold cursor-pointer shadow-2xs dark:bg-[#16A66A] dark:hover:bg-[#128a58] transition-colors"
           >
-            Mês Atual
-          </button>
-          <button
-            type="button"
-            onClick={() => handlePresetChange('last_3_months')}
-            className={`px-3 py-1.5 rounded-lg text-[11px] font-bold cursor-pointer transition-all ${
-              preset === 'last_3_months'
-                ? 'bg-white dark:bg-[#1E2220] text-[#075C45] dark:text-[#78D9A6] shadow-2xs'
-                : 'text-[#5E6963] dark:text-[#95A39B] hover:text-[#202724] dark:hover:text-[#F4F4F5]'
-            }`}
-          >
-            3 Meses
-          </button>
-          <button
-            type="button"
-            onClick={() => handlePresetChange('last_6_months')}
-            className={`px-3 py-1.5 rounded-lg text-[11px] font-bold cursor-pointer transition-all ${
-              preset === 'last_6_months'
-                ? 'bg-white dark:bg-[#1E2220] text-[#075C45] dark:text-[#78D9A6] shadow-2xs'
-                : 'text-[#5E6963] dark:text-[#95A39B] hover:text-[#202724] dark:hover:text-[#F4F4F5]'
-            }`}
-          >
-            6 Meses
-          </button>
-          <button
-            type="button"
-            onClick={() => handlePresetChange('current_year')}
-            className={`px-3 py-1.5 rounded-lg text-[11px] font-bold cursor-pointer transition-all ${
-              preset === 'current_year'
-                ? 'bg-white dark:bg-[#1E2220] text-[#075C45] dark:text-[#78D9A6] shadow-2xs'
-                : 'text-[#5E6963] dark:text-[#95A39B] hover:text-[#202724] dark:hover:text-[#F4F4F5]'
-            }`}
-          >
-            Este Ano
-          </button>
-          <button
-            type="button"
-            onClick={() => handlePresetChange('custom')}
-            className={`px-3 py-1.5 rounded-lg text-[11px] font-bold cursor-pointer transition-all ${
-              preset === 'custom'
-                ? 'bg-white dark:bg-[#1E2220] text-[#075C45] dark:text-[#78D9A6] shadow-2xs'
-                : 'text-[#5E6963] dark:text-[#95A39B] hover:text-[#202724] dark:hover:text-[#F4F4F5]'
-            }`}
-          >
-            Personalizado
-          </button>
+            <Download className="w-4 h-4" />
+            Exportar CSV
+          </Button>
         </div>
       </div>
 
@@ -690,8 +877,8 @@ export function ReportsScreen() {
                     <span className="text-[10px] font-bold uppercase tracking-wider text-[#5E6963] dark:text-[#95A39B]">
                       Média de Comprometimento
                     </span>
-                    <h3 className={`text-xl lg:text-2xl font-bold font-display ${getCommitmentColorClass(aggregates.commitmentPercent)}`}>
-                      {aggregates.commitmentPercent}%
+                    <h3 className="text-xl lg:text-2xl font-bold font-display text-[#202724] dark:text-[#F4F4F5]">
+                      {aggregates.totalIncome > 0 ? `${aggregates.commitmentPercent.toFixed(1)}%` : '—'}
                     </h3>
                   </div>
                   <div className="w-8 h-8 rounded-lg bg-[#16A66A]/10 flex items-center justify-center text-[#16A66A]">
@@ -703,13 +890,12 @@ export function ReportsScreen() {
                 <div className="space-y-1 pt-1">
                   <div className="w-full bg-[#F3F4F4] dark:bg-[#282E2B] h-2 rounded-full overflow-hidden">
                     <div
-                      className={`h-full rounded-full transition-all duration-500 ${getCommitmentBgClass(aggregates.commitmentPercent)}`}
-                      style={{ width: `${Math.min(100, aggregates.commitmentPercent)}%` }}
+                      className="h-full rounded-full transition-all duration-500 bg-[#075C45] dark:bg-[#78D9A6]"
+                      style={{ width: `${aggregates.totalIncome > 0 ? Math.min(100, aggregates.commitmentPercent) : 0}%` }}
                     />
                   </div>
                   <div className="flex justify-between items-center text-[9px] text-[#5E6963] dark:text-[#95A39B]">
-                    <span>Alvo ideal: &lt; 70%</span>
-                    <span className="font-bold">{getCommitmentBadgeText(aggregates.commitmentPercent)}</span>
+                    <span>Fórmula: Despesas / Entradas * 100</span>
                   </div>
                 </div>
               </CardContent>
@@ -962,13 +1148,10 @@ export function ReportsScreen() {
                               <span>Comprometimento:</span>
                               <span className="font-bold">
                                 {reportMonths[hoveredTrendIndex].summary.total_income > 0
-                                  ? (
-                                      (reportMonths[hoveredTrendIndex].summary.total_expenses /
-                                        reportMonths[hoveredTrendIndex].summary.total_income) *
-                                      100
-                                    ).toFixed(0)
-                                  : 0}
-                                %
+                                  ? `${((reportMonths[hoveredTrendIndex].summary.total_expenses /
+                                      reportMonths[hoveredTrendIndex].summary.total_income) *
+                                      100).toFixed(1)}%`
+                                  : '—'}
                               </span>
                             </div>
                           </div>
@@ -1134,9 +1317,11 @@ export function ReportsScreen() {
                             {formatCurrency(m.summary.final_balance)}
                           </td>
                           <td className="py-3 px-3 text-center">
-                            <span className={`inline-flex items-center gap-1.5 font-bold text-[11px] ${getCommitmentColorClass(commitment)}`}>
-                              {commitment.toFixed(0)}%
-                              <span className={`w-1.5 h-1.5 rounded-full ${getCommitmentBgClass(commitment)}`} />
+                            <span className="inline-flex items-center gap-1.5 font-bold text-[11px] text-[#202724] dark:text-[#F4F4F5]">
+                              {m.summary.total_income > 0 ? `${commitment.toFixed(1)}%` : '—'}
+                              {m.summary.total_income > 0 && (
+                                <span className="w-1.5 h-1.5 rounded-full bg-[#075C45] dark:bg-[#78D9A6]" />
+                              )}
                             </span>
                           </td>
                           <td className="py-3 px-3 text-center">
@@ -1297,10 +1482,10 @@ export function ReportsScreen() {
                       </div>
                       <div>
                         <p className="text-[9px] uppercase font-bold text-[#5E6963] dark:text-[#95A39B]">Comprometimento</p>
-                        <p className={`font-bold text-sm ${getCommitmentColorClass(
-                          selectedDetailMonth.summary.total_income > 0 ? (selectedDetailMonth.summary.total_expenses / selectedDetailMonth.summary.total_income) * 100 : 0
-                        )}`}>
-                          {(selectedDetailMonth.summary.total_income > 0 ? (selectedDetailMonth.summary.total_expenses / selectedDetailMonth.summary.total_income) * 100 : 0).toFixed(0)}%
+                        <p className="font-bold text-sm text-[#202724] dark:text-[#F4F4F5]">
+                          {selectedDetailMonth.summary.total_income > 0
+                            ? `${((selectedDetailMonth.summary.total_expenses / selectedDetailMonth.summary.total_income) * 100).toFixed(1)}%`
+                            : '—'}
                         </p>
                       </div>
                     </div>
