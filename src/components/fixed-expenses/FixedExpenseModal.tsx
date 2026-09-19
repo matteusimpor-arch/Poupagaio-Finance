@@ -44,6 +44,10 @@ export function FixedExpenseModal({
   editingExpense,
   spaceId,
 }: FixedExpenseModalProps) {
+  const currentNow = new Date();
+  const currentYear = currentNow.getFullYear();
+  const currentMonth = currentNow.getMonth() + 1;
+
   const [description, setDescription] = useState('');
   const [rawAmount, setRawAmount] = useState('');
   const [dueDay, setDueDay] = useState('10');
@@ -51,6 +55,8 @@ export function FixedExpenseModal({
   const [category, setCategory] = useState('Aluguel');
   const [customCategory, setCustomCategory] = useState('');
   const [recurrence, setRecurrence] = useState<ExpenseRecurrence>('monthly');
+  const [startYear, setStartYear] = useState<number>(currentYear);
+  const [startMonth, setStartMonth] = useState<number>(currentMonth);
   const [notes, setNotes] = useState('');
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -58,6 +64,8 @@ export function FixedExpenseModal({
   const [generalError, setGeneralError] = useState<string | null>(null);
 
   const isEditing = Boolean(editingExpense);
+
+  const availableYears = Array.from({ length: 9 }, (_, i) => currentYear - 3 + i);
 
   useEffect(() => {
     if (editingExpense) {
@@ -74,19 +82,33 @@ export function FixedExpenseModal({
       }
       setRecurrence(editingExpense.recurrence || 'monthly');
       setNotes(editingExpense.notes || '');
+
+      // Preserva o start_date real na edição
+      if (editingExpense.start_date) {
+        const parts = editingExpense.start_date.split('-');
+        const y = parseInt(parts[0], 10);
+        const m = parseInt(parts[1], 10);
+        setStartYear(!isNaN(y) ? y : currentYear);
+        setStartMonth(!isNaN(m) ? m : currentMonth);
+      } else {
+        setStartYear(currentYear);
+        setStartMonth(currentMonth);
+      }
     } else {
       setDescription('');
       setRawAmount('');
       setDueDay('10');
-      setDueMonth(String(new Date().getMonth() + 1));
+      setDueMonth(String(currentMonth));
       setCategory('Aluguel');
       setCustomCategory('');
       setRecurrence('monthly');
+      setStartYear(currentYear);
+      setStartMonth(currentMonth);
       setNotes('');
     }
     setErrors({});
     setGeneralError(null);
-  }, [editingExpense, isOpen]);
+  }, [editingExpense, isOpen, currentYear, currentMonth]);
 
   if (!isOpen) return null;
 
@@ -147,6 +169,8 @@ export function FixedExpenseModal({
         ? customCategory.trim()
         : category;
 
+    const formattedStartDate = `${startYear}-${String(startMonth).padStart(2, '0')}-01`;
+
     const payload: CreateFixedExpenseInput | UpdateFixedExpenseInput = {
       space_id: spaceId,
       description: description.trim(),
@@ -155,6 +179,7 @@ export function FixedExpenseModal({
       due_month: recurrence === 'yearly' ? parseInt(dueMonth, 10) : null,
       category: resolvedCategory,
       recurrence,
+      start_date: formattedStartDate,
       notes: notes.trim() || null,
     };
 
@@ -348,6 +373,43 @@ export function FixedExpenseModal({
               </p>
             </div>
           )}
+
+          {/* Início do Gasto (Vigência Inicial) */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-[#202724] dark:text-[#F7F4EA] flex items-center gap-1.5">
+              <Calendar className="w-3.5 h-3.5 text-[#5E6963] dark:text-[#95A39B]" />
+              Início do gasto <span className="text-rose-500">*</span>
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <select
+                id="fixed-expense-start-month-select"
+                value={startMonth}
+                onChange={(e) => setStartMonth(parseInt(e.target.value, 10))}
+                className="w-full h-11 px-3.5 rounded-2xl bg-white dark:bg-[#101614] border border-[#E8E4D5] dark:border-[#24312B] text-xs sm:text-sm text-[#202724] dark:text-[#F7F4EA] focus:outline-hidden focus:ring-2 focus:ring-[#16A66A] cursor-pointer"
+              >
+                {MONTH_NAMES.map((mName, idx) => (
+                  <option key={idx + 1} value={idx + 1}>
+                    {mName}
+                  </option>
+                ))}
+              </select>
+              <select
+                id="fixed-expense-start-year-select"
+                value={startYear}
+                onChange={(e) => setStartYear(parseInt(e.target.value, 10))}
+                className="w-full h-11 px-3.5 rounded-2xl bg-white dark:bg-[#101614] border border-[#E8E4D5] dark:border-[#24312B] text-xs sm:text-sm text-[#202724] dark:text-[#F7F4EA] focus:outline-hidden focus:ring-2 focus:ring-[#16A66A] cursor-pointer"
+              >
+                {availableYears.map((yr) => (
+                  <option key={yr} value={yr}>
+                    {yr}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <p className="text-[10px] text-[#5E6963] dark:text-[#95A39B]">
+              Primeiro mês em que este gasto fixo passa a vigorar ({MONTH_NAMES[startMonth - 1]} de {startYear}).
+            </p>
+          </div>
 
           {/* Categoria Personalizada se selecionou 'Outros' */}
           {category === 'Outros' && (

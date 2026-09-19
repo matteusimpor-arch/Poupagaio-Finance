@@ -24,6 +24,7 @@ interface AuthContextType {
   updateProfileName: (newName: string) => Promise<{ error: Error | null }>;
   createSpace: (name: string, type: 'personal' | 'couple' | 'family' | 'business') => Promise<{ error: Error | null; space?: Space | null }>;
   updateSpaceName: (spaceId: string, newName: string) => Promise<{ error: Error | null; space?: Space | null }>;
+  deleteSpace: (spaceId: string) => Promise<{ error: Error | null }>;
   refreshData: () => Promise<void>;
 }
 
@@ -302,6 +303,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const deleteSpace = async (spaceId: string): Promise<{ error: Error | null }> => {
+    if (!user) return { error: new Error('Usuário não autenticado.') };
+    try {
+      setIsLoading(true);
+      const res = await spaceService.deleteSpace(spaceId);
+      if (res.error) {
+        return { error: new Error(res.error) };
+      }
+
+      const [userSpaces, userMemberships] = await Promise.all([
+        spaceService.getUserSpaces(user.id),
+        spaceService.getUserMemberships(user.id),
+      ]);
+
+      setSpaces(userSpaces);
+      setMemberships(userMemberships);
+
+      // Se o espaço excluído era o ativo no momento:
+      if (currentSpace?.id === spaceId) {
+        // Localiza o espaço real type='personal'
+        const personalSpace = userSpaces.find((s) => s.type === 'personal') || userSpaces[0] || null;
+        setCurrentSpaceState(personalSpace);
+        if (personalSpace) {
+          localStorage.setItem(`poupagaio_active_space_${user.id}`, personalSpace.id);
+        } else {
+          localStorage.removeItem(`poupagaio_active_space_${user.id}`);
+        }
+      }
+
+      return { error: null };
+    } catch (err: any) {
+      return { error: new Error(err.message || 'Erro ao excluir espaço.') };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const refreshData = async () => {
     if (user) {
       await loadUserData(user);
@@ -329,6 +367,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         updateProfileName,
         createSpace,
         updateSpaceName,
+        deleteSpace,
         refreshData,
       }}
     >

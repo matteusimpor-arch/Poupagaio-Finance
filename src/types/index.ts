@@ -109,6 +109,7 @@ export interface FixedExpense {
   due_month?: number | null; // 1 - 12 (obrigatório para yearly, null para monthly)
   category: string;
   recurrence: ExpenseRecurrence;
+  start_date: string; // YYYY-MM-01 (competência inicial do gasto)
   notes?: string | null;
   created_at: string;
   updated_at: string;
@@ -141,6 +142,7 @@ export interface CreateFixedExpenseInput {
   due_month?: number | null;
   category?: string;
   recurrence?: ExpenseRecurrence;
+  start_date?: string; // YYYY-MM-01
   notes?: string | null;
 }
 
@@ -151,6 +153,7 @@ export interface UpdateFixedExpenseInput {
   due_month?: number | null;
   category?: string;
   recurrence?: ExpenseRecurrence;
+  start_date?: string; // YYYY-MM-01
   notes?: string | null;
 }
 

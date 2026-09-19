@@ -389,7 +389,7 @@ export function MarketScreen() {
           className="h-10 px-4 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-medium text-xs sm:text-sm shadow-xs transition-colors flex items-center gap-1.5 self-start sm:self-auto"
         >
           <Plus className="w-4 h-4" />
-          + Nova lista
+          Nova lista
         </Button>
       </div>
 

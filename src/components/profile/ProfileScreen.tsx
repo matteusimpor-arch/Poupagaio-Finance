@@ -10,7 +10,7 @@ import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 
 export function ProfileScreen() {
-  const { user, profile, spaces, memberships, currentSpace, updateProfileName, updatePassword, createSpace, updateSpaceName, setCurrentSpace, signOut } = useAuth();
+  const { user, profile, spaces, memberships, currentSpace, updateProfileName, updatePassword, createSpace, updateSpaceName, deleteSpace, setCurrentSpace, signOut } = useAuth();
   
   const [isManageSpacesOpen, setIsManageSpacesOpen] = useState(false);
   const [fullName, setFullName] = useState(profile?.full_name || user?.full_name || '');

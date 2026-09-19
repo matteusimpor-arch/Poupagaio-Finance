@@ -87,11 +87,17 @@ export const fixedExpensesService = {
       const now = new Date();
       const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
       const maxDaysInMonth = new Date(year, month, 0).getDate();
+      const targetCycleStr = `${year}-${String(month).padStart(2, '0')}-01`;
 
-      // Filtra gastos que competem para este mês:
-      // Se mensal, incide em todos os meses.
-      // Se anual, incide somente no mês correspondente a due_month.
+      // Filtra gastos que competem para este mês respeitando a vigência inicial (start_date):
+      // 1. A competência consultada deve ser maior ou igual a start_date (YYYY-MM-01).
+      // 2. Se mensal, incide em todos os meses a partir de start_date.
+      // 3. Se anual, incide a partir de start_date SOMENTE no mês correspondente a due_month.
       const applicableExpenses = rawExpenses.filter((exp) => {
+        const expStartDate = exp.start_date ? exp.start_date.substring(0, 10) : '1970-01-01';
+        if (targetCycleStr < expStartDate) {
+          return false;
+        }
         if (exp.recurrence === 'yearly') {
           return exp.due_month === month;
         }
@@ -153,7 +159,7 @@ export const fixedExpensesService = {
           totalPending,
           totalUpcoming,
           totalOverdue,
-          count: rawExpenses.length,
+          count: applicableExpenses.length,
           paidCount,
           upcomingCount,
           overdueCount,
@@ -220,6 +226,15 @@ export const fixedExpensesService = {
         }
       }
 
+      // Normaliza a competência inicial (start_date) para o 1º dia do mês (YYYY-MM-01)
+      let startDate = input.start_date?.trim();
+      if (startDate) {
+        startDate = startDate.substring(0, 7) + '-01';
+      } else {
+        const nowObj = new Date();
+        startDate = `${nowObj.getFullYear()}-${String(nowObj.getMonth() + 1).padStart(2, '0')}-01`;
+      }
+
       const payload = {
         space_id: input.space_id,
         created_by: userId || null,
@@ -229,6 +244,7 @@ export const fixedExpensesService = {
         due_month: isYearly ? dueMonth : null,
         category: input.category?.trim() || 'Outros',
         recurrence: input.recurrence || 'monthly',
+        start_date: startDate,
         notes: input.notes?.trim() || null,
         created_at: now,
         updated_at: now,
@@ -306,6 +322,12 @@ export const fixedExpensesService = {
       }
     } else if (input.due_month !== undefined) {
       payload.due_month = input.due_month;
+    }
+    if (input.start_date !== undefined && input.start_date !== null) {
+      const sd = input.start_date.trim();
+      if (sd) {
+        payload.start_date = sd.substring(0, 7) + '-01';
+      }
     }
     if (input.notes !== undefined) payload.notes = input.notes?.trim() || null;
 

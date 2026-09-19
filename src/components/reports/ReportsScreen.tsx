@@ -247,7 +247,12 @@ export function ReportsScreen() {
           const monthInst = installmentsData.filter((i: any) => i.due_date.startsWith(cyclePrefix));
           const totalInstallments = monthInst.reduce((acc, i) => acc + (Number(i.amount) || 0), 0);
 
+          const targetCycleStr = `${item.year}-${String(item.month).padStart(2, '0')}-01`;
           const applicableFixed = fixedExpensesData.filter((f: any) => {
+            const expStartDate = f.start_date ? f.start_date.substring(0, 10) : '1970-01-01';
+            if (targetCycleStr < expStartDate) {
+              return false;
+            }
             if (f.recurrence === 'yearly') {
               return f.due_month === item.month;
             }
@@ -638,9 +643,9 @@ export function ReportsScreen() {
   }, [aggregates]);
 
   return (
-    <div className="space-y-6" id="reports-screen-root">
+    <div className="space-y-6 w-full max-w-full overflow-x-hidden" id="reports-screen-root">
       {/* 1. TOPO & FILTROS DE PERÍODO */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-[#1E2220] p-4 rounded-2xl border border-[#E2E8E4] dark:border-[#2E3532] shadow-2xs">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-[#1E2220] p-4 rounded-2xl border border-[#E2E8E4] dark:border-[#2E3532] shadow-2xs w-full">
         <div className="space-y-1">
           <h2 className="text-lg font-bold font-display text-[#075C45] dark:text-[#78D9A6] flex items-center gap-2">
             <BarChart3 className="w-5 h-5 text-[#16A66A]" />
@@ -652,12 +657,12 @@ export function ReportsScreen() {
         </div>
 
         {/* Seletor de Período Preset & Exportar */}
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex flex-wrap items-center gap-1.5 bg-[#F3F4F4] dark:bg-[#151817] p-1 rounded-xl">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto">
+          <div className="grid grid-cols-3 sm:flex sm:flex-wrap items-center gap-1.5 bg-[#F3F4F4] dark:bg-[#151817] p-1 rounded-xl w-full sm:w-auto text-center">
             <button
               type="button"
               onClick={() => handlePresetChange('current_month')}
-              className={`px-3 py-1.5 rounded-lg text-[11px] font-bold cursor-pointer transition-all ${
+              className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-[11px] font-bold cursor-pointer transition-all ${
                 preset === 'current_month'
                   ? 'bg-white dark:bg-[#1E2220] text-[#075C45] dark:text-[#78D9A6] shadow-2xs'
                   : 'text-[#5E6963] dark:text-[#95A39B] hover:text-[#202724] dark:hover:text-[#F4F4F5]'
@@ -668,7 +673,7 @@ export function ReportsScreen() {
             <button
               type="button"
               onClick={() => handlePresetChange('last_3_months')}
-              className={`px-3 py-1.5 rounded-lg text-[11px] font-bold cursor-pointer transition-all ${
+              className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-[11px] font-bold cursor-pointer transition-all ${
                 preset === 'last_3_months'
                   ? 'bg-white dark:bg-[#1E2220] text-[#075C45] dark:text-[#78D9A6] shadow-2xs'
                   : 'text-[#5E6963] dark:text-[#95A39B] hover:text-[#202724] dark:hover:text-[#F4F4F5]'
@@ -679,7 +684,7 @@ export function ReportsScreen() {
             <button
               type="button"
               onClick={() => handlePresetChange('last_6_months')}
-              className={`px-3 py-1.5 rounded-lg text-[11px] font-bold cursor-pointer transition-all ${
+              className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-[11px] font-bold cursor-pointer transition-all ${
                 preset === 'last_6_months'
                   ? 'bg-white dark:bg-[#1E2220] text-[#075C45] dark:text-[#78D9A6] shadow-2xs'
                   : 'text-[#5E6963] dark:text-[#95A39B] hover:text-[#202724] dark:hover:text-[#F4F4F5]'
@@ -690,7 +695,7 @@ export function ReportsScreen() {
             <button
               type="button"
               onClick={() => handlePresetChange('current_year')}
-              className={`px-3 py-1.5 rounded-lg text-[11px] font-bold cursor-pointer transition-all ${
+              className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-[11px] font-bold cursor-pointer transition-all ${
                 preset === 'current_year'
                   ? 'bg-white dark:bg-[#1E2220] text-[#075C45] dark:text-[#78D9A6] shadow-2xs'
                   : 'text-[#5E6963] dark:text-[#95A39B] hover:text-[#202724] dark:hover:text-[#F4F4F5]'
@@ -701,7 +706,7 @@ export function ReportsScreen() {
             <button
               type="button"
               onClick={() => handlePresetChange('custom')}
-              className={`px-3 py-1.5 rounded-lg text-[11px] font-bold cursor-pointer transition-all ${
+              className={`col-span-2 sm:col-span-1 px-2.5 sm:px-3 py-1.5 rounded-lg text-[11px] font-bold cursor-pointer transition-all ${
                 preset === 'custom'
                   ? 'bg-white dark:bg-[#1E2220] text-[#075C45] dark:text-[#78D9A6] shadow-2xs'
                   : 'text-[#5E6963] dark:text-[#95A39B] hover:text-[#202724] dark:hover:text-[#F4F4F5]'
@@ -713,7 +718,7 @@ export function ReportsScreen() {
 
           <Button
             onClick={handleExportCSV}
-            className="bg-[#075C45] hover:bg-[#054131] text-white flex items-center gap-1.5 px-3 py-1.5 h-9 rounded-xl text-xs font-bold cursor-pointer shadow-2xs dark:bg-[#16A66A] dark:hover:bg-[#128a58] transition-colors"
+            className="bg-[#075C45] hover:bg-[#054131] text-white flex items-center justify-center gap-1.5 px-3 py-1.5 h-9 rounded-xl text-xs font-bold cursor-pointer shadow-2xs dark:bg-[#16A66A] dark:hover:bg-[#128a58] transition-colors w-full sm:w-auto"
           >
             <Download className="w-4 h-4" />
             Exportar CSV
