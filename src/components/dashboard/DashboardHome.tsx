@@ -448,14 +448,14 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
       </div>
 
       {/* ==================================================
-          4. NÍVEL 2: "O QUE COMPÕE MEU MÊS?" (SUBSISTEMAS COLORIDOS)
-          Cores estritamente herdadas dos subsistemas existentes:
-          Entradas (emerald), Gastos Fixos (amber), Gastos Variáveis (rose), Parcelados (indigo)
+          4. NÍVEL 2: "PARA ONDE VAI O DINHEIRO?" (COMPOSIÇÃO DAS DESPESAS)
+          Apenas os 3 pilares de despesas:
+          Gastos Fixos (amber), Gastos Variáveis (rose), Parcelados (indigo)
           ================================================== */}
       <div>
         <div className="flex items-center justify-between mb-2.5">
           <h2 className="text-xs font-bold uppercase tracking-wider text-[#5E6963] dark:text-[#95A39B]">
-            Composição das Finanças do Mês
+            Composição das Despesas
           </h2>
           <button
             type="button"
@@ -466,35 +466,9 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
           </button>
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
           
-          {/* 1. ENTRADAS (EMERALD) */}
-          <div
-            onClick={() => onSelectTab('entries')}
-            className="p-3.5 sm:p-4 rounded-2xl border border-emerald-500/20 bg-emerald-50/50 dark:bg-emerald-950/20 hover:border-emerald-500/40 hover:shadow-xs cursor-pointer transition-all flex flex-col justify-between group"
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 flex items-center justify-center">
-                  <ArrowUpRight className="w-4 h-4" />
-                </div>
-                <span className="text-xs font-bold uppercase tracking-wider text-emerald-900 dark:text-emerald-200">
-                  Entradas
-                </span>
-              </div>
-              <ArrowRight className="w-4 h-4 text-emerald-600/40 group-hover:text-emerald-600 transition-colors" />
-            </div>
-            <div className="mt-3">
-              <p className="text-xl sm:text-2xl font-extrabold font-display text-emerald-700 dark:text-emerald-300 truncate">
-                {formatCurrency(totalReceitas)}
-              </p>
-              <p className="text-[11px] text-emerald-800/80 dark:text-emerald-300/80 mt-0.5 truncate">
-                {entriesSummary.count} {entriesSummary.count === 1 ? 'receita planejada' : 'receitas planejadas'}
-              </p>
-            </div>
-          </div>
-
-          {/* 2. GASTOS FIXOS (AMBER) */}
+          {/* 1. GASTOS FIXOS (AMBER) */}
           <div
             onClick={() => onSelectTab('fixed_expenses')}
             className="p-3.5 sm:p-4 rounded-2xl border border-amber-500/20 bg-amber-50/50 dark:bg-amber-950/20 hover:border-amber-500/40 hover:shadow-xs cursor-pointer transition-all flex flex-col justify-between group"
@@ -520,7 +494,7 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
             </div>
           </div>
 
-          {/* 3. GASTOS VARIÁVEIS (ROSE) */}
+          {/* 2. GASTOS VARIÁVEIS (ROSE) */}
           <div
             onClick={() => onSelectTab('variable_expenses')}
             className="p-3.5 sm:p-4 rounded-2xl border border-rose-500/20 bg-rose-50/50 dark:bg-rose-950/20 hover:border-rose-500/40 hover:shadow-xs cursor-pointer transition-all flex flex-col justify-between group"
@@ -531,7 +505,7 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
                   <CreditCard className="w-4 h-4" />
                 </div>
                 <span className="text-xs font-bold uppercase tracking-wider text-rose-900 dark:text-rose-200">
-                  Variáveis
+                  Gastos Variáveis
                 </span>
               </div>
               <ArrowRight className="w-4 h-4 text-rose-600/40 group-hover:text-rose-600 transition-colors" />
@@ -546,7 +520,7 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
             </div>
           </div>
 
-          {/* 4. PARCELADOS (INDIGO) */}
+          {/* 3. PARCELADOS (INDIGO) */}
           <div
             onClick={() => onSelectTab('installments')}
             className="p-3.5 sm:p-4 rounded-2xl border border-indigo-500/20 bg-indigo-50/50 dark:bg-indigo-950/20 hover:border-indigo-500/40 hover:shadow-xs cursor-pointer transition-all flex flex-col justify-between group"
@@ -642,11 +616,11 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
           {/* Lista de Itens do Checklist */}
           <div className="overflow-y-auto max-h-[300px] pr-1 space-y-2">
             {isLoading ? (
-              <p className="text-xs text-center text-[#5E6963] py-6">Carregando...</p>
+              <p className="text-xs text-center text-[#5E6963] py-4">Carregando...</p>
             ) : filteredChecklistItems.length === 0 ? (
-              <div className="text-center py-8 border border-dashed border-[#E2E8E4] dark:border-[#24312B] rounded-xl bg-[#F7F4EA]/40 dark:bg-[#101614]/40">
-                <CheckCircle2 className="w-6 h-6 text-[#075C45]/40 dark:text-[#78D9A6]/40 mx-auto mb-1.5" />
-                <p className="text-xs font-bold text-[#202724] dark:text-[#F7F4EA]">Nenhuma conta nesta categoria</p>
+              <div className="text-center py-3.5 px-3 border border-dashed border-[#E2E8E4] dark:border-[#24312B] rounded-xl bg-[#F7F4EA]/40 dark:bg-[#101614]/40 flex items-center justify-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-[#075C45]/50 dark:text-[#78D9A6]/50 shrink-0" />
+                <p className="text-xs font-medium text-[#5E6963] dark:text-[#95A39B]">Nenhuma conta nesta categoria</p>
               </div>
             ) : (
               filteredChecklistItems.map((item) => (
@@ -712,9 +686,9 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
 
             <div className="space-y-2">
               {sortedUpcomingItems.length === 0 ? (
-                <div className="text-center py-4 border border-dashed border-[#E2E8E4] dark:border-[#24312B] rounded-xl bg-[#F7F4EA]/40 dark:bg-[#101614]/40">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-500/40 mx-auto mb-1" />
-                  <p className="text-[11px] font-semibold text-[#202724] dark:text-[#F7F4EA]">Tudo em dia!</p>
+                <div className="text-center py-2.5 px-3 border border-dashed border-[#E2E8E4] dark:border-[#24312B] rounded-xl bg-[#F7F4EA]/40 dark:bg-[#101614]/40 flex items-center justify-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500/60 shrink-0" />
+                  <p className="text-xs font-semibold text-[#075C45] dark:text-[#78D9A6]">Tudo em dia!</p>
                 </div>
               ) : (
                 sortedUpcomingItems.map((item) => {

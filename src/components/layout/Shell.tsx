@@ -47,10 +47,14 @@ interface NavGroup {
 export function Shell({ currentTab, onSelectTab, children }: ShellProps) {
   const { user, profile, currentSpace, signOut } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const [isSidebarHovered, setIsSidebarHovered] = useState(false);
+  const [isSidebarFocused, setIsSidebarFocused] = useState(false);
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const [isActionSheetOpen, setIsActionSheetOpen] = useState(false);
   const [isMobileNotificationsOpen, setIsMobileNotificationsOpen] = useState(false);
   const [alerts, setAlerts] = useState<FinancialAlert[]>([]);
+
+  const isDesktopExpanded = isSidebarHovered || isSidebarFocused;
 
   useEffect(() => {
     async function loadAlerts() {
@@ -115,132 +119,202 @@ export function Shell({ currentTab, onSelectTab, children }: ShellProps) {
 
   return (
     <div className="h-[100dvh] w-full flex bg-[#F3F4F4] dark:bg-[#181B1A] text-[#202724] dark:text-[#F4F4F5] transition-colors duration-200 overflow-hidden">
-      {/* DESKTOP SIDEBAR (Visible on md and up, fixed 100dvh with independent scroll) */}
-      <aside className="hidden md:flex flex-col w-64 lg:w-72 h-[100dvh] border-r border-[#E2E8E4] dark:border-[#2E3532] bg-white dark:bg-[#1E2220] p-4 lg:p-5 shrink-0 select-none z-20">
-        {/* Top Header: Brand & Space Selector (shrink-0) */}
-        <div className="shrink-0 space-y-4 pb-2">
-          {/* Brand Header */}
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl overflow-hidden border-2 border-[#16A66A]/30 bg-[#F3F4F4] dark:bg-[#232725] p-0.5 shrink-0 shadow-2xs">
-              <img
-                src={POUPAGAIO_MASCOT_URL}
-                alt="Poupagaio Mascot"
-                referrerPolicy="no-referrer"
-                className="w-full h-full object-contain rounded-lg"
-              />
-            </div>
-            <div className="min-w-0">
-              <h1 className="font-bold text-base tracking-tight font-display text-[#075C45] dark:text-[#78D9A6] truncate">
-                Poupagaio Finance
-              </h1>
-              <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B] truncate">
-                Organize hoje. Voe mais longe.
-              </p>
-            </div>
-          </div>
-
-          {/* Space Selector */}
-          <div>
-            <SpaceSelector />
-          </div>
-        </div>
-
-        {/* Navigation Groups: Independent scroll (flex-1 min-h-0 overflow-y-auto) */}
-        <nav className="flex-1 min-h-0 overflow-y-auto py-2 pr-1 space-y-3">
-          {sidebarNavGroups.map((group) => (
-            <div key={group.title} className="space-y-0.5">
-              <p className="px-3 text-[10px] font-bold uppercase tracking-wider text-[#5E6963]/75 dark:text-[#95A39B]/65 select-none">
-                {group.title}
-              </p>
-              <div className="space-y-0.5">
-                {group.items.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = currentTab === item.id;
-                  return (
-                    <button
-                      key={item.id}
-                      id={`nav-desktop-${item.id}`}
-                      onClick={() => handleNavClick(item.id)}
-                      type="button"
-                      className={`w-full flex items-center justify-between px-3 py-2 rounded-xl font-medium text-xs transition-all duration-150 cursor-pointer ${
-                        isActive
-                          ? 'bg-[#075C45] text-white shadow-xs dark:bg-[#16A66A] dark:text-[#101614]'
-                          : 'hover:bg-black/5 text-[#202724] dark:hover:bg-white/5 dark:text-[#F4F4F5]'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <Icon className={`w-4 h-4 ${isActive ? 'text-white dark:text-[#101614]' : 'text-[#16A66A]'}`} />
-                        <span>{item.label}</span>
-                      </div>
-                    </button>
-                  );
-                })}
+      {/* DESKTOP SIDEBAR WRAPPER (Fixed 72px base width so main content NEVER moves or shifts) */}
+      <div
+        className="hidden md:block w-[72px] shrink-0 h-[100dvh] relative z-40"
+        onMouseEnter={() => setIsSidebarHovered(true)}
+        onMouseLeave={() => setIsSidebarHovered(false)}
+      >
+        <aside
+          onFocus={() => setIsSidebarFocused(true)}
+          onBlur={(e) => {
+            if (!e.currentTarget.contains(e.relatedTarget)) {
+              setIsSidebarFocused(false);
+            }
+          }}
+          className={`absolute top-0 left-0 h-[100dvh] transition-[width] duration-200 ease-out border-r border-[#E2E8E4] dark:border-[#2E3532] bg-white dark:bg-[#1E2220] p-3 flex flex-col shrink-0 select-none z-40 overflow-x-hidden ${
+            isDesktopExpanded ? 'w-64 shadow-2xl' : 'w-[72px] shadow-sm'
+          }`}
+        >
+          {/* Top Header: Brand & Space Selector (shrink-0) */}
+          <div className="shrink-0 space-y-3 pb-2">
+            {/* Brand Header */}
+            <div className={`flex items-center ${isDesktopExpanded ? 'gap-3 px-1' : 'justify-center'}`}>
+              <div
+                className="w-10 h-10 rounded-xl overflow-hidden border-2 border-[#16A66A]/30 bg-[#F3F4F4] dark:bg-[#232725] p-0.5 shrink-0 shadow-2xs"
+                title={!isDesktopExpanded ? 'Poupagaio Finance' : undefined}
+              >
+                <img
+                  src={POUPAGAIO_MASCOT_URL}
+                  alt="Poupagaio Mascot"
+                  referrerPolicy="no-referrer"
+                  className="w-full h-full object-contain rounded-lg"
+                />
               </div>
+              {isDesktopExpanded && (
+                <div className="min-w-0 transition-opacity duration-150 animate-in fade-in">
+                  <h1 className="font-bold text-sm lg:text-base tracking-tight font-display text-[#075C45] dark:text-[#78D9A6] truncate">
+                    Poupagaio Finance
+                  </h1>
+                  <p className="text-[10px] text-[#5E6963] dark:text-[#95A39B] truncate">
+                    Organize hoje. Voe mais longe.
+                  </p>
+                </div>
+              )}
             </div>
-          ))}
-        </nav>
 
-        {/* Bottom Sidebar: User Profile & Preferences (shrink-0, permanently accessible!) */}
-        <div className="shrink-0 pt-3 border-t border-[#E2E8E4] dark:border-[#2E3532] space-y-2.5">
-          <button
-            type="button"
-            id="nav-desktop-profile"
-            onClick={() => handleNavClick('profile')}
-            className={`w-full flex items-center gap-3 p-2 rounded-xl transition-colors cursor-pointer text-left ${
-              currentTab === 'profile'
-                ? 'bg-[#16A66A]/15 text-[#075C45] dark:bg-[#16A66A]/25 dark:text-[#78D9A6]'
-                : 'hover:bg-black/5 text-[#202724] dark:hover:bg-white/5 dark:text-[#F4F4F5]'
-            }`}
-          >
-            <Avatar
-              name={profile?.full_name || user?.full_name || user?.email || 'U'}
-              size="sm"
-            />
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-bold truncate">
-                {profile?.full_name || user?.full_name || 'Usuário'}
-              </p>
-              <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B] truncate">
-                {user?.email}
-              </p>
+            {/* Space Selector */}
+            <div className="w-full">
+              <SpaceSelector isCollapsed={!isDesktopExpanded} />
             </div>
-            <User className="w-4 h-4 text-[#5E6963] dark:text-[#95A39B]" />
-          </button>
+          </div>
 
-          <div className="flex items-center justify-between pt-0.5">
+          {/* Navigation Groups: Independent scroll (flex-1 min-h-0 overflow-y-auto) */}
+          <nav className="flex-1 min-h-0 overflow-y-auto py-1 pr-0.5 space-y-2.5">
+            {sidebarNavGroups.map((group) => (
+              <div key={group.title} className="space-y-0.5">
+                {isDesktopExpanded ? (
+                  <p className="px-3 text-[10px] font-bold uppercase tracking-wider text-[#5E6963]/75 dark:text-[#95A39B]/65 select-none truncate">
+                    {group.title}
+                  </p>
+                ) : (
+                  <div className="h-0.5 border-t border-[#E2E8E4]/60 dark:border-[#2E3532]/60 my-1 mx-2" />
+                )}
+                <div className="space-y-0.5">
+                  {group.items.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = currentTab === item.id;
+                    return (
+                      <button
+                        key={item.id}
+                        id={`nav-desktop-${item.id}`}
+                        onClick={() => handleNavClick(item.id)}
+                        type="button"
+                        title={!isDesktopExpanded ? item.label : undefined}
+                        aria-label={item.label}
+                        className={`w-full flex items-center rounded-xl font-medium text-xs transition-all duration-150 cursor-pointer ${
+                          isDesktopExpanded
+                            ? 'justify-between px-3 py-2'
+                            : 'justify-center p-2.5'
+                        } ${
+                          isActive
+                            ? 'bg-[#075C45] text-white shadow-xs dark:bg-[#16A66A] dark:text-[#101614]'
+                            : 'hover:bg-black/5 text-[#202724] dark:hover:bg-white/5 dark:text-[#F4F4F5]'
+                        }`}
+                      >
+                        <div className={`flex items-center ${isDesktopExpanded ? 'gap-2.5 min-w-0' : 'justify-center'}`}>
+                          <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white dark:text-[#101614]' : 'text-[#16A66A]'}`} />
+                          {isDesktopExpanded && (
+                            <span className="truncate">{item.label}</span>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </nav>
+
+          {/* Bottom Sidebar: User Profile & Preferences (shrink-0, permanently accessible) */}
+          <div className="shrink-0 pt-2.5 border-t border-[#E2E8E4] dark:border-[#2E3532] space-y-2">
             <button
               type="button"
-              id="sidebar-toggle-theme"
-              onClick={toggleTheme}
-              aria-label="Alternar tema"
-              className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-[#E2E8E4] hover:bg-black/5 dark:border-[#2E3532] dark:hover:bg-white/5 text-xs text-[#5E6963] dark:text-[#95A39B] cursor-pointer transition-colors"
+              id="nav-desktop-profile"
+              onClick={() => handleNavClick('profile')}
+              title={!isDesktopExpanded ? (profile?.full_name || user?.full_name || user?.email || 'Perfil') : undefined}
+              aria-label="Perfil do usuário"
+              className={`w-full flex items-center rounded-xl transition-colors cursor-pointer text-left ${
+                isDesktopExpanded ? 'gap-3 p-2' : 'justify-center p-1.5'
+              } ${
+                currentTab === 'profile'
+                  ? 'bg-[#16A66A]/15 text-[#075C45] dark:bg-[#16A66A]/25 dark:text-[#78D9A6]'
+                  : 'hover:bg-black/5 text-[#202724] dark:hover:bg-white/5 dark:text-[#F4F4F5]'
+              }`}
             >
-              {theme === 'light' ? (
+              <Avatar
+                name={profile?.full_name || user?.full_name || user?.email || 'U'}
+                size="sm"
+              />
+              {isDesktopExpanded && (
                 <>
-                  <Moon className="w-3.5 h-3.5" />
-                  <span>Escuro</span>
-                </>
-              ) : (
-                <>
-                  <Sun className="w-3.5 h-3.5 text-[#D6A84B]" />
-                  <span>Claro</span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-bold truncate">
+                      {profile?.full_name || user?.full_name || 'Usuário'}
+                    </p>
+                    <p className="text-[10px] text-[#5E6963] dark:text-[#95A39B] truncate">
+                      {user?.email}
+                    </p>
+                  </div>
+                  <User className="w-4 h-4 text-[#5E6963] dark:text-[#95A39B] shrink-0" />
                 </>
               )}
             </button>
 
-            <button
-              type="button"
-              id="sidebar-logout-btn"
-              onClick={() => signOut()}
-              aria-label="Sair da conta"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-red-50 text-red-600 dark:hover:bg-red-950/40 dark:text-red-400 text-xs font-medium cursor-pointer transition-colors"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-              <span>Sair</span>
-            </button>
+            {isDesktopExpanded ? (
+              <div className="flex items-center justify-between pt-0.5 animate-in fade-in duration-150">
+                <button
+                  type="button"
+                  id="sidebar-toggle-theme"
+                  onClick={toggleTheme}
+                  aria-label="Alternar tema"
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-[#E2E8E4] hover:bg-black/5 dark:border-[#2E3532] dark:hover:bg-white/5 text-xs text-[#5E6963] dark:text-[#95A39B] cursor-pointer transition-colors"
+                >
+                  {theme === 'light' ? (
+                    <>
+                      <Moon className="w-3.5 h-3.5" />
+                      <span>Escuro</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sun className="w-3.5 h-3.5 text-[#D6A84B]" />
+                      <span>Claro</span>
+                    </>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  id="sidebar-logout-btn"
+                  onClick={() => signOut()}
+                  aria-label="Sair da conta"
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl hover:bg-red-50 text-red-600 dark:hover:bg-red-950/40 dark:text-red-400 text-xs font-medium cursor-pointer transition-colors"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span>Sair</span>
+                </button>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center gap-1.5 pt-0.5">
+                <button
+                  type="button"
+                  id="sidebar-toggle-theme-compact"
+                  onClick={toggleTheme}
+                  title={theme === 'light' ? 'Modo Escuro' : 'Modo Claro'}
+                  aria-label="Alternar tema"
+                  className="w-10 h-8 rounded-xl border border-[#E2E8E4] hover:bg-black/5 dark:border-[#2E3532] dark:hover:bg-white/5 flex items-center justify-center text-[#5E6963] dark:text-[#95A39B] cursor-pointer transition-colors"
+                >
+                  {theme === 'light' ? (
+                    <Moon className="w-4 h-4" />
+                  ) : (
+                    <Sun className="w-4 h-4 text-[#D6A84B]" />
+                  )}
+                </button>
+                <button
+                  type="button"
+                  id="sidebar-logout-btn-compact"
+                  onClick={() => signOut()}
+                  title="Sair da conta"
+                  aria-label="Sair da conta"
+                  className="w-10 h-8 rounded-xl hover:bg-red-50 text-red-600 dark:hover:bg-red-950/40 dark:text-red-400 flex items-center justify-center cursor-pointer transition-colors"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </div>
+            )}
           </div>
-        </div>
-      </aside>
+        </aside>
+      </div>
 
       {/* MAIN CONTENT AREA */}
       <div className="flex-1 flex flex-col min-w-0 h-[100dvh] overflow-hidden">
