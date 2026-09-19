@@ -981,18 +981,18 @@ export function ReportsScreen() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Gráfico 1: Evolução Financeira Mensal (SVG) */}
             <Card className="lg:col-span-2 border-[#E2E8E4] dark:border-[#2E3532] bg-white dark:bg-[#1E2220] shadow-2xs">
-              <CardContent className="p-4 lg:p-5 space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
+              <CardContent className="p-4 sm:p-5 space-y-4">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left pb-1">
+                  <div className="flex flex-col items-center sm:items-start">
                     <h4 className="text-xs font-bold uppercase tracking-wider text-[#075C45] dark:text-[#78D9A6]">
                       Evolução Mensal (Entradas vs Despesas)
                     </h4>
-                    <p className="text-[10px] text-[#5E6963] dark:text-[#95A39B]">
+                    <p className="text-[10px] text-[#5E6963] dark:text-[#95A39B] mt-0.5">
                       Evolução das receitas, despesas e saldo no período
                     </p>
                   </div>
                   {/* Legenda do Gráfico */}
-                  <div className="flex items-center gap-3 text-[10px] font-bold">
+                  <div className="flex flex-wrap items-center justify-center gap-3 text-[10px] font-bold">
                     <span className="flex items-center gap-1.5">
                       <span className="w-2.5 h-2.5 rounded-sm bg-[#16A66A]" />
                       Receitas
@@ -1238,14 +1238,14 @@ export function ReportsScreen() {
               </CardContent>
             </Card>
 
-            {/* Gráfico 2: Composição das Despesas (SVG Donut) */}
+            {/* Gráfico 2: Composição de Despesas (SVG Donut) */}
             <Card className="border-[#E2E8E4] dark:border-[#2E3532] bg-white dark:bg-[#1E2220] shadow-2xs">
-              <CardContent className="p-4 lg:p-5 space-y-4 text-center">
-                <div className="text-left">
+              <CardContent className="p-4 sm:p-5 space-y-4 text-center">
+                <div className="flex flex-col items-center sm:items-start text-center sm:text-left pb-1">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-[#075C45] dark:text-[#78D9A6]">
-                    Composição das Despesas
-                    </h4>
-                  <p className="text-[10px] text-[#5E6963] dark:text-[#95A39B]">
+                    Composição de Despesas
+                  </h4>
+                  <p className="text-[10px] text-[#5E6963] dark:text-[#95A39B] mt-0.5">
                     Divisão das despesas totais do período por tipo
                   </p>
                 </div>
@@ -1328,20 +1328,20 @@ export function ReportsScreen() {
           {/* SEÇÃO COMPACTA: PREVISTO X REALIZADO — ETAPA 3.10 */}
           {previstoRealizadoData && (
             <Card className="border-[#E2E8E4] dark:border-[#2E3532] bg-white dark:bg-[#1E2220] shadow-2xs">
-              <CardContent className="p-4 lg:p-5 space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#F3F4F4] dark:border-[#282E2B] pb-3">
-                  <div>
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-[#075C45] dark:text-[#78D9A6] flex items-center gap-1.5">
+              <CardContent className="p-4 sm:p-5 space-y-4">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 border-b border-[#F3F4F4] dark:border-[#282E2B] pb-3 text-center sm:text-left">
+                  <div className="flex flex-col items-center sm:items-start">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-[#075C45] dark:text-[#78D9A6] flex items-center justify-center sm:justify-start gap-1.5">
                       <TrendingUp className="w-4 h-4 text-[#16A66A]" />
                       Análise Previsto x Realizado
                     </h4>
-                    <p className="text-[10px] text-[#5E6963] dark:text-[#95A39B]">
+                    <p className="text-[10px] text-[#5E6963] dark:text-[#95A39B] mt-0.5">
                       Acompanhe o planejado frente à efetivação de receitas e pagamentos da competência selecionada
                     </p>
                   </div>
 
                   {/* Seletor de Mês específico */}
-                  <div className="flex items-center gap-1.5 shrink-0">
+                  <div className="flex items-center justify-center gap-1.5 shrink-0">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-[#5E6963] dark:text-[#95A39B]">
                       Competência:
                     </span>
@@ -1595,12 +1595,12 @@ export function ReportsScreen() {
 
           {/* 5. TABELA COMPARATIVA DE COMPETÊNCIAS */}
           <Card className="border-[#E2E8E4] dark:border-[#2E3532] bg-white dark:bg-[#1E2220] shadow-2xs">
-            <CardContent className="p-4 lg:p-5 space-y-4">
-              <div>
+            <CardContent className="p-4 sm:p-5 space-y-4">
+              <div className="flex flex-col items-center sm:items-start text-center sm:text-left pb-1">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-[#075C45] dark:text-[#78D9A6]">
                   Comparativo de Competências do Período
                 </h4>
-                <p className="text-[10px] text-[#5E6963] dark:text-[#95A39B]">
+                <p className="text-[10px] text-[#5E6963] dark:text-[#95A39B] mt-0.5">
                   Consolidado mês a mês das receitas, despesas, balanço final e nível de comprometimento
                 </p>
               </div>
@@ -1687,13 +1687,13 @@ export function ReportsScreen() {
             </CardContent>
           </Card>
 
-          {/* 6. HISTÓRICO DE FECHAMENTOS OFICIAIS */}
+          {/* 6. HISTÓRICO DE FECHAMENTO */}
           <Card className="border-[#E2E8E4] dark:border-[#2E3532] bg-[#F7F9F7] dark:bg-[#131514] overflow-hidden">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 pb-3 border-b border-[#E2E8E4] dark:border-[#2E3532] mb-3">
+            <CardContent className="p-4 sm:p-5">
+              <div className="flex items-center justify-center sm:justify-start gap-2 pb-3 border-b border-[#E2E8E4] dark:border-[#2E3532] mb-3 text-center sm:text-left">
                 <History className="w-4 h-4 text-[#16A66A]" />
                 <span className="text-xs font-bold uppercase tracking-wider text-[#202724] dark:text-[#F4F4F5]">
-                  Histórico de Fechamentos (Snapshot Oficial)
+                  Histórico de Fechamento
                 </span>
               </div>
 

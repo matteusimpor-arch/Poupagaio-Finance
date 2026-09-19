@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useTheme } from '../../hooks/useTheme';
 import { POUPAGAIO_MASCOT_URL } from '../../assets/mascot';
-import { Card, CardContent } from '../ui/card';
-import { Button } from '../ui/button';
 import { entriesService } from '../../lib/services/entries';
-import { checklistService, NormalizedChecklistExpense, MonthlyChecklistResult, FinancialAlert } from '../../lib/services/checklist';
+import {
+  checklistService,
+  NormalizedChecklistExpense,
+  MonthlyChecklistResult,
+} from '../../lib/services/checklist';
 import { calendarNotesService, CalendarNote } from '../../lib/services/calendarNotes';
 import { formatCurrency } from '../../lib/formatters';
 import {
@@ -24,7 +26,6 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
-  ChevronRight as ChevronIcon,
   CalendarCheck,
   StickyNote,
 } from 'lucide-react';
@@ -34,9 +35,19 @@ interface DashboardHomeProps {
   onSelectTab: (tab: ActiveTab) => void;
 }
 
+const MONTH_NAMES = [
+  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+];
+
+const MONTH_SHORT_NAMES = [
+  'JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN',
+  'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'
+];
+
 export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
   const { profile, user, currentSpace } = useAuth();
-  const { theme, toggleTheme } = useTheme();
+  const { theme } = useTheme();
 
   const now = new Date();
   const [currentYear, setCurrentYear] = useState(now.getFullYear());
@@ -58,7 +69,7 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
   // Selected Day in compact Mini Calendar
   const [selectedMiniDay, setSelectedMiniDay] = useState<number>(now.getDate());
 
-  // Load all operational financial data for the selected month/year
+  // Load operational financial data
   const loadDashboardData = async () => {
     if (!currentSpace?.id) return;
     setIsLoading(true);
@@ -85,7 +96,6 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
     loadDashboardData();
   }, [currentSpace?.id, currentYear, currentMonth]);
 
-  // Navigate months
   const handlePrevMonth = () => {
     setSelectedMiniDay(1);
     if (currentMonth === 1) {
@@ -106,7 +116,6 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
     }
   };
 
-  // Toggle item payment status directly from checklist
   const handleToggleItemStatus = async (item: NormalizedChecklistExpense) => {
     if (!currentSpace?.id) return;
     const res = await checklistService.toggleItemPaymentStatus(item, currentSpace.id, currentYear, currentMonth);
@@ -122,17 +131,27 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
   const totalDespesas = checklistResult ? checklistResult.stats.totalAmount : 0;
   const saldoConsolidado = totalReceitas - totalDespesas;
 
+  // Breakdown by subsystem
+  const allItems = checklistResult ? checklistResult.items : [];
+  const totalFixed = allItems.filter(i => i.sourceType === 'fixed').reduce((acc, i) => acc + i.amount, 0);
+  const totalVariable = allItems.filter(i => i.sourceType === 'variable').reduce((acc, i) => acc + i.amount, 0);
+  const totalInstallments = allItems.filter(i => i.sourceType === 'installment').reduce((acc, i) => acc + i.amount, 0);
+
+  const countFixed = allItems.filter(i => i.sourceType === 'fixed').length;
+  const countVariable = allItems.filter(i => i.sourceType === 'variable').length;
+  const countInstallments = allItems.filter(i => i.sourceType === 'installment').length;
+
   const totalPago = checklistResult ? checklistResult.stats.paidAmount : 0;
   const totalPendente = checklistResult ? checklistResult.stats.pendingAmount : 0;
 
-  const overdueItems = checklistResult ? checklistResult.items.filter(i => i.visualStatus === 'overdue' && i.status === 'pending') : [];
-  const todayItems = checklistResult ? checklistResult.items.filter(i => i.visualStatus === 'today' && i.status === 'pending') : [];
-  const upcomingItems = checklistResult ? checklistResult.items.filter(i => i.visualStatus === 'upcoming' && i.status === 'pending') : [];
+  const overdueItems = allItems.filter(i => i.visualStatus === 'overdue' && i.status === 'pending');
+  const todayItems = allItems.filter(i => i.visualStatus === 'today' && i.status === 'pending');
+  const upcomingItems = allItems.filter(i => i.visualStatus === 'upcoming' && i.status === 'pending');
 
   const totalAtrasado = overdueItems.reduce((acc, i) => acc + i.amount, 0) + todayItems.reduce((acc, i) => acc + i.amount, 0);
   const totalProximo = upcomingItems.reduce((acc, i) => acc + i.amount, 0);
 
-  // User details
+  // User name
   const fullName = profile?.full_name || user?.full_name || user?.email?.split('@')[0] || '';
   const firstName = fullName.trim().split(' ')[0] || 'Usuário';
 
@@ -171,19 +190,9 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
       })
     : [];
 
-  const MONTH_NAMES = [
-    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
-  ];
-
-  const MONTH_SHORT_NAMES = [
-    'JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN',
-    'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'
-  ];
-
   // Helper calculations for calendar
   const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
-  const firstDayWeekday = new Date(currentYear, currentMonth - 1, 1).getDay(); // 0 = Sun
+  const firstDayWeekday = new Date(currentYear, currentMonth - 1, 1).getDay();
 
   const itemsByDate: Record<string, NormalizedChecklistExpense[]> = {};
   if (checklistResult) {
@@ -203,10 +212,9 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
   const miniSelectedDayItems = itemsByDate[selectedMiniDateStr] || [];
   const miniSelectedDayNotes = notesByDate[selectedMiniDateStr] || [];
 
-  // Próximos Vencimentos List (Line 4 LHS) - Sorted by urgency
+  // Próximos Vencimentos
   const rawPendingItems = checklistResult ? checklistResult.items.filter(i => i.status === 'pending') : [];
   const sortedUpcomingItems = [...rawPendingItems].sort((a, b) => {
-    // Urgency sorting helper
     const dateA = new Date(a.dueDate).getTime();
     const dateB = new Date(b.dueDate).getTime();
     if (a.visualStatus === 'overdue' && b.visualStatus !== 'overdue') return -1;
@@ -214,12 +222,12 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
     if (a.visualStatus === 'today' && b.visualStatus !== 'today') return -1;
     if (b.visualStatus === 'today' && a.visualStatus !== 'today') return 1;
     return dateA - dateB;
-  }).slice(0, 3); // Showing exactly 3 items to preserve height matching with calendar
+  }).slice(0, 4);
 
   return (
-    <div className="w-full h-full animate-in fade-in duration-300">
+    <div className="w-full space-y-4 pb-12 animate-in fade-in duration-300 max-w-7xl mx-auto">
       {actionError && (
-        <div className="p-2 mb-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 rounded-xl text-xs text-red-700 dark:text-red-300 flex items-center justify-between shrink-0">
+        <div className="p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 rounded-xl text-xs text-rose-700 dark:text-rose-300 flex items-center justify-between">
           <span>{actionError}</span>
           <button type="button" onClick={() => setActionError(null)} className="p-1 cursor-pointer">
             <X className="w-4 h-4" />
@@ -228,829 +236,720 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
       )}
 
       {/* ==================================================
-          A. DESKTOP VIEW (hidden md:flex)
-          Utilizes full viewport height, fits exactly inside 768px+ screens
+          1. CABEÇALHO OPERACIONAL (Saudação + Seletor de Competência)
           ================================================== */}
-      <div className="hidden md:flex md:flex-col md:gap-4 w-full md:h-[calc(100dvh-3.6rem)] md:min-h-[550px]">
-        
-        {/* LINHA 1: CABEÇALHO OPERACIONAL COMPACTO */}
-        <div className="flex flex-row items-center justify-between gap-2.5 shrink-0 bg-white dark:bg-[#1E2220] px-4 py-2.5 rounded-xl border border-[#E2E8E4] dark:border-[#2E3532] shadow-3xs">
-          <div>
-            <h1 className="text-base sm:text-lg font-bold font-display text-[#202724] dark:text-[#F4F4F5] tracking-tight">
-              Olá, {firstName}! 👋
-            </h1>
-            <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B]">
-              Vamos organizar suas finanças hoje?
-            </p>
-          </div>
-
-          {/* Competency Month Navigation Selector */}
-          <div className="flex items-center gap-1.5 bg-[#F3F4F4] dark:bg-[#282E2B] p-1 rounded-xl border border-[#E2E8E4] dark:border-[#2E3532]">
-            <button
-              type="button"
-              onClick={handlePrevMonth}
-              className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-[#5E6963] dark:text-[#95A39B] cursor-pointer"
-              aria-label="Mês anterior"
-            >
-              <ChevronLeft className="w-3.5 h-3.5" />
-            </button>
-            <span className="text-[11px] sm:text-xs font-bold min-w-[95px] text-center font-display text-[#075C45] dark:text-[#78D9A6]">
-              {MONTH_NAMES[currentMonth - 1]} {currentYear}
-            </span>
-            <button
-              type="button"
-              onClick={handleNextMonth}
-              className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-[#5E6963] dark:text-[#95A39B] cursor-pointer"
-              aria-label="Próximo mês"
-            >
-              <ChevronRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-[#18211D] p-3.5 sm:p-4 rounded-2xl border border-[#E2E8E4] dark:border-[#24312B] shadow-xs">
+        <div>
+          <h1 className="text-lg sm:text-xl font-bold font-display text-[#202724] dark:text-[#F7F4EA] tracking-tight">
+            Olá, {firstName}! 👋
+          </h1>
+          <p className="text-xs text-[#5E6963] dark:text-[#95A39B]">
+            Visão consolidada das suas finanças
+          </p>
         </div>
 
-        {/* LINHA 2: FAIXA POUPAGAIO DIZ */}
-        <div className="flex items-center justify-between gap-3 px-4 py-2 shrink-0 rounded-xl border border-[#E2E8E4] dark:border-[#2E3532] bg-white dark:bg-[#1E2220] shadow-3xs">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-7 h-7 rounded-lg overflow-hidden border border-[#16A66A]/30 bg-[#F3F4F4] dark:bg-[#282E2B] p-0.5 shrink-0 flex items-center justify-center">
-              <img
-                src={POUPAGAIO_MASCOT_URL}
-                alt="Poupagaio"
-                referrerPolicy="no-referrer"
-                className="w-full h-full object-contain"
-              />
-            </div>
-            <p className="text-[11px] sm:text-xs text-[#202724] dark:text-[#F4F4F5] truncate font-medium">
-              <span className="font-semibold text-[#075C45] dark:text-[#78D9A6] mr-1">Poupagaio diz:</span>
-              {mascotMessage}
-            </p>
-          </div>
-          {mascotActionLabel && (
-            <button
-              type="button"
-              onClick={() => {
-                if (mascotActionLabel === 'Ver pendentes') {
-                  setChecklistFilter('pending');
-                } else {
-                  onSelectTab(mascotActionTab);
-                }
-              }}
-              className="shrink-0 text-[10px] font-bold text-[#075C45] hover:text-[#075C45]/80 dark:text-[#78D9A6] dark:hover:text-[#78D9A6]/80 flex items-center gap-0.5 px-2 py-1 rounded-lg hover:bg-[#16A66A]/10 transition-colors cursor-pointer"
-            >
-              <span>{mascotActionLabel}</span>
-              <ArrowRight className="w-3 h-3" />
-            </button>
-          )}
-        </div>
-
-        {/* LINHA 3: RESUMO PRINCIPAL (Saldo, Situação, Checklist) */}
-        <div className="grid grid-cols-12 gap-3.5 shrink-0">
-          
-          {/* CARD 1: SALDO DO MÊS */}
-          <div className="col-span-4 bg-white dark:bg-[#1E2220] border border-[#E2E8E4] dark:border-[#2E3532] rounded-2xl p-4 flex flex-col shadow-3xs">
-            <div className="bg-[#EAFDF5] dark:bg-[#0F2F23]/70 border border-[#A7F3D0] dark:border-[#105E41] rounded-xl p-3 text-center space-y-1 relative">
-              {currentSpace?.name && (
-                <span className="absolute top-2 right-2.5 text-[8px] font-extrabold tracking-wider uppercase bg-emerald-600 dark:bg-emerald-500 text-white dark:text-[#101614] px-1.5 py-0.5 rounded-md shadow-3xs">
-                  {currentSpace.name}
-                </span>
-              )}
-              <p className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
-                Saldo do Mês
-              </p>
-              <div className={`text-2xl font-extrabold font-display tracking-tight ${saldoConsolidado < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-[#075C45] dark:text-[#78D9A6]'}`}>
-                {formatCurrency(saldoConsolidado)}
-              </div>
-              <p className="text-[9px] text-emerald-700/80 dark:text-emerald-400/80">
-                Balanço disponível para esta competência
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 mt-3.5">
-              <div
-                onClick={() => onSelectTab('entries')}
-                className="p-2.5 rounded-xl bg-[#F8F9F8] dark:bg-[#18201D] border border-[#E2E8E4] dark:border-[#2A312E] hover:border-emerald-500/40 cursor-pointer transition-all flex flex-col justify-between"
-              >
-                <div className="flex items-center gap-1 text-[9px] uppercase font-bold text-emerald-600 dark:text-emerald-400">
-                  <ArrowUpRight className="w-3.5 h-3.5 shrink-0" />
-                  <span>Entradas</span>
-                </div>
-                <p className="text-xs font-bold text-[#202724] dark:text-[#F4F4F5] mt-1.5 truncate">
-                  {formatCurrency(totalReceitas)}
-                </p>
-                <span className="text-[8px] text-[#5E6963] dark:text-[#95A39B] mt-0.5 block truncate">
-                  Receitas planejadas
-                </span>
-              </div>
-
-              <div
-                onClick={() => onSelectTab('fixed_expenses')}
-                className="p-2.5 rounded-xl bg-[#F8F9F8] dark:bg-[#18201D] border border-[#E2E8E4] dark:border-[#2A312E] hover:border-rose-500/40 cursor-pointer transition-all flex flex-col justify-between"
-              >
-                <div className="flex items-center gap-1 text-[9px] uppercase font-bold text-rose-600 dark:text-rose-400">
-                  <ArrowDownRight className="w-3.5 h-3.5 shrink-0" />
-                  <span>Despesas</span>
-                </div>
-                <p className="text-xs font-bold text-[#202724] dark:text-[#F4F4F5] mt-1.5 truncate">
-                  {formatCurrency(totalDespesas)}
-                </p>
-                <span className="text-[8px] text-[#5E6963] dark:text-[#95A39B] mt-0.5 block truncate">
-                  Total planejado
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* CARD 2: SITUAÇÃO DO MÊS */}
-          <div className="col-span-3 bg-white dark:bg-[#1E2220] border border-[#E2E8E4] dark:border-[#2E3532] rounded-2xl p-4 flex flex-col shadow-3xs">
-            <div className="border-b border-[#E2E8E4]/60 dark:border-[#2E3532]/60 pb-1.5">
-              <h3 className="text-xs font-bold font-display text-[#202724] dark:text-[#F4F4F5] uppercase tracking-wider">
-                Situação do Mês
-              </h3>
-            </div>
-
-            <div className="space-y-2.5 mt-3">
-              <div className="p-2 rounded-xl bg-[#F0FDF4] dark:bg-[#0D241A] border border-[#D1FAE5] dark:border-[#154631] flex items-center justify-between">
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                  <div className="min-w-0">
-                    <p className="text-[9px] font-bold uppercase text-emerald-800 dark:text-emerald-300">Pago</p>
-                    <p className="text-[8px] text-[#5E6963] dark:text-[#95A39B] truncate">
-                      {checklistResult ? checklistResult.stats.paidCount : 0} quitados
-                    </p>
-                  </div>
-                </div>
-                <span className="text-xs font-extrabold text-emerald-700 dark:text-emerald-400">
-                  {formatCurrency(totalPago)}
-                </span>
-              </div>
-
-              <div className="p-2 rounded-xl bg-[#FFFBEB] dark:bg-[#251F10] border border-[#FEF3C7] dark:border-[#4B3B1B] flex items-center justify-between">
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <Clock className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                  <div className="min-w-0">
-                    <p className="text-[9px] font-bold uppercase text-amber-800 dark:text-amber-300">Próximo</p>
-                    <p className="text-[8px] text-[#5E6963] dark:text-[#95A39B] truncate">
-                      Próx. 3 dias
-                    </p>
-                  </div>
-                </div>
-                <span className="text-xs font-extrabold text-amber-700 dark:text-amber-400">
-                  {formatCurrency(totalProximo)}
-                </span>
-              </div>
-
-              <div className={`p-2 rounded-xl flex items-center justify-between border ${
-                totalAtrasado > 0
-                  ? 'bg-[#FEF2F2] dark:bg-[#261214] border-[#FEE2E2] dark:border-[#4F1A21]'
-                  : 'bg-[#F8F9F8] dark:bg-[#1A1E1C]/40 border-[#E2E8E4]'
-              }`}>
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <AlertCircle className={`w-3.5 h-3.5 shrink-0 ${totalAtrasado > 0 ? 'text-rose-600' : 'text-[#5E6963]'}`} />
-                  <div className="min-w-0">
-                    <p className={`text-[9px] font-bold uppercase ${totalAtrasado > 0 ? 'text-rose-800 dark:text-rose-300' : 'text-[#5E6963]'}`}>
-                      Atrasado / Hoje
-                    </p>
-                    <p className="text-[8px] text-[#5E6963] dark:text-[#95A39B] truncate">
-                      {overdueItems.length + todayItems.length} vencimentos
-                    </p>
-                  </div>
-                </div>
-                <span className={`text-xs font-extrabold ${totalAtrasado > 0 ? 'text-rose-600 dark:text-rose-400 animate-pulse' : 'text-[#202724] dark:text-[#F4F4F5]'}`}>
-                  {formatCurrency(totalAtrasado)}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* CARD 3: CHECKLIST FINANCEIRO */}
-          <div className="col-span-5 bg-white dark:bg-[#1E2220] border border-[#E2E8E4] dark:border-[#2E3532] rounded-2xl p-4 flex flex-col shadow-3xs">
-            <div className="flex items-center justify-between pb-1 border-b border-[#E2E8E4]/60 dark:border-[#2E3532]/60">
-              <div>
-                <h3 className="text-xs font-bold font-display text-[#202724] dark:text-[#F4F4F5] uppercase tracking-wider flex items-center gap-1">
-                  <CalendarCheck className="w-3.5 h-3.5 text-[#16A66A]" />
-                  Checklist Financeiro
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => onSelectTab('calendar')}
-                className="text-[10px] font-bold text-[#075C45] dark:text-[#78D9A6] hover:underline"
-              >
-                Ver calendário →
-              </button>
-            </div>
-
-            {checklistResult && (
-              <div className="my-1.5">
-                <div className="flex items-center justify-between text-[9px] font-bold text-[#5E6963] dark:text-[#95A39B] mb-0.5">
-                  <span>Progresso: {checklistResult.stats.paidCount} de {checklistResult.stats.totalItems} pagos</span>
-                  <span className="text-[#075C45] dark:text-[#78D9A6] font-extrabold">{checklistResult.stats.progressPercentage}%</span>
-                </div>
-                <div className="w-full bg-[#EBECEE] dark:bg-[#2A302D] h-1.5 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-[#16A66A] rounded-full transition-all duration-300"
-                    style={{ width: `${checklistResult.stats.progressPercentage}%` }}
-                  />
-                </div>
-              </div>
-            )}
-
-            <div className="flex items-center gap-1 bg-[#F3F4F4] dark:bg-[#282E2B] p-0.5 rounded-lg border border-[#E2E8E4]/80 dark:border-[#2E3532]/80 shrink-0 mb-1.5">
-              <button
-                type="button"
-                onClick={() => setChecklistFilter('pending')}
-                className={`flex-1 text-center py-0.5 rounded text-[9px] font-bold cursor-pointer transition-colors ${
-                  checklistFilter === 'pending'
-                    ? 'bg-white text-[#075C45] dark:bg-[#1E2220] dark:text-[#78D9A6] shadow-3xs'
-                    : 'text-[#5E6963] dark:text-[#95A39B]'
-                }`}
-              >
-                Pendentes ({checklistResult ? checklistResult.stats.pendingCount : 0})
-              </button>
-              <button
-                type="button"
-                onClick={() => setChecklistFilter('paid')}
-                className={`flex-1 text-center py-0.5 rounded text-[9px] font-bold cursor-pointer transition-colors ${
-                  checklistFilter === 'paid'
-                    ? 'bg-white text-[#075C45] dark:bg-[#1E2220] dark:text-[#78D9A6] shadow-3xs'
-                    : 'text-[#5E6963] dark:text-[#95A39B]'
-                }`}
-              >
-                Pagas ({checklistResult ? checklistResult.stats.paidCount : 0})
-              </button>
-              <button
-                type="button"
-                onClick={() => setChecklistFilter('all')}
-                className={`flex-1 text-center py-0.5 rounded text-[9px] font-bold cursor-pointer transition-colors ${
-                  checklistFilter === 'all'
-                    ? 'bg-white text-[#075C45] dark:bg-[#1E2220] dark:text-[#78D9A6] shadow-3xs'
-                    : 'text-[#5E6963] dark:text-[#95A39B]'
-                }`}
-              >
-                Todas ({checklistResult ? checklistResult.stats.totalItems : 0})
-              </button>
-            </div>
-
-            <div className="overflow-y-auto max-h-[140px] pr-1 space-y-1.5">
-              {isLoading ? (
-                <p className="text-[10px] text-center text-[#5E6963] py-4">Carregando...</p>
-              ) : filteredChecklistItems.length === 0 ? (
-                <div className="text-center py-4 border border-dashed border-[#E2E8E4] dark:border-[#2A312E] rounded-xl bg-[#F8F9F8]/50 dark:bg-[#161918]/30">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-500/30 mx-auto mb-1" />
-                  <p className="text-[10px] font-bold text-[#202724] dark:text-[#F4F4F5]">Tudo limpo!</p>
-                </div>
-              ) : (
-                filteredChecklistItems.map((item) => (
-                  <div
-                    key={item.id}
-                    className={`p-2 rounded-xl border flex items-center justify-between gap-2.5 transition-colors ${
-                      item.status === 'paid'
-                        ? 'bg-emerald-50/40 dark:bg-emerald-950/10 border-emerald-200 dark:border-emerald-800/20'
-                        : item.visualStatus === 'overdue' || item.visualStatus === 'today'
-                        ? 'bg-rose-50/40 dark:bg-rose-950/10 border-rose-200 dark:border-rose-800/20 font-semibold'
-                        : 'bg-[#F8F9F8]/60 dark:bg-[#1A1E1C]/60 border-[#E2E8E4] dark:border-[#2A312E]'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
-                      <button
-                        type="button"
-                        onClick={() => handleToggleItemStatus(item)}
-                        className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 cursor-pointer transition-colors ${
-                          item.status === 'paid'
-                            ? 'bg-emerald-600 border-emerald-600 text-white dark:bg-emerald-500'
-                            : 'border-[#5E6963] dark:border-[#95A39B] hover:border-[#16A66A]'
-                        }`}
-                      >
-                        {item.status === 'paid' && <Check className="w-2.5 h-2.5 stroke-[3.5]" />}
-                      </button>
-                      <div className="min-w-0">
-                        <p className={`text-[11px] font-bold truncate ${item.status === 'paid' ? 'line-through text-[#5E6963] dark:text-[#95A39B]' : 'text-[#202724] dark:text-[#F4F4F5]'}`}>
-                          {item.title}
-                        </p>
-                        <span className="text-[8px] text-[#5E6963] dark:text-[#95A39B] uppercase font-bold tracking-wider">
-                          {item.category} • Vence {item.dueDate.split('-').slice(2).join('/')}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <p className={`text-[11px] font-bold ${item.status === 'paid' ? 'text-emerald-600 dark:text-emerald-400' : 'text-[#202724] dark:text-[#F4F4F5]'}`}>
-                        {formatCurrency(item.amount)}
-                      </p>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-
-        </div>
-
-        {/* LINHA 4: PRÓXIMOS VENCIMENTOS + CALENDÁRIO DO MÊS */}
-        <div className="grid grid-cols-12 gap-3.5 flex-grow flex-shrink flex-1 min-h-0">
-          
-          {/* COLUNA ESQUERDA: PRÓXIMOS VENCIMENTOS */}
-          <div className="col-span-5 bg-white dark:bg-[#1E2220] border border-[#E2E8E4] dark:border-[#2E3532] rounded-2xl p-4 flex flex-col shadow-3xs h-full">
-            <div className="flex items-center justify-between pb-1.5 border-b border-[#E2E8E4]/60 dark:border-[#2E3532]/60 shrink-0 mb-3">
-              <div>
-                <h3 className="text-xs font-bold font-display text-[#202724] dark:text-[#F4F4F5] uppercase tracking-wider">
-                  Próximos Vencimentos
-                </h3>
-                <p className="text-[9px] text-[#5E6963] dark:text-[#95A39B]">
-                  Suas próximas contas e compromissos
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => onSelectTab('fixed_expenses')}
-                className="text-[10px] font-bold text-[#075C45] dark:text-[#78D9A6] hover:underline"
-              >
-                Ver todos →
-              </button>
-            </div>
-
-            <div className="flex-grow flex-shrink flex-1 min-h-0 flex flex-col justify-center">
-              {sortedUpcomingItems.length === 0 ? (
-                <div className="text-center py-6 border border-dashed border-[#E2E8E4] dark:border-[#2A312E] rounded-xl bg-[#F8F9F8]/50 dark:bg-[#161918]/30 my-auto">
-                  <CheckCircle2 className="w-6 h-6 text-emerald-500/30 mx-auto mb-1" />
-                  <p className="text-[10px] font-semibold text-[#202724] dark:text-[#F4F4F5]">Tudo pago por enquanto!</p>
-                </div>
-              ) : (
-                <div className="space-y-2 flex-1 overflow-y-auto pr-0.5">
-                  {sortedUpcomingItems.map((item) => {
-                    const [, m, d] = item.dueDate.split('-');
-                    const shortMonth = MONTH_SHORT_NAMES[Number(m) - 1];
-                    
-                    let relativeLabel = 'Próximo';
-                    let badgeStyle = 'bg-slate-100 text-slate-800 dark:bg-slate-900/40 dark:text-slate-400';
-                    if (item.visualStatus === 'overdue') {
-                      relativeLabel = 'Atrasado';
-                      badgeStyle = 'bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-400 animate-pulse';
-                    } else if (item.visualStatus === 'today') {
-                      relativeLabel = 'Hoje';
-                      badgeStyle = 'bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-400 font-bold';
-                    } else if (item.visualStatus === 'upcoming') {
-                      relativeLabel = 'Amanhã';
-                      badgeStyle = 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-400';
-                    }
-
-                    return (
-                      <div
-                        key={item.id}
-                        className="p-2.5 rounded-xl border border-[#E2E8E4] dark:border-[#2A312E] bg-white dark:bg-[#1A1E1C] flex items-center justify-between gap-3 group hover:border-[#16A66A]/40 transition-colors"
-                      >
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className="w-10 h-10 rounded-xl bg-[#F3F4F4] dark:bg-[#282E2B] flex flex-col items-center justify-center border border-[#E2E8E4] dark:border-[#2E3532] shrink-0 select-none">
-                            <span className="text-[13px] font-extrabold text-[#202724] dark:text-[#F4F4F5] leading-none">
-                              {d}
-                            </span>
-                            <span className="text-[7px] font-bold text-[#5E6963] dark:text-[#95A39B] tracking-wider mt-0.5 leading-none">
-                              {shortMonth}
-                            </span>
-                          </div>
-
-                          <div className="min-w-0">
-                            <h4 className="text-xs font-bold text-[#202724] dark:text-[#F4F4F5] truncate leading-normal">
-                              {item.title}
-                            </h4>
-                            <span className="text-[9px] text-[#5E6963] dark:text-[#95A39B] block truncate leading-none mt-0.5">
-                              {item.sourceType === 'fixed' ? 'Gasto fixo' : item.sourceType === 'variable' ? 'Gasto variável' : 'Parcelado'} • {formatCurrency(item.amount)}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-2 shrink-0">
-                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${badgeStyle}`}>
-                            {relativeLabel}
-                          </span>
-                          <ChevronIcon className="w-3.5 h-3.5 text-[#5E6963]/40 group-hover:text-[#16A66A] transition-colors" />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* COLUNA DIREITA: CALENDÁRIO COMPACTO */}
-          <div className="col-span-7 bg-white dark:bg-[#1E2220] border border-[#E2E8E4] dark:border-[#2E3532] rounded-2xl p-4 flex flex-col shadow-3xs h-full">
-            <div className="flex items-center justify-between pb-1.5 border-b border-[#E2E8E4]/60 dark:border-[#2E3532]/60 shrink-0 mb-3">
-              <div>
-                <h3 className="text-xs font-bold font-display text-[#202724] dark:text-[#F4F4F5] uppercase tracking-wider">
-                  Calendário do Mês
-                </h3>
-                <p className="text-[9px] text-[#5E6963] dark:text-[#95A39B]">
-                  Visualize seus vencimentos e anotações
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => onSelectTab('calendar')}
-                className="text-[10px] font-bold text-[#075C45] dark:text-[#78D9A6] hover:underline"
-              >
-                Ver mês completo →
-              </button>
-            </div>
-
-            <div className="flex-grow flex-shrink flex-1 min-h-0 flex flex-row gap-4">
-              
-              {/* Matrix days left */}
-              <div className="w-[58%] flex flex-col h-full justify-between">
-                <div className="grid grid-cols-7 text-center gap-1.5 pb-1 border-b border-[#E2E8E4]/40 dark:border-[#2E3532]/40">
-                  {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((wd, i) => (
-                    <span key={i} className={`text-[8px] font-bold ${i === 0 || i === 6 ? 'text-rose-500' : 'text-[#5E6963]'}`}>
-                      {wd}
-                    </span>
-                  ))}
-                </div>
-
-                <div className="flex-grow grid grid-cols-7 gap-x-1.5 gap-y-1 sm:gap-y-1.5 mt-2 justify-items-center items-center content-around">
-                  {Array.from({ length: firstDayWeekday }).map((_, idx) => (
-                    <div key={`empty-${idx}`} className="w-5.5 h-5.5" />
-                  ))}
-
-                  {Array.from({ length: daysInMonth }).map((_, idx) => {
-                    const dayNum = idx + 1;
-                    const dStr = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
-                    const isDaySelected = dayNum === selectedMiniDay;
-
-                    const hasDayItems = (itemsByDate[dStr] || []).length > 0;
-                    const hasDayNotes = (notesByDate[dStr] || []).length > 0;
-                    const hasDayOverdue = (itemsByDate[dStr] || []).some(i => i.visualStatus === 'overdue' && i.status === 'pending');
-
-                    return (
-                      <button
-                        key={dayNum}
-                        type="button"
-                        onClick={() => setSelectedMiniDay(dayNum)}
-                        className={`w-6 h-6 md:w-7 md:h-7 rounded-full flex flex-col items-center justify-center text-[10px] md:text-xs font-bold relative transition-all cursor-pointer ${
-                          isDaySelected
-                            ? 'bg-[#16A66A] text-white dark:text-[#101614] scale-105 shadow-3xs'
-                            : dStr === `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
-                            ? 'border border-[#075C45] dark:border-[#78D9A6] text-[#075C45] dark:text-[#78D9A6]'
-                            : 'hover:bg-black/5 dark:hover:bg-white/5 text-[#202724] dark:text-[#F4F4F5]'
-                        }`}
-                      >
-                        <span>{dayNum}</span>
-                        
-                        <div className="absolute -bottom-0.5 flex gap-0.5 justify-center">
-                          {hasDayItems && (
-                            <span className={`w-1 h-1 rounded-full ${hasDayOverdue ? 'bg-rose-500' : 'bg-emerald-500'}`} />
-                          )}
-                          {hasDayNotes && (
-                            <span className="w-1 h-1 rounded-full bg-amber-500" />
-                          )}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Day details right */}
-              <div className="w-[42%] bg-[#F8F9F8] dark:bg-[#18201D] border border-[#E2E8E4] dark:border-[#2A312E] rounded-xl p-3 flex flex-col justify-between h-full">
-                <div className="space-y-2 flex-grow flex-shrink flex-1 min-h-0 overflow-y-auto pr-0.5">
-                  <div className="flex items-center justify-between pb-1 border-b border-[#E2E8E4]/60 dark:border-[#2E3532]/60 sticky top-0 bg-[#F8F9F8] dark:bg-[#18201D] z-10">
-                    <span className="text-[10px] font-bold text-[#075C45] dark:text-[#78D9A6]">
-                      {selectedMiniDay} de {MONTH_NAMES[currentMonth - 1].toLowerCase()}
-                    </span>
-                    <span className="text-[8px] uppercase tracking-wider font-extrabold bg-[#16A66A]/15 text-[#075C45] dark:text-[#78D9A6] px-1.5 py-0.5 rounded">
-                      Info
-                    </span>
-                  </div>
-
-                  {miniSelectedDayItems.length === 0 && miniSelectedDayNotes.length === 0 ? (
-                    <p className="text-[9px] text-[#5E6963] dark:text-[#95A39B] italic pt-4 text-center">
-                      Nenhum lançamento ou nota.
-                    </p>
-                  ) : (
-                    <div className="space-y-1.5 pt-1">
-                      {miniSelectedDayItems.slice(0, 2).map(item => (
-                        <div key={item.id} className="text-[9px] font-semibold text-[#202724] dark:text-[#F4F4F5] flex items-center justify-between">
-                          <span className="truncate max-w-[70%]">• {item.title}</span>
-                          <span className="shrink-0">{formatCurrency(item.amount)}</span>
-                        </div>
-                      ))}
-                      {miniSelectedDayNotes.slice(0, 2).map(note => (
-                        <div key={note.id} className="text-[9px] font-medium text-amber-700 dark:text-amber-400 flex items-start gap-1">
-                          <StickyNote className="w-2.5 h-2.5 shrink-0 mt-0.5" />
-                          <span className="break-words line-clamp-2">{note.content}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => onSelectTab('calendar')}
-                  className="mt-2 w-full text-center text-[9px] font-bold text-[#16A66A] hover:underline flex items-center justify-center gap-0.5 shrink-0 pt-1"
-                >
-                  <Plus className="w-2.5 h-2.5" />
-                  <span>Gerenciar anotações</span>
-                </button>
-              </div>
-
-            </div>
-          </div>
-
-        </div>
-
-        {/* LINHA 5: AÇÕES RÁPIDAS */}
-        <div className="grid grid-cols-4 gap-4">
-          
-          {/* ENTRADA CARD */}
+        {/* Competency Month Navigation Selector */}
+        <div className="flex items-center gap-2 bg-[#F7F4EA] dark:bg-[#101614] p-1 rounded-xl border border-[#E2E8E4] dark:border-[#24312B] self-start sm:self-auto">
           <button
             type="button"
-            onClick={() => onSelectTab('entries')}
-            className="flex items-center justify-between p-3 rounded-xl border border-emerald-200 dark:border-emerald-800/40 bg-emerald-500/5 dark:bg-emerald-500/10 hover:border-emerald-500 hover:shadow-2xs cursor-pointer text-left transition-all group shrink-0 active:scale-98"
+            onClick={handlePrevMonth}
+            className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-[#5E6963] dark:text-[#95A39B] cursor-pointer transition-colors"
+            aria-label="Mês anterior"
           >
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-8 h-8 rounded-lg bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-                <ArrowUpRight className="w-5 h-5 stroke-[2.5]" />
-              </div>
-              <div className="min-w-0">
-                <h4 className="font-bold text-xs sm:text-sm text-[#202724] dark:text-[#F4F4F5] group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors leading-tight">
-                  + Nova Entrada
-                </h4>
-                <p className="text-[10px] text-[#5E6963] dark:text-[#95A39B] truncate mt-0.5">
-                  Registre suas receitas
-                </p>
-              </div>
-            </div>
-            <ChevronIcon className="w-4 h-4 text-[#5E6963]/30 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors shrink-0" />
+            <ChevronLeft className="w-4 h-4" />
           </button>
-
-          {/* GASTO CARD */}
+          <span className="text-xs sm:text-sm font-bold min-w-[120px] text-center font-display text-[#075C45] dark:text-[#78D9A6]">
+            {MONTH_NAMES[currentMonth - 1]} {currentYear}
+          </span>
           <button
             type="button"
-            onClick={() => onSelectTab('variable_expenses')}
-            className="flex items-center justify-between p-3 rounded-xl border border-rose-200 dark:border-rose-800/40 bg-rose-500/5 dark:bg-rose-500/10 hover:border-rose-500 hover:shadow-2xs cursor-pointer text-left transition-all group shrink-0 active:scale-98"
+            onClick={handleNextMonth}
+            className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-[#5E6963] dark:text-[#95A39B] cursor-pointer transition-colors"
+            aria-label="Próximo mês"
           >
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-8 h-8 rounded-lg bg-rose-500/15 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
-                <CreditCard className="w-5 h-5" />
-              </div>
-              <div className="min-w-0">
-                <h4 className="font-bold text-xs sm:text-sm text-[#202724] dark:text-[#F4F4F5] group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors leading-tight">
-                  + Novo Gasto
-                </h4>
-                <p className="text-[10px] text-[#5E6963] dark:text-[#95A39B] truncate mt-0.5">
-                  Despesas do dia a dia
-                </p>
-              </div>
-            </div>
-            <ChevronIcon className="w-4 h-4 text-[#5E6963]/30 group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors shrink-0" />
+            <ChevronRight className="w-4 h-4" />
           </button>
-
-          {/* GASTO FIXO CARD */}
-          <button
-            type="button"
-            onClick={() => onSelectTab('fixed_expenses')}
-            className="flex items-center justify-between p-3 rounded-xl border border-indigo-200 dark:border-indigo-800/40 bg-indigo-500/5 dark:bg-indigo-500/10 hover:border-indigo-500 hover:shadow-2xs cursor-pointer text-left transition-all group shrink-0 active:scale-98"
-          >
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-8 h-8 rounded-lg bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
-                <FileText className="w-5 h-5" />
-              </div>
-              <div className="min-w-0">
-                <h4 className="font-bold text-xs sm:text-sm text-[#202724] dark:text-[#F4F4F5] group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors leading-tight">
-                  + Gasto Fixo
-                </h4>
-                <p className="text-[10px] text-[#5E6963] dark:text-[#95A39B] truncate mt-0.5">
-                  Mensais recorrentes
-                </p>
-              </div>
-            </div>
-            <ChevronIcon className="w-4 h-4 text-[#5E6963]/30 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors shrink-0" />
-          </button>
-
-          {/* PARCELAMENTO CARD */}
-          <button
-            type="button"
-            onClick={() => onSelectTab('installments')}
-            className="flex items-center justify-between p-3 rounded-xl border border-amber-200 dark:border-amber-800/40 bg-amber-500/5 dark:bg-amber-500/10 hover:border-amber-500 hover:shadow-2xs cursor-pointer text-left transition-all group shrink-0 active:scale-98"
-          >
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-8 h-8 rounded-lg bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
-                <Calendar className="w-5 h-5" />
-              </div>
-              <div className="min-w-0">
-                <h4 className="font-bold text-xs sm:text-sm text-[#202724] dark:text-[#F4F4F5] group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors leading-tight">
-                  + Novo Parcelamento
-                </h4>
-                <p className="text-[10px] text-[#5E6963] dark:text-[#95A39B] truncate mt-0.5">
-                  Compras parceladas
-                </p>
-              </div>
-            </div>
-            <ChevronIcon className="w-4 h-4 text-[#5E6963]/30 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors shrink-0" />
-          </button>
-
         </div>
-
       </div>
 
       {/* ==================================================
-          B. MOBILE VIEW (flex flex-col md:hidden)
-          Highly streamlined, compact operational cards only
+          2. FAIXA POUPAGAIO DIZ
           ================================================== */}
-      <div className="flex flex-col md:hidden gap-3.5 pb-20">
-        
-        {/* CABEÇALHO COMPACTO MOBILE */}
-        <div className="flex items-center justify-between bg-white dark:bg-[#1E2220] px-3.5 py-2.5 rounded-xl border border-[#E2E8E4] dark:border-[#2E3532] shadow-3xs">
-          <div>
-            <h1 className="text-sm font-bold font-display text-[#202724] dark:text-[#F4F4F5] tracking-tight">
-              Olá, {firstName}! 👋
-            </h1>
-            <p className="text-[9px] text-[#5E6963] dark:text-[#95A39B]">
-              Organize suas contas hoje.
-            </p>
+      <div className="flex items-center justify-between gap-3 px-3.5 sm:px-4 py-2.5 rounded-2xl border border-[#E2E8E4] dark:border-[#24312B] bg-white dark:bg-[#18211D] shadow-xs">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-8 h-8 rounded-xl overflow-hidden border border-[#075C45]/20 bg-[#F7F4EA] dark:bg-[#101614] p-0.5 shrink-0 flex items-center justify-center">
+            <img
+              src={POUPAGAIO_MASCOT_URL}
+              alt="Poupagaio"
+              referrerPolicy="no-referrer"
+              className="w-full h-full object-contain"
+            />
           </div>
-
-          {/* Selector */}
-          <div className="flex items-center gap-1.5 bg-[#F3F4F4] dark:bg-[#282E2B] p-0.5 rounded-lg border border-[#E2E8E4] dark:border-[#2E3532]">
-            <button
-              type="button"
-              onClick={handlePrevMonth}
-              className="p-1 rounded hover:bg-black/5 dark:hover:bg-white/5 text-[#5E6963] dark:text-[#95A39B] cursor-pointer"
-            >
-              <ChevronLeft className="w-3 h-3" />
-            </button>
-            <span className="text-[10px] font-bold min-w-[75px] text-center font-display text-[#075C45] dark:text-[#78D9A6]">
-              {MONTH_SHORT_NAMES[currentMonth - 1]} {currentYear}
-            </span>
-            <button
-              type="button"
-              onClick={handleNextMonth}
-              className="p-1 rounded hover:bg-black/5 dark:hover:bg-white/5 text-[#5E6963] dark:text-[#95A39B] cursor-pointer"
-            >
-              <ChevronRight className="w-3 h-3" />
-            </button>
-          </div>
+          <p className="text-xs sm:text-sm text-[#202724] dark:text-[#F7F4EA] truncate font-medium">
+            <span className="font-semibold text-[#075C45] dark:text-[#78D9A6] mr-1.5">Poupagaio diz:</span>
+            {mascotMessage}
+          </p>
         </div>
+        {mascotActionLabel && (
+          <button
+            type="button"
+            onClick={() => {
+              if (mascotActionLabel === 'Ver pendentes') {
+                setChecklistFilter('pending');
+              } else {
+                onSelectTab(mascotActionTab);
+              }
+            }}
+            className="shrink-0 text-xs font-bold text-[#075C45] hover:text-[#075C45]/80 dark:text-[#78D9A6] dark:hover:text-[#78D9A6]/80 flex items-center gap-1 px-2.5 py-1.5 rounded-xl hover:bg-[#075C45]/10 transition-colors cursor-pointer"
+          >
+            <span>{mascotActionLabel}</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
 
-        {/* ALERTA POUPAGAIO (Omitido se não houver atrasos/hoje) */}
-        {overdueItems.length > 0 || todayItems.length > 0 ? (
-          <div className="flex items-center justify-between gap-2.5 px-3 py-2 rounded-xl border border-rose-200 dark:border-rose-800/30 bg-rose-500/5 dark:bg-rose-950/20 shadow-3xs">
-            <div className="flex items-center gap-2 min-w-0">
-              <div className="w-6 h-6 rounded-lg overflow-hidden border border-[#16A66A]/30 bg-[#F3F4F4] dark:bg-[#282E2B] p-0.5 shrink-0 flex items-center justify-center">
-                <img
-                  src={POUPAGAIO_MASCOT_URL}
-                  alt="Poupagaio"
-                  referrerPolicy="no-referrer"
-                  className="w-full h-full object-contain"
-                />
+      {/* ==================================================
+          3. NÍVEL 1: "COMO ESTÁ MEU MÊS?" (RESUMO PRINCIPAL)
+          ================================================== */}
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-3.5">
+        
+        {/* CARD SALDO CONSOLIDADO */}
+        <div className="md:col-span-6 bg-white dark:bg-[#18211D] border border-[#E2E8E4] dark:border-[#24312B] rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-xs">
+          <div className="flex items-center justify-between border-b border-[#E2E8E4]/60 dark:border-[#24312B]/60 pb-2.5">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-[#075C45]/10 dark:bg-[#78D9A6]/10 text-[#075C45] dark:text-[#78D9A6] flex items-center justify-center">
+                <Wallet className="w-4 h-4" />
               </div>
-              <p className="text-[10px] text-rose-800 dark:text-rose-300 truncate font-semibold">
-                {mascotMessage}
-              </p>
+              <span className="text-xs font-bold uppercase tracking-wider text-[#5E6963] dark:text-[#95A39B]">
+                Saldo do Mês
+              </span>
             </div>
-            <button
-              type="button"
-              onClick={() => onSelectTab('fixed_expenses')}
-              className="shrink-0 text-[10px] font-bold text-rose-700 dark:text-rose-400 flex items-center gap-0.5"
-            >
-              <span>Ver</span>
-              <ArrowRight className="w-2.5 h-2.5" />
-            </button>
-          </div>
-        ) : null}
-
-        {/* CARD UNIFICADO: SALDO DO MÊS */}
-        <div className="bg-white dark:bg-[#1E2220] border border-[#E2E8E4] dark:border-[#2E3532] rounded-2xl p-4 shadow-3xs">
-          <div className="flex items-center justify-between border-b border-[#E2E8E4]/60 dark:border-[#2E3532]/60 pb-2">
-            <div className="flex items-center gap-1.5">
-              <div className="w-5 h-5 rounded bg-[#16A66A]/10 text-[#075C45] dark:text-[#78D9A6] flex items-center justify-center">
-                <Wallet className="w-3 h-3" />
-              </div>
-              <span className="text-[10px] font-bold text-[#5E6963] dark:text-[#95A39B] uppercase tracking-wider">Saldo do Mês</span>
-            </div>
-            <span className="text-[9px] font-bold text-[#075C45] dark:text-[#78D9A6] uppercase tracking-wider bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded">
-              Disponível
-            </span>
+            {currentSpace?.name && (
+              <span className="text-[10px] font-extrabold tracking-wider uppercase bg-[#075C45]/10 dark:bg-[#78D9A6]/15 text-[#075C45] dark:text-[#78D9A6] px-2 py-0.5 rounded-md">
+                {currentSpace.name}
+              </span>
+            )}
           </div>
 
-          <div className="mt-3 text-center">
-            <h2 className={`text-3xl font-extrabold font-display tracking-tight ${saldoConsolidado < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-[#075C45] dark:text-[#78D9A6]'}`}>
+          <div className="my-3.5 text-center">
+            <div className={`text-3xl sm:text-4xl font-extrabold font-display tracking-tight ${saldoConsolidado < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-[#075C45] dark:text-[#78D9A6]'}`}>
               {formatCurrency(saldoConsolidado)}
-            </h2>
-            <p className="text-[9px] text-[#5E6963] dark:text-[#95A39B] mt-0.5">
-              Balanço projetado para esta competência
+            </div>
+            <p className="text-xs text-[#5E6963] dark:text-[#95A39B] mt-1">
+              Balanço disponível projetado para esta competência
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 mt-4 pt-3.5 border-t border-[#E2E8E4]/60 dark:border-[#2E3532]/60">
-            <div className="bg-[#F8F9F8] dark:bg-[#1A1D1B] rounded-xl p-2.5 border border-[#E2E8E4]/60 dark:border-[#2A312E]/60 text-center">
-              <p className="text-[9px] uppercase font-bold text-emerald-600 dark:text-emerald-400 flex items-center justify-center gap-0.5">
-                <ArrowUpRight className="w-3 h-3" /> Entradas
-              </p>
-              <p className="text-sm font-bold text-[#202724] dark:text-[#F4F4F5] mt-1">
+          <div className="grid grid-cols-2 gap-2.5 pt-3 border-t border-[#E2E8E4]/60 dark:border-[#24312B]/60">
+            <div
+              onClick={() => onSelectTab('entries')}
+              className="p-2.5 sm:p-3 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-500/20 hover:border-emerald-500/40 cursor-pointer transition-all flex flex-col justify-between"
+            >
+              <div className="flex items-center gap-1.5 text-xs font-bold uppercase text-emerald-800 dark:text-emerald-300">
+                <ArrowUpRight className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <span className="truncate">Entradas</span>
+              </div>
+              <p className="text-sm sm:text-base font-extrabold text-emerald-700 dark:text-emerald-300 mt-1 truncate">
                 {formatCurrency(totalReceitas)}
               </p>
             </div>
-            <div className="bg-[#F8F9F8] dark:bg-[#1A1D1B] rounded-xl p-2.5 border border-[#E2E8E4]/60 dark:border-[#2A312E]/60 text-center">
-              <p className="text-[9px] uppercase font-bold text-rose-600 dark:text-rose-400 flex items-center justify-center gap-0.5">
-                <ArrowDownRight className="w-3 h-3" /> Despesas
-              </p>
-              <p className="text-sm font-bold text-[#202724] dark:text-[#F4F4F5] mt-1">
+
+            <div
+              onClick={() => onSelectTab('reports')}
+              className="p-2.5 sm:p-3 rounded-xl bg-rose-50/50 dark:bg-rose-950/20 border border-rose-500/20 hover:border-rose-500/40 cursor-pointer transition-all flex flex-col justify-between"
+            >
+              <div className="flex items-center gap-1.5 text-xs font-bold uppercase text-rose-800 dark:text-rose-300">
+                <ArrowDownRight className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
+                <span className="truncate">Despesas</span>
+              </div>
+              <p className="text-sm sm:text-base font-extrabold text-rose-700 dark:text-rose-300 mt-1 truncate">
                 {formatCurrency(totalDespesas)}
               </p>
             </div>
           </div>
         </div>
 
-        {/* SITUAÇÃO DO MÊS MOBILE COMPACTA */}
-        <div className="bg-white dark:bg-[#1E2220] border border-[#E2E8E4] dark:border-[#2E3532] rounded-2xl p-3.5 shadow-3xs">
-          <p className="text-[10px] font-bold text-[#5E6963] dark:text-[#95A39B] uppercase tracking-wider mb-2.5">Situação do Mês</p>
-          <div className="grid grid-cols-3 gap-2">
-            <div className="p-2 rounded-xl bg-[#F0FDF4] dark:bg-[#0D241A] border border-[#D1FAE5]/60 dark:border-[#154631]/40 text-center">
-              <span className="text-[8px] font-bold uppercase text-emerald-800 dark:text-emerald-300 block">Pago</span>
-              <span className="text-xs font-extrabold text-emerald-700 dark:text-emerald-400 block mt-0.5">
+        {/* CARD SITUAÇÃO DAS DESPESAS DO MÊS */}
+        <div className="md:col-span-6 bg-white dark:bg-[#18211D] border border-[#E2E8E4] dark:border-[#24312B] rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-xs">
+          <div className="border-b border-[#E2E8E4]/60 dark:border-[#24312B]/60 pb-2.5">
+            <h3 className="text-xs font-bold font-display text-[#202724] dark:text-[#F7F4EA] uppercase tracking-wider flex items-center gap-2">
+              <CalendarCheck className="w-4 h-4 text-[#075C45] dark:text-[#78D9A6]" />
+              Situação dos Pagamentos
+            </h3>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2.5 my-3.5">
+            {/* Pago */}
+            <div className="p-3 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-500/20 flex flex-col justify-between">
+              <div className="flex items-center gap-1.5 text-xs font-bold uppercase text-emerald-800 dark:text-emerald-300">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <span className="truncate">Pago</span>
+              </div>
+              <p className="text-sm sm:text-base font-extrabold text-emerald-600 dark:text-emerald-400 mt-1.5 truncate">
                 {formatCurrency(totalPago)}
+              </p>
+              <span className="text-[10px] text-emerald-700/80 dark:text-emerald-400/80 truncate mt-0.5">
+                {checklistResult ? checklistResult.stats.paidCount : 0} quitados
               </span>
             </div>
-            <div className="p-2 rounded-xl bg-[#FFFBEB] dark:bg-[#251F10] border border-[#FEF3C7]/60 dark:border-[#4B3B1B]/40 text-center">
-              <span className="text-[8px] font-bold uppercase text-amber-800 dark:text-amber-300 block">Próximo</span>
-              <span className="text-xs font-extrabold text-amber-700 dark:text-amber-400 block mt-0.5">
+
+            {/* Próximo */}
+            <div className="p-3 rounded-xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-500/20 flex flex-col justify-between">
+              <div className="flex items-center gap-1.5 text-xs font-bold uppercase text-amber-800 dark:text-amber-300">
+                <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                <span className="truncate">Próximo</span>
+              </div>
+              <p className="text-sm sm:text-base font-extrabold text-amber-700 dark:text-amber-300 mt-1.5 truncate">
                 {formatCurrency(totalProximo)}
+              </p>
+              <span className="text-[10px] text-amber-700/80 dark:text-amber-400/80 truncate mt-0.5">
+                Próx. 3 dias
               </span>
             </div>
-            <div className={`p-2 rounded-xl border text-center ${
-              totalAtrasado > 0 
-                ? 'bg-[#FEF2F2] dark:bg-[#261214] border-[#FEE2E2]/60 dark:border-[#4F1A21]/40' 
-                : 'bg-[#F8F9F8] dark:bg-[#1A1E1C]/40 border-[#E2E8E4]/60'
+
+            {/* Atrasado / Hoje */}
+            <div className={`p-3 rounded-xl border flex flex-col justify-between ${
+              totalAtrasado > 0
+                ? 'bg-rose-50/50 dark:bg-rose-950/20 border-rose-500/30'
+                : 'bg-[#F7F4EA]/70 dark:bg-[#101614] border-[#E2E8E4] dark:border-[#24312B]'
             }`}>
-              <span className={`text-[8px] font-bold uppercase block ${totalAtrasado > 0 ? 'text-rose-800 dark:text-rose-300' : 'text-[#5E6963]'}`}>Atrasado</span>
-              <span className={`text-xs font-extrabold block mt-0.5 ${totalAtrasado > 0 ? 'text-rose-600 dark:text-rose-400 font-extrabold animate-pulse' : 'text-[#202724] dark:text-[#F4F4F5]'}`}>
+              <div className="flex items-center gap-1.5 text-xs font-bold uppercase">
+                <AlertCircle className={`w-3.5 h-3.5 shrink-0 ${totalAtrasado > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-[#5E6963] dark:text-[#95A39B]'}`} />
+                <span className={`truncate ${totalAtrasado > 0 ? 'text-rose-800 dark:text-rose-300' : 'text-[#5E6963] dark:text-[#95A39B]'}`}>
+                  Atrasado
+                </span>
+              </div>
+              <p className={`text-sm sm:text-base font-extrabold mt-1.5 truncate ${totalAtrasado > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-[#202724] dark:text-[#F7F4EA]'}`}>
                 {formatCurrency(totalAtrasado)}
+              </p>
+              <span className={`text-[10px] truncate mt-0.5 ${totalAtrasado > 0 ? 'text-rose-700/80 dark:text-rose-400/80 font-bold' : 'text-[#5E6963] dark:text-[#95A39B]'}`}>
+                {overdueItems.length + todayItems.length} vencidos
               </span>
             </div>
           </div>
+
+          {/* Barra de Progresso Global do Mês */}
+          {checklistResult && (
+            <div className="pt-2 border-t border-[#E2E8E4]/60 dark:border-[#24312B]/60">
+              <div className="flex items-center justify-between text-[11px] font-bold text-[#5E6963] dark:text-[#95A39B] mb-1">
+                <span>Progresso: {checklistResult.stats.paidCount} de {checklistResult.stats.totalItems} obrigações pagas</span>
+                <span className="text-[#075C45] dark:text-[#78D9A6] font-extrabold">{checklistResult.stats.progressPercentage}%</span>
+              </div>
+              <div className="w-full bg-[#E2E8E4] dark:bg-[#24312B] h-2 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-[#075C45] dark:bg-[#78D9A6] rounded-full transition-all duration-300"
+                  style={{ width: `${checklistResult.stats.progressPercentage}%` }}
+                />
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* PRÓXIMOS COMPROMISSOS MOBILE */}
-        <div className="bg-white dark:bg-[#1E2220] border border-[#E2E8E4] dark:border-[#2E3532] rounded-2xl p-4 shadow-3xs">
-          <div className="flex items-center justify-between pb-2 border-b border-[#E2E8E4]/60 dark:border-[#2E3532]/60 mb-3">
-            <h3 className="text-xs font-bold font-display text-[#202724] dark:text-[#F4F4F5] uppercase tracking-wider">
-              Próximos Compromissos
-            </h3>
-            <span className="text-[8px] uppercase font-extrabold bg-amber-500/10 text-amber-600 px-1.5 py-0.5 rounded">
-              Lembretes
-            </span>
-          </div>
+      </div>
 
-          <div className="space-y-2">
-            {sortedUpcomingItems.length === 0 ? (
-              <div className="text-center py-5 border border-dashed border-[#E2E8E4]/60 dark:border-[#2E3532]/60 rounded-xl bg-[#F8F9F8]/50 dark:bg-[#161918]/30">
-                <CheckCircle2 className="w-5 h-5 text-emerald-500/30 mx-auto mb-1" />
-                <p className="text-[10px] font-semibold text-[#202724] dark:text-[#F4F4F5]">Tudo pago por enquanto!</p>
+      {/* ==================================================
+          4. NÍVEL 2: "O QUE COMPÕE MEU MÊS?" (SUBSISTEMAS COLORIDOS)
+          Cores estritamente herdadas dos subsistemas existentes:
+          Entradas (emerald), Gastos Fixos (amber), Gastos Variáveis (rose), Parcelados (indigo)
+          ================================================== */}
+      <div>
+        <div className="flex items-center justify-between mb-2.5">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-[#5E6963] dark:text-[#95A39B]">
+            Composição das Finanças do Mês
+          </h2>
+          <button
+            type="button"
+            onClick={() => onSelectTab('reports')}
+            className="text-xs font-bold text-[#075C45] dark:text-[#78D9A6] hover:underline"
+          >
+            Ver relatório completo →
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          
+          {/* 1. ENTRADAS (EMERALD) */}
+          <div
+            onClick={() => onSelectTab('entries')}
+            className="p-3.5 sm:p-4 rounded-2xl border border-emerald-500/20 bg-emerald-50/50 dark:bg-emerald-950/20 hover:border-emerald-500/40 hover:shadow-xs cursor-pointer transition-all flex flex-col justify-between group"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 flex items-center justify-center">
+                  <ArrowUpRight className="w-4 h-4" />
+                </div>
+                <span className="text-xs font-bold uppercase tracking-wider text-emerald-900 dark:text-emerald-200">
+                  Entradas
+                </span>
               </div>
-            ) : (
-              sortedUpcomingItems.map((item) => {
-                const [, m, d] = item.dueDate.split('-');
-                let relativeLabel = 'Próximo';
-                if (item.visualStatus === 'overdue') relativeLabel = 'Atrasado';
-                else if (item.visualStatus === 'today') relativeLabel = 'Hoje';
-                else if (item.visualStatus === 'upcoming') relativeLabel = 'Amanhã';
-
-                return (
-                  <div key={item.id} className="flex items-center justify-between py-2 border-b border-[#F3F4F4]/60 dark:border-[#282E2B]/60 last:border-0 last:pb-0">
-                    <div className="min-w-0 flex-1 pr-2">
-                      <p className="text-xs font-bold text-[#202724] dark:text-[#F4F4F5] truncate">{item.title}</p>
-                      <span className="text-[9px] text-[#5E6963] dark:text-[#95A39B] uppercase font-bold tracking-wider">
-                        Vence {d}/{m} • {item.sourceType === 'fixed' ? 'Fixo' : item.sourceType === 'variable' ? 'Variável' : 'Parcelado'}
-                      </span>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <p className="text-xs font-bold text-[#202724] dark:text-[#F4F4F5]">{formatCurrency(item.amount)}</p>
-                      <span className={`text-[8px] font-extrabold uppercase px-1 py-0.5 rounded ${
-                        item.visualStatus === 'overdue' 
-                          ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-400 animate-pulse' 
-                          : item.visualStatus === 'today' 
-                          ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-400 font-bold' 
-                          : 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-400'
-                      }`}>
-                        {relativeLabel}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })
-            )}
+              <ArrowRight className="w-4 h-4 text-emerald-600/40 group-hover:text-emerald-600 transition-colors" />
+            </div>
+            <div className="mt-3">
+              <p className="text-xl sm:text-2xl font-extrabold font-display text-emerald-700 dark:text-emerald-300 truncate">
+                {formatCurrency(totalReceitas)}
+              </p>
+              <p className="text-[11px] text-emerald-800/80 dark:text-emerald-300/80 mt-0.5 truncate">
+                {entriesSummary.count} {entriesSummary.count === 1 ? 'receita planejada' : 'receitas planejadas'}
+              </p>
+            </div>
           </div>
 
-          <div className="mt-4 pt-3 border-t border-[#E2E8E4]/60 dark:border-[#2E3532]/60">
+          {/* 2. GASTOS FIXOS (AMBER) */}
+          <div
+            onClick={() => onSelectTab('fixed_expenses')}
+            className="p-3.5 sm:p-4 rounded-2xl border border-amber-500/20 bg-amber-50/50 dark:bg-amber-950/20 hover:border-amber-500/40 hover:shadow-xs cursor-pointer transition-all flex flex-col justify-between group"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 flex items-center justify-center">
+                  <FileText className="w-4 h-4" />
+                </div>
+                <span className="text-xs font-bold uppercase tracking-wider text-amber-900 dark:text-amber-200">
+                  Gastos Fixos
+                </span>
+              </div>
+              <ArrowRight className="w-4 h-4 text-amber-600/40 group-hover:text-amber-600 transition-colors" />
+            </div>
+            <div className="mt-3">
+              <p className="text-xl sm:text-2xl font-extrabold font-display text-amber-800 dark:text-amber-300 truncate">
+                {formatCurrency(totalFixed)}
+              </p>
+              <p className="text-[11px] text-amber-800/80 dark:text-amber-300/80 mt-0.5 truncate">
+                {countFixed} {countFixed === 1 ? 'compromisso recorrente' : 'compromissos recorrentes'}
+              </p>
+            </div>
+          </div>
+
+          {/* 3. GASTOS VARIÁVEIS (ROSE) */}
+          <div
+            onClick={() => onSelectTab('variable_expenses')}
+            className="p-3.5 sm:p-4 rounded-2xl border border-rose-500/20 bg-rose-50/50 dark:bg-rose-950/20 hover:border-rose-500/40 hover:shadow-xs cursor-pointer transition-all flex flex-col justify-between group"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-300 flex items-center justify-center">
+                  <CreditCard className="w-4 h-4" />
+                </div>
+                <span className="text-xs font-bold uppercase tracking-wider text-rose-900 dark:text-rose-200">
+                  Variáveis
+                </span>
+              </div>
+              <ArrowRight className="w-4 h-4 text-rose-600/40 group-hover:text-rose-600 transition-colors" />
+            </div>
+            <div className="mt-3">
+              <p className="text-xl sm:text-2xl font-extrabold font-display text-rose-800 dark:text-rose-300 truncate">
+                {formatCurrency(totalVariable)}
+              </p>
+              <p className="text-[11px] text-rose-800/80 dark:text-rose-300/80 mt-0.5 truncate">
+                {countVariable} {countVariable === 1 ? 'despesa eventual' : 'despesas eventuais'}
+              </p>
+            </div>
+          </div>
+
+          {/* 4. PARCELADOS (INDIGO) */}
+          <div
+            onClick={() => onSelectTab('installments')}
+            className="p-3.5 sm:p-4 rounded-2xl border border-indigo-500/20 bg-indigo-50/50 dark:bg-indigo-950/20 hover:border-indigo-500/40 hover:shadow-xs cursor-pointer transition-all flex flex-col justify-between group"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 flex items-center justify-center">
+                  <Calendar className="w-4 h-4" />
+                </div>
+                <span className="text-xs font-bold uppercase tracking-wider text-indigo-900 dark:text-indigo-200">
+                  Parcelados
+                </span>
+              </div>
+              <ArrowRight className="w-4 h-4 text-indigo-600/40 group-hover:text-indigo-600 transition-colors" />
+            </div>
+            <div className="mt-3">
+              <p className="text-xl sm:text-2xl font-extrabold font-display text-indigo-800 dark:text-indigo-300 truncate">
+                {formatCurrency(totalInstallments)}
+              </p>
+              <p className="text-[11px] text-indigo-800/80 dark:text-indigo-300/80 mt-0.5 truncate">
+                {countInstallments} {countInstallments === 1 ? 'parcela neste mês' : 'parcelas neste mês'}
+              </p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      {/* ==================================================
+          5. NÍVEL 3: "O QUE PRECISA DA MINHA ATENÇÃO?" + DETALHES
+          Checklist interativo, Próximos Vencimentos e Mini Calendário
+          ================================================== */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5">
+        
+        {/* CHECKLIST FINANCEIRO INTERATIVO (7 COLS) */}
+        <div className="lg:col-span-7 bg-white dark:bg-[#18211D] border border-[#E2E8E4] dark:border-[#24312B] rounded-2xl p-4 sm:p-5 flex flex-col shadow-xs">
+          <div className="flex items-center justify-between pb-2 border-b border-[#E2E8E4]/60 dark:border-[#24312B]/60 mb-3">
+            <div>
+              <h3 className="text-xs sm:text-sm font-bold font-display text-[#202724] dark:text-[#F7F4EA] uppercase tracking-wider flex items-center gap-1.5">
+                <CalendarCheck className="w-4 h-4 text-[#075C45] dark:text-[#78D9A6]" />
+                Checklist de Contas
+              </h3>
+              <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B]">
+                Marque as contas conforme forem pagas
+              </p>
+            </div>
             <button
               type="button"
               onClick={() => onSelectTab('calendar')}
-              className="w-full py-2 rounded-xl bg-[#F3F4F4] hover:bg-[#16A66A]/10 dark:bg-[#282E2B] text-center text-xs font-bold text-[#075C45] dark:text-[#78D9A6] flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+              className="text-xs font-bold text-[#075C45] dark:text-[#78D9A6] hover:underline"
             >
-              <Calendar className="w-3.5 h-3.5" />
-              <span>Ver calendário do mês completo</span>
+              Ver no calendário →
             </button>
+          </div>
+
+          {/* Filtros de Status do Checklist */}
+          <div className="flex items-center gap-1 bg-[#F7F4EA] dark:bg-[#101614] p-1 rounded-xl border border-[#E2E8E4] dark:border-[#24312B] mb-3">
+            <button
+              type="button"
+              onClick={() => setChecklistFilter('pending')}
+              className={`flex-1 text-center py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-colors ${
+                checklistFilter === 'pending'
+                  ? 'bg-white text-[#075C45] dark:bg-[#18211D] dark:text-[#78D9A6] shadow-xs'
+                  : 'text-[#5E6963] dark:text-[#95A39B]'
+              }`}
+            >
+              Pendentes ({checklistResult ? checklistResult.stats.pendingCount : 0})
+            </button>
+            <button
+              type="button"
+              onClick={() => setChecklistFilter('paid')}
+              className={`flex-1 text-center py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-colors ${
+                checklistFilter === 'paid'
+                  ? 'bg-white text-[#075C45] dark:bg-[#18211D] dark:text-[#78D9A6] shadow-xs'
+                  : 'text-[#5E6963] dark:text-[#95A39B]'
+              }`}
+            >
+              Pagas ({checklistResult ? checklistResult.stats.paidCount : 0})
+            </button>
+            <button
+              type="button"
+              onClick={() => setChecklistFilter('all')}
+              className={`flex-1 text-center py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-colors ${
+                checklistFilter === 'all'
+                  ? 'bg-white text-[#075C45] dark:bg-[#18211D] dark:text-[#78D9A6] shadow-xs'
+                  : 'text-[#5E6963] dark:text-[#95A39B]'
+              }`}
+            >
+              Todas ({checklistResult ? checklistResult.stats.totalItems : 0})
+            </button>
+          </div>
+
+          {/* Lista de Itens do Checklist */}
+          <div className="overflow-y-auto max-h-[300px] pr-1 space-y-2">
+            {isLoading ? (
+              <p className="text-xs text-center text-[#5E6963] py-6">Carregando...</p>
+            ) : filteredChecklistItems.length === 0 ? (
+              <div className="text-center py-8 border border-dashed border-[#E2E8E4] dark:border-[#24312B] rounded-xl bg-[#F7F4EA]/40 dark:bg-[#101614]/40">
+                <CheckCircle2 className="w-6 h-6 text-[#075C45]/40 dark:text-[#78D9A6]/40 mx-auto mb-1.5" />
+                <p className="text-xs font-bold text-[#202724] dark:text-[#F7F4EA]">Nenhuma conta nesta categoria</p>
+              </div>
+            ) : (
+              filteredChecklistItems.map((item) => (
+                <div
+                  key={item.id}
+                  className={`p-2.5 sm:p-3 rounded-xl border flex items-center justify-between gap-3 transition-colors ${
+                    item.status === 'paid'
+                      ? 'bg-emerald-50/40 dark:bg-emerald-950/10 border-emerald-200 dark:border-emerald-800/20'
+                      : item.visualStatus === 'overdue' || item.visualStatus === 'today'
+                      ? 'bg-rose-50/40 dark:bg-rose-950/10 border-rose-200 dark:border-rose-800/20'
+                      : 'bg-[#F7F4EA]/40 dark:bg-[#101614]/40 border-[#E2E8E4] dark:border-[#24312B]'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                    <button
+                      type="button"
+                      onClick={() => handleToggleItemStatus(item)}
+                      className={`w-5 h-5 rounded-lg border flex items-center justify-center shrink-0 cursor-pointer transition-colors ${
+                        item.status === 'paid'
+                          ? 'bg-emerald-600 border-emerald-600 text-white dark:bg-emerald-500'
+                          : 'border-[#5E6963] dark:border-[#95A39B] hover:border-[#075C45] dark:hover:border-[#78D9A6]'
+                      }`}
+                    >
+                      {item.status === 'paid' && <Check className="w-3.5 h-3.5 stroke-[3.5]" />}
+                    </button>
+                    <div className="min-w-0">
+                      <p className={`text-xs font-bold truncate ${item.status === 'paid' ? 'line-through text-[#5E6963] dark:text-[#95A39B]' : 'text-[#202724] dark:text-[#F7F4EA]'}`}>
+                        {item.title}
+                      </p>
+                      <span className="text-[10px] text-[#5E6963] dark:text-[#95A39B] uppercase font-bold tracking-wider">
+                        {item.sourceType === 'fixed' ? 'Fixo' : item.sourceType === 'variable' ? 'Variável' : 'Parcelado'} • Vence {item.dueDate.split('-').slice(2).join('/')}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className={`text-xs sm:text-sm font-bold ${item.status === 'paid' ? 'text-emerald-600 dark:text-emerald-400' : 'text-[#202724] dark:text-[#F7F4EA]'}`}>
+                      {formatCurrency(item.amount)}
+                    </p>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
 
+        {/* PRÓXIMOS VENCIMENTOS & CALENDÁRIO (5 COLS) */}
+        <div className="lg:col-span-5 space-y-3.5">
+          
+          {/* PRÓXIMOS VENCIMENTOS */}
+          <div className="bg-white dark:bg-[#18211D] border border-[#E2E8E4] dark:border-[#24312B] rounded-2xl p-4 shadow-xs">
+            <div className="flex items-center justify-between pb-2 border-b border-[#E2E8E4]/60 dark:border-[#24312B]/60 mb-2.5">
+              <h3 className="text-xs font-bold font-display text-[#202724] dark:text-[#F7F4EA] uppercase tracking-wider">
+                Próximos Vencimentos
+              </h3>
+              <button
+                type="button"
+                onClick={() => onSelectTab('calendar')}
+                className="text-[11px] font-bold text-[#075C45] dark:text-[#78D9A6] hover:underline"
+              >
+                Ver todos →
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              {sortedUpcomingItems.length === 0 ? (
+                <div className="text-center py-4 border border-dashed border-[#E2E8E4] dark:border-[#24312B] rounded-xl bg-[#F7F4EA]/40 dark:bg-[#101614]/40">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-500/40 mx-auto mb-1" />
+                  <p className="text-[11px] font-semibold text-[#202724] dark:text-[#F7F4EA]">Tudo em dia!</p>
+                </div>
+              ) : (
+                sortedUpcomingItems.map((item) => {
+                  const [, m, d] = item.dueDate.split('-');
+                  let relativeLabel = 'Próximo';
+                  let badgeStyle = 'bg-slate-100 text-slate-800 dark:bg-slate-900/40 dark:text-slate-400';
+                  if (item.visualStatus === 'overdue') {
+                    relativeLabel = 'Atrasado';
+                    badgeStyle = 'bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-400 font-bold';
+                  } else if (item.visualStatus === 'today') {
+                    relativeLabel = 'Hoje';
+                    badgeStyle = 'bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-400 font-bold';
+                  } else if (item.visualStatus === 'upcoming') {
+                    relativeLabel = 'Amanhã';
+                    badgeStyle = 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-400';
+                  }
+
+                  return (
+                    <div
+                      key={item.id}
+                      className="p-2.5 rounded-xl border border-[#E2E8E4] dark:border-[#24312B] bg-[#F7F4EA]/40 dark:bg-[#101614]/40 flex items-center justify-between gap-2.5"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-bold text-[#202724] dark:text-[#F7F4EA] truncate">
+                          {item.title}
+                        </p>
+                        <span className="text-[10px] text-[#5E6963] dark:text-[#95A39B] uppercase font-bold">
+                          Vence {d}/{m} • {formatCurrency(item.amount)}
+                        </span>
+                      </div>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md shrink-0 ${badgeStyle}`}>
+                        {relativeLabel}
+                      </span>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          {/* MINI CALENDÁRIO COM ANOTAÇÕES */}
+          <div className="bg-white dark:bg-[#18211D] border border-[#E2E8E4] dark:border-[#24312B] rounded-2xl p-4 shadow-xs">
+            <div className="flex items-center justify-between pb-2 border-b border-[#E2E8E4]/60 dark:border-[#24312B]/60 mb-2.5">
+              <h3 className="text-xs font-bold font-display text-[#202724] dark:text-[#F7F4EA] uppercase tracking-wider">
+                Calendário Financeiro
+              </h3>
+              <button
+                type="button"
+                onClick={() => onSelectTab('calendar')}
+                className="text-[11px] font-bold text-[#075C45] dark:text-[#78D9A6] hover:underline"
+              >
+                Mês completo →
+              </button>
+            </div>
+
+            <div className="grid grid-cols-7 text-center gap-1 pb-1 border-b border-[#E2E8E4]/40 dark:border-[#24312B]/40">
+              {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((wd, i) => (
+                <span key={i} className={`text-[10px] font-bold ${i === 0 || i === 6 ? 'text-rose-500' : 'text-[#5E6963]'}`}>
+                  {wd}
+                </span>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-7 gap-1 mt-1.5 justify-items-center items-center">
+              {Array.from({ length: firstDayWeekday }).map((_, idx) => (
+                <div key={`empty-${idx}`} className="w-7 h-7" />
+              ))}
+
+              {Array.from({ length: daysInMonth }).map((_, idx) => {
+                const dayNum = idx + 1;
+                const dStr = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+                const isDaySelected = dayNum === selectedMiniDay;
+
+                const hasDayItems = (itemsByDate[dStr] || []).length > 0;
+                const hasDayNotes = (notesByDate[dStr] || []).length > 0;
+                const hasDayOverdue = (itemsByDate[dStr] || []).some(i => i.visualStatus === 'overdue' && i.status === 'pending');
+
+                return (
+                  <button
+                    key={dayNum}
+                    type="button"
+                    onClick={() => setSelectedMiniDay(dayNum)}
+                    className={`w-7 h-7 rounded-full flex flex-col items-center justify-center text-[11px] font-bold relative transition-all cursor-pointer ${
+                      isDaySelected
+                        ? 'bg-[#075C45] text-white dark:bg-[#78D9A6] dark:text-[#101614] shadow-xs'
+                        : dStr === `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+                        ? 'border border-[#075C45] dark:border-[#78D9A6] text-[#075C45] dark:text-[#78D9A6]'
+                        : 'hover:bg-black/5 dark:hover:bg-white/5 text-[#202724] dark:text-[#F7F4EA]'
+                    }`}
+                  >
+                    <span>{dayNum}</span>
+                    <div className="absolute -bottom-0.5 flex gap-0.5 justify-center">
+                      {hasDayItems && (
+                        <span className={`w-1 h-1 rounded-full ${hasDayOverdue ? 'bg-rose-500' : 'bg-emerald-500'}`} />
+                      )}
+                      {hasDayNotes && (
+                        <span className="w-1 h-1 rounded-full bg-amber-500" />
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Detalhe do dia selecionado */}
+            <div className="mt-2.5 p-2.5 rounded-xl bg-[#F7F4EA]/70 dark:bg-[#101614] border border-[#E2E8E4] dark:border-[#24312B] text-xs">
+              <div className="flex items-center justify-between pb-1 border-b border-[#E2E8E4]/60 dark:border-[#24312B]/60 font-bold text-[#075C45] dark:text-[#78D9A6]">
+                <span>{selectedMiniDay} de {MONTH_NAMES[currentMonth - 1]}</span>
+                <span className="text-[10px] uppercase">{miniSelectedDayItems.length} conta(s)</span>
+              </div>
+              {miniSelectedDayItems.length === 0 && miniSelectedDayNotes.length === 0 ? (
+                <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B] italic pt-1">
+                  Nenhum compromisso agendado para este dia.
+                </p>
+              ) : (
+                <div className="space-y-1 pt-1">
+                  {miniSelectedDayItems.slice(0, 2).map(item => (
+                    <div key={item.id} className="text-[11px] font-semibold text-[#202724] dark:text-[#F7F4EA] flex items-center justify-between">
+                      <span className="truncate max-w-[70%]">• {item.title}</span>
+                      <span className="shrink-0">{formatCurrency(item.amount)}</span>
+                    </div>
+                  ))}
+                  {miniSelectedDayNotes.slice(0, 1).map(note => (
+                    <div key={note.id} className="text-[11px] font-medium text-amber-700 dark:text-amber-400 flex items-start gap-1">
+                      <StickyNote className="w-3 h-3 shrink-0 mt-0.5" />
+                      <span className="truncate">{note.content}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      {/* ==================================================
+          6. NÍVEL 4: AÇÕES RÁPIDAS
+          ================================================== */}
+      <div>
+        <h2 className="text-xs font-bold uppercase tracking-wider text-[#5E6963] dark:text-[#95A39B] mb-2.5">
+          Ações Rápidas
+        </h2>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          
+          {/* + Nova Entrada */}
+          <button
+            type="button"
+            onClick={() => onSelectTab('entries')}
+            className="flex items-center justify-between p-3.5 rounded-2xl border border-emerald-500/20 bg-emerald-50/50 dark:bg-emerald-950/20 hover:border-emerald-500/40 hover:shadow-xs cursor-pointer text-left transition-all group shrink-0 active:scale-98"
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 flex items-center justify-center shrink-0">
+                <ArrowUpRight className="w-4 h-4 stroke-[2.5]" />
+              </div>
+              <div className="min-w-0">
+                <h4 className="font-bold text-xs sm:text-sm text-[#202724] dark:text-[#F7F4EA] group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors truncate">
+                  + Entrada
+                </h4>
+                <p className="text-[10px] text-[#5E6963] dark:text-[#95A39B] truncate">
+                  Novas receitas
+                </p>
+              </div>
+            </div>
+            <ArrowRight className="w-4 h-4 text-emerald-600/40 group-hover:text-emerald-600 transition-colors shrink-0" />
+          </button>
+
+          {/* + Gasto Fixo */}
+          <button
+            type="button"
+            onClick={() => onSelectTab('fixed_expenses')}
+            className="flex items-center justify-between p-3.5 rounded-2xl border border-amber-500/20 bg-amber-50/50 dark:bg-amber-950/20 hover:border-amber-500/40 hover:shadow-xs cursor-pointer text-left transition-all group shrink-0 active:scale-98"
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-xl bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 flex items-center justify-center shrink-0">
+                <FileText className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <h4 className="font-bold text-xs sm:text-sm text-[#202724] dark:text-[#F7F4EA] group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors truncate">
+                  + Gasto Fixo
+                </h4>
+                <p className="text-[10px] text-[#5E6963] dark:text-[#95A39B] truncate">
+                  Recorrentes
+                </p>
+              </div>
+            </div>
+            <ArrowRight className="w-4 h-4 text-amber-600/40 group-hover:text-amber-600 transition-colors shrink-0" />
+          </button>
+
+          {/* + Gasto Variável */}
+          <button
+            type="button"
+            onClick={() => onSelectTab('variable_expenses')}
+            className="flex items-center justify-between p-3.5 rounded-2xl border border-rose-500/20 bg-rose-50/50 dark:bg-rose-950/20 hover:border-rose-500/40 hover:shadow-xs cursor-pointer text-left transition-all group shrink-0 active:scale-98"
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-xl bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-300 flex items-center justify-center shrink-0">
+                <CreditCard className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <h4 className="font-bold text-xs sm:text-sm text-[#202724] dark:text-[#F7F4EA] group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors truncate">
+                  + Gasto Variável
+                </h4>
+                <p className="text-[10px] text-[#5E6963] dark:text-[#95A39B] truncate">
+                  Do dia a dia
+                </p>
+              </div>
+            </div>
+            <ArrowRight className="w-4 h-4 text-rose-600/40 group-hover:text-rose-600 transition-colors shrink-0" />
+          </button>
+
+          {/* + Parcelamento */}
+          <button
+            type="button"
+            onClick={() => onSelectTab('installments')}
+            className="flex items-center justify-between p-3.5 rounded-2xl border border-indigo-500/20 bg-indigo-50/50 dark:bg-indigo-950/20 hover:border-indigo-500/40 hover:shadow-xs cursor-pointer text-left transition-all group shrink-0 active:scale-98"
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-xl bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 flex items-center justify-center shrink-0">
+                <Calendar className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <h4 className="font-bold text-xs sm:text-sm text-[#202724] dark:text-[#F7F4EA] group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors truncate">
+                  + Parcelamento
+                </h4>
+                <p className="text-[10px] text-[#5E6963] dark:text-[#95A39B] truncate">
+                  Compras em parcelas
+                </p>
+              </div>
+            </div>
+            <ArrowRight className="w-4 h-4 text-indigo-600/40 group-hover:text-indigo-600 transition-colors shrink-0" />
+          </button>
+
+        </div>
       </div>
 
     </div>
