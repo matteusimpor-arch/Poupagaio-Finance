@@ -264,15 +264,18 @@ export function MarketListCard({
                             Voltar ao planejamento
                           </button>
                         )}
-                        <button
-                          id={`btn-archive-list-${list.id}`}
-                          onClick={() => onArchiveList(list)}
-                          className="w-full text-left px-3 py-2 text-xs text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 flex items-center gap-2"
-                        >
-                          <Archive className="w-3.5 h-3.5 text-neutral-500" />
-                          Arquivar lista
-                        </button>
                       </>
+                    )}
+
+                    {(isActive || isShopping || isCompleted) && (
+                      <button
+                        id={`btn-archive-list-${list.id}`}
+                        onClick={() => onArchiveList(list)}
+                        className="w-full text-left px-3 py-2 text-xs text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 flex items-center gap-2"
+                      >
+                        <Archive className="w-3.5 h-3.5 text-neutral-500" />
+                        Arquivar lista
+                      </button>
                     )}
 
                     {(isCompleted || isArchived) && (
@@ -283,17 +286,6 @@ export function MarketListCard({
                       >
                         <RotateCcw className="w-3.5 h-3.5 text-blue-600" />
                         Reabrir no Planejamento
-                      </button>
-                    )}
-
-                    {isCompleted && (
-                      <button
-                        id={`btn-archive-completed-${list.id}`}
-                        onClick={() => onArchiveList(list)}
-                        className="w-full text-left px-3 py-2 text-xs text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 flex items-center gap-2"
-                      >
-                        <Archive className="w-3.5 h-3.5 text-neutral-500" />
-                        Arquivar lista
                       </button>
                     )}
 

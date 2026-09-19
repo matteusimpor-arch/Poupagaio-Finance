@@ -217,6 +217,25 @@ export const spaceService = {
     }
   },
 
+  async deleteSpace(spaceId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      if (!supabase) return { success: false, error: 'Supabase não inicializado' };
+      const { error } = await supabase
+        .from('spaces')
+        .delete()
+        .eq('id', spaceId);
+
+      if (error) {
+        console.error('Erro ao excluir espaço:', error);
+        return { success: false, error: error.message };
+      }
+      return { success: true };
+    } catch (err: any) {
+      console.error('deleteSpace error:', err);
+      return { success: false, error: err.message };
+    }
+  },
+
   async getUserMemberships(userId: string): Promise<{ space_id: string; role: any }[]> {
     try {
       if (!supabase) return [];

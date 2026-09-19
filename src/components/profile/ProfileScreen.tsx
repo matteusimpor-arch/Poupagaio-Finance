@@ -1,33 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
-import { useTheme } from '../../hooks/useTheme';
 import { spaceService } from '../../lib/services/space';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../ui/card';
-import { Button } from '../ui/button';
-import { Input } from '../ui/input';
-import { Avatar } from '../ui/avatar';
-import { Badge } from '../ui/badge';
-import {
-  User,
-  Mail,
-  LogOut,
-  Users,
-  Briefcase,
-  Layers,
-  Sparkles,
-  Shield,
-  Eye,
-  EyeOff
-} from 'lucide-react';
+import { LogOut, Users, ChevronRight } from 'lucide-react';
 import { Space, SpaceType, SpaceRole, SpaceMember } from '../../types';
-
-type TabType = 'profile' | 'spaces';
+import { ProfileCard, SecurityCard } from './ProfileTab';
+import { SpacesTab } from './SpacesTab';
+import { Card } from '../ui/card';
+import { Button } from '../ui/button';
+import { Badge } from '../ui/badge';
 
 export function ProfileScreen() {
   const { user, profile, spaces, memberships, currentSpace, updateProfileName, updatePassword, createSpace, updateSpaceName, setCurrentSpace, signOut } = useAuth();
-  const { theme, toggleTheme, setTheme } = useTheme();
-
-  const [activeTab, setActiveTab] = useState<TabType>('profile');
+  
+  const [isManageSpacesOpen, setIsManageSpacesOpen] = useState(false);
   const [fullName, setFullName] = useState(profile?.full_name || user?.full_name || '');
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -43,14 +28,13 @@ export function ProfileScreen() {
   const [activeSpaceMembers, setActiveSpaceMembers] = useState<SpaceMember[]>([]);
   const [isLoadingMembers, setIsLoadingMembers] = useState(false);
   const [newSpaceName, setNewSpaceName] = useState('');
-  const [newSpaceType, setNewSpaceType] = useState<'couple' | 'family' | 'business'>('couple');
+  const [newSpaceType, setNewSpaceType] = useState<SpaceType>('couple');
   const [isCreatingSpace, setIsCreatingSpace] = useState(false);
-  const [spaceCreateSuccess, setSpaceCreateSuccess] = useState(false);
-  const [spaceCreateError, setSpaceCreateError] = useState('');
   const [editSpaceName, setEditSpaceName] = useState(currentSpace?.name || '');
   const [isUpdatingSpaceName, setIsUpdatingSpaceName] = useState(false);
-  const [spaceUpdateSuccess, setSpaceUpdateSuccess] = useState(false);
-  const [spaceUpdateError, setSpaceUpdateError] = useState('');
+  const [spaceToDelete, setSpaceToDelete] = useState<Space | null>(null);
+  const [isDeletingSpace, setIsDeletingSpace] = useState(false);
+  const [deleteConfirmationName, setDeleteConfirmationName] = useState('');
 
   useEffect(() => {
     if (profile?.full_name || user?.full_name) {
@@ -106,72 +90,145 @@ export function ProfileScreen() {
 
   const handleCreateSpace = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newSpaceName.trim()) { setSpaceCreateError('O nome do espaço não pode ficar vazio.'); return; }
+    if (!newSpaceName.trim()) return;
     setIsCreatingSpace(true);
-    setSpaceCreateError('');
-    setSpaceCreateSuccess(false);
-    const { error } = await createSpace(newSpaceName.trim(), newSpaceType);
+    await createSpace(newSpaceName.trim(), newSpaceType);
     setIsCreatingSpace(false);
-    if (error) { setSpaceCreateError(error.message); } else { setSpaceCreateSuccess(true); setNewSpaceName(''); setTimeout(() => setSpaceCreateSuccess(false), 3000); }
+    setNewSpaceName('');
   };
 
   const handleUpdateSpaceName = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentSpace) return;
-    if (!editSpaceName.trim()) { setSpaceUpdateError('O nome do espaço não pode ficar vazio.'); return; }
     setIsUpdatingSpaceName(true);
-    setSpaceUpdateError('');
-    setSpaceUpdateSuccess(false);
-    const { error } = await updateSpaceName(currentSpace.id, editSpaceName.trim());
+    await updateSpaceName(currentSpace.id, editSpaceName.trim());
     setIsUpdatingSpaceName(false);
-    if (error) { setSpaceUpdateError(error.message); } else { setSpaceUpdateSuccess(true); setTimeout(() => setSpaceUpdateSuccess(false), 3000); }
+  };
+
+  const handleDeleteSpace = async () => {
+    if (!spaceToDelete) return;
+    setIsDeletingSpace(true);
+    const { error } = await spaceService.deleteSpace(spaceToDelete.id);
+    setIsDeletingSpace(false);
+    if (!error) {
+      setSpaceToDelete(null);
+      setDeleteConfirmationName('');
+    }
   };
 
   const getRoleLabel = (role?: SpaceRole) => role === 'owner' ? 'Proprietário' : role === 'admin' ? 'Administrador' : 'Membro';
   const getRoleBadgeColor = (role?: SpaceRole) => role === 'owner' ? 'bg-amber-100 text-amber-800' : role === 'admin' ? 'bg-blue-100 text-blue-800' : 'bg-emerald-100 text-emerald-800';
-
   const currentSpaceRole = memberships.find((m) => m.space_id === currentSpace?.id)?.role || (currentSpace?.owner_id === user?.id ? 'owner' : 'member');
+  
+  const getCategoryLabel = (type: string) => {
+    switch (type) {
+      case 'personal': return 'Pessoal';
+      case 'couple': return 'Casal';
+      case 'family': return 'Família';
+      case 'business': return 'Empresa';
+      default: return type;
+    }
+  };
+
+  const getCategoryIcon = (type: string) => {
+    switch (type) {
+      case 'personal': return '🏠';
+      case 'couple': return '♥';
+      case 'family': return '👥';
+      case 'business': return '💼';
+      default: return '📁';
+    }
+  };
 
   return (
-    <div className="w-full max-w-4xl mx-auto space-y-6 pb-20 animate-in fade-in duration-300">
-      <h1 className="text-2xl font-bold text-[#075C45] dark:text-[#78D9A6]">Meu Perfil & Configurações</h1>
+    <div className="w-full max-w-6xl mx-auto space-y-8 pb-20 animate-in fade-in duration-300">
+      <div>
+        <h1 className="text-2xl font-bold text-[#075C45] dark:text-[#78D9A6]">Meu Perfil & Configurações</h1>
+        <p className="text-gray-500">Gerencie suas informações, espaços e a segurança da sua conta.</p>
+      </div>
       
-      <div className="flex gap-2">
-        <button onClick={() => setActiveTab('profile')} className={`px-4 py-2 rounded-lg font-bold ${activeTab === 'profile' ? 'bg-white text-[#075C45]' : 'text-gray-500'}`}>Meu Perfil</button>
-        <button onClick={() => setActiveTab('spaces')} className={`px-4 py-2 rounded-lg font-bold ${activeTab === 'spaces' ? 'bg-white text-[#075C45]' : 'text-gray-500'}`}>Espaços</button>
+      {/* LINHA 1: Perfil + Segurança */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <ProfileCard 
+          fullName={fullName} setFullName={setFullName} handleSaveName={handleSaveName} isSaving={isSaving} saveSuccess={saveSuccess}
+        />
+        <SecurityCard
+          newPassword={newPassword} setNewPassword={setNewPassword} confirmPassword={confirmPassword} setConfirmPassword={setConfirmPassword}
+          showPassword={showPassword} setShowPassword={setShowPassword} handleUpdatePassword={handleUpdatePassword} isUpdatingPassword={isUpdatingPassword}
+          passwordSuccess={passwordSuccess} passwordError={passwordError}
+        />
       </div>
 
-      {activeTab === 'profile' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card className="bg-white dark:bg-[#18211D]">
-            <CardHeader><CardTitle>Perfil</CardTitle></CardHeader>
-            <CardContent>
-              <form onSubmit={handleSaveName} className="space-y-4">
-                <Input value={fullName} onChange={(e) => setFullName(e.target.value)} />
-                <Button type="submit" disabled={isSaving}>Salvar</Button>
-                {saveSuccess && <p className="text-xs text-emerald-500">Salvo!</p>}
-              </form>
-            </CardContent>
-          </Card>
+      {/* LINHA 2: Espaços */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+                <Users className="w-6 h-6 text-green-700" />
+                <div>
+                    <h2 className="text-lg font-bold">Espaços</h2>
+                    <p className="text-sm text-gray-500">Organize suas finanças pessoais, do casal, da família ou da empresa.</p>
+                </div>
+            </div>
+            <Button variant="ghost" className="text-green-700" onClick={() => setIsManageSpacesOpen(true)}>Gerenciar espaços <ChevronRight className="w-4 h-4 ml-1"/></Button>
+        </div>
+        
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {spaces.map(s => (
+                <Card key={s.id} className={currentSpace?.id === s.id ? 'border-2 border-green-500' : 'border'}>
+                    <div className="p-4 space-y-3">
+                        <div className="flex justify-between items-start">
+                            <span className="text-2xl">{getCategoryIcon(s.type)}</span>
+                            {currentSpace?.id === s.id && <span className="text-xs font-medium px-2 py-1 bg-green-100 text-green-700 rounded-full">Ativo</span>}
+                        </div>
+                        <div>
+                            <p className="font-bold">{s.name}</p>
+                            <p className="text-sm text-gray-500">{getCategoryLabel(s.type)}</p>
+                        </div>
+                    </div>
+                </Card>
+            ))}
+        </div>
 
-          <Card className="bg-white dark:bg-[#18211D]">
-            <CardHeader><CardTitle className="flex items-center gap-2"><Shield className="w-4 h-4" /> Segurança</CardTitle></CardHeader>
-            <CardContent>
-              <form onSubmit={handleUpdatePassword} className="space-y-4">
-                <Input type={showPassword ? 'text' : 'password'} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Nova senha" />
-                <Input type={showPassword ? 'text' : 'password'} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Confirmar nova senha" />
-                <Button type="button" variant="ghost" onClick={() => setShowPassword(!showPassword)}>{showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}</Button>
-                <Button type="submit" disabled={isUpdatingPassword}>Alterar senha</Button>
-                {passwordSuccess && <p className="text-xs text-emerald-500">Senha atualizada!</p>}
-                {passwordError && <p className="text-xs text-red-500">{passwordError}</p>}
-              </form>
-            </CardContent>
-          </Card>
+        <div className="bg-green-50 border border-green-200 p-3 rounded-xl text-sm text-green-800">
+            <strong>💡 Dica:</strong> Você pode ter múltiplos espaços para separar suas finanças por objetivo. O espaço Pessoal não pode ser excluído.
+        </div>
+      </div>
 
-          <Card className="bg-white dark:bg-[#18211D]">
-            <CardContent className="p-5">
-              <Button variant="danger" onClick={() => signOut()} className="w-full gap-2"><LogOut className="w-4 h-4" /> Sair da Conta</Button>
-            </CardContent>
+      {/* LINHA 3: Sair */}
+      <div className="flex items-center justify-between p-6 bg-white dark:bg-[#18211D] rounded-xl border border-gray-100 dark:border-gray-800">
+        <div className="flex items-center gap-4">
+          <LogOut className="w-5 h-5 text-red-500" />
+          <div>
+            <p className="font-bold">Sair da Conta</p>
+            <p className="text-sm text-gray-500">Encerre sua sessão atual com segurança.</p>
+          </div>
+        </div>
+        <Button variant="outline" className="border-red-200 text-red-600 hover:bg-red-50" size="sm" onClick={() => signOut()}>Sair da Conta</Button>
+      </div>
+
+      {/* Panel/Modal for Spaces Management */}
+      {isManageSpacesOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <Card className="w-full max-w-4xl max-h-[90vh] overflow-y-auto p-6">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h2 className="text-xl font-bold">Gerenciar Espaços</h2>
+                <p className="text-sm text-gray-500">Crie e organize ambientes separados para suas finanças.</p>
+              </div>
+              <Button variant="ghost" onClick={() => setIsManageSpacesOpen(false)}>Fechar</Button>
+            </div>
+
+            <SpacesTab 
+              spaces={spaces} currentSpace={currentSpace} setCurrentSpace={setCurrentSpace} currentSpaceRole={currentSpaceRole}
+              activeSpaceMembers={activeSpaceMembers} getRoleLabel={getRoleLabel} getRoleBadgeColor={getRoleBadgeColor}
+              handleCreateSpace={handleCreateSpace} newSpaceName={newSpaceName} setNewSpaceName={setNewSpaceName}
+              newSpaceType={newSpaceType} setNewSpaceType={setNewSpaceType} isCreatingSpace={isCreatingSpace}
+              handleUpdateSpaceName={handleUpdateSpaceName} editSpaceName={editSpaceName} setEditSpaceName={setEditSpaceName}
+              isUpdatingSpaceName={isUpdatingSpaceName} setSpaceToDelete={setSpaceToDelete}
+              spaceToDelete={spaceToDelete} handleDeleteSpace={handleDeleteSpace}
+              deleteConfirmationName={deleteConfirmationName} setDeleteConfirmationName={setDeleteConfirmationName}
+              isDeletingSpace={isDeletingSpace}
+            />
           </Card>
         </div>
       )}
