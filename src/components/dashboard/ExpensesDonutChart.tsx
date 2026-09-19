@@ -34,9 +34,9 @@ export function ExpensesDonutChart({
   const installmentsOffset = -(fixedStroke + variableStroke);
 
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 w-full h-full">
+    <div className="flex flex-row items-center justify-between gap-3 w-full h-full">
       {/* DONUT SVG WITH CENTER VALUE */}
-      <div className="relative w-36 h-36 shrink-0 flex items-center justify-center">
+      <div className="relative w-24 h-24 sm:w-28 sm:h-28 shrink-0 flex items-center justify-center">
         <svg className="w-full h-full -rotate-90 transform" viewBox="0 0 120 120">
           {/* Background circle */}
           <circle
@@ -102,22 +102,22 @@ export function ExpensesDonutChart({
         </svg>
 
         {/* Center Label */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-2 pointer-events-none">
-          <span className="text-xs font-extrabold text-[#02402E] tracking-tight truncate max-w-[85px]">
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-1 pointer-events-none">
+          <span className="text-[11px] sm:text-xs font-extrabold text-[#02402E] tracking-tight truncate max-w-[70px]">
             {formatCurrency(safeTotal)}
           </span>
-          <span className="text-[10px] text-[#5E6963] font-medium uppercase tracking-wider">
+          <span className="text-[9px] text-[#5E6963] font-medium uppercase tracking-wider">
             Total
           </span>
         </div>
       </div>
 
       {/* LEGEND ON THE RIGHT */}
-      <div className="flex flex-col justify-center space-y-2.5 w-full min-w-0">
+      <div className="flex flex-col justify-center space-y-1.5 w-full min-w-0">
         {/* Gastos Fixos */}
-        <div className="flex items-center justify-between gap-2 text-xs font-medium">
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#8B5CF6] shrink-0" />
+        <div className="flex items-center justify-between gap-1.5 text-[11px] font-medium">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="w-2 h-2 rounded-full bg-[#8B5CF6] shrink-0" />
             <span className="text-[#202724] truncate">Gastos Fixos</span>
           </div>
           <span className="font-bold text-[#202724] shrink-0">
@@ -126,9 +126,9 @@ export function ExpensesDonutChart({
         </div>
 
         {/* Gastos Variáveis */}
-        <div className="flex items-center justify-between gap-2 text-xs font-medium">
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#FF3B6F] shrink-0" />
+        <div className="flex items-center justify-between gap-1.5 text-[11px] font-medium">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="w-2 h-2 rounded-full bg-[#FF3B6F] shrink-0" />
             <span className="text-[#202724] truncate">Gastos Variáveis</span>
           </div>
           <span className="font-bold text-[#202724] shrink-0">
@@ -137,9 +137,9 @@ export function ExpensesDonutChart({
         </div>
 
         {/* Parcelados */}
-        <div className="flex items-center justify-between gap-2 text-xs font-medium">
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#F59E0B] shrink-0" />
+        <div className="flex items-center justify-between gap-1.5 text-[11px] font-medium">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="w-2 h-2 rounded-full bg-[#F59E0B] shrink-0" />
             <span className="text-[#202724] truncate">Parcelados</span>
           </div>
           <span className="font-bold text-[#202724] shrink-0">

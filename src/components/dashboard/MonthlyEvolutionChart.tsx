@@ -57,9 +57,9 @@ export function MonthlyEvolutionChart({ data }: MonthlyEvolutionChartProps) {
   };
 
   // Dimensions
-  const chartHeight = 160;
-  const chartPaddingTop = 20;
-  const chartPaddingBottom = 24;
+  const chartHeight = 96;
+  const chartPaddingTop = 14;
+  const chartPaddingBottom = 18;
   const usableHeight = chartHeight - chartPaddingTop - chartPaddingBottom;
 
   const getYPos = (val: number) => {
@@ -73,7 +73,7 @@ export function MonthlyEvolutionChart({ data }: MonthlyEvolutionChartProps) {
     <div className="w-full relative select-none">
       {/* CHART CONTAINER */}
       <div className="w-full overflow-x-auto no-scrollbar">
-        <div className="min-w-[500px] w-full relative" style={{ height: `${chartHeight + 20}px` }}>
+        <div className="min-w-[420px] w-full relative" style={{ height: `${chartHeight + 14}px` }}>
           
           {/* Y-AXIS GRID LINES & LABELS */}
           <div className="absolute inset-0 left-0 right-0 pointer-events-none">
@@ -85,7 +85,7 @@ export function MonthlyEvolutionChart({ data }: MonthlyEvolutionChartProps) {
                   className="absolute left-0 right-0 flex items-center"
                   style={{ top: `${topPos}px` }}
                 >
-                  <span className="w-10 text-[10px] text-[#5E6963]/75 font-medium text-right pr-2">
+                  <span className="w-9 text-[9px] text-[#5E6963]/75 font-medium text-right pr-1.5">
                     {formatYLabel(val)}
                   </span>
                   <div className="flex-1 border-b border-[#E8E4D5]/70" />
@@ -97,7 +97,7 @@ export function MonthlyEvolutionChart({ data }: MonthlyEvolutionChartProps) {
           {/* SVG FOR BARS AND LINE */}
           <svg
             className="absolute inset-0 w-full h-full"
-            viewBox={`0 0 1000 ${chartHeight + 20}`}
+            viewBox={`0 0 1000 ${chartHeight + 14}`}
             preserveAspectRatio="none"
           >
             {/* 1. DRAW SALDO LINE */}
@@ -105,7 +105,7 @@ export function MonthlyEvolutionChart({ data }: MonthlyEvolutionChartProps) {
               <polyline
                 fill="none"
                 stroke="#F2B807"
-                strokeWidth="3"
+                strokeWidth="2.5"
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 points={data
@@ -120,7 +120,7 @@ export function MonthlyEvolutionChart({ data }: MonthlyEvolutionChartProps) {
           </svg>
 
           {/* COLUMNS & INTERACTIVE NODES */}
-          <div className="absolute inset-0 left-12 right-4 flex justify-between items-end pb-6">
+          <div className="absolute inset-0 left-10 right-3 flex justify-between items-end pb-4">
             {data.map((point, idx) => {
               const entriesHeight = Math.max(2, (point.entries / yAxisMax) * usableHeight);
               const expensesHeight = Math.max(2, (point.expenses / yAxisMax) * usableHeight);
@@ -145,8 +145,8 @@ export function MonthlyEvolutionChart({ data }: MonthlyEvolutionChartProps) {
                     }}
                   >
                     <div
-                      className={`w-3.5 h-3.5 rounded-full border-2 border-white shadow-xs transition-all ${
-                        isCurrent ? 'bg-[#02402E] ring-2 ring-[#F2B807]' : 'bg-[#F2B807]'
+                      className={`w-2.5 h-2.5 rounded-full border border-white shadow-2xs transition-all ${
+                        isCurrent ? 'bg-[#02402E] ring-1.5 ring-[#F2B807]' : 'bg-[#F2B807]'
                       }`}
                     />
                   </div>
@@ -154,36 +154,36 @@ export function MonthlyEvolutionChart({ data }: MonthlyEvolutionChartProps) {
                   {/* CURRENT MONTH SALDO BADGE (Displayed like in reference image) */}
                   {isCurrent && (
                     <div
-                      className="absolute z-30 pointer-events-none transform -translate-y-1/2 right-2 sm:right-4"
-                      style={{ top: `${Math.max(20, balanceY)}px` }}
+                      className="absolute z-30 pointer-events-none transform -translate-y-1/2 right-1 sm:right-2"
+                      style={{ top: `${Math.max(12, balanceY)}px` }}
                     >
-                      <div className="bg-[#02402E] text-white px-2.5 py-1 rounded-lg shadow-md border border-[#03543D] text-[10px] font-bold text-center leading-tight">
-                        <span className="text-[#F2B807] block text-[9px] uppercase tracking-wider">Saldo</span>
+                      <div className="bg-[#02402E] text-white px-1.5 py-0.5 rounded-md shadow-md border border-[#03543D] text-[9px] font-bold text-center leading-tight">
+                        <span className="text-[#F2B807] block text-[8px] uppercase tracking-wider">Saldo</span>
                         <span>{formatCurrency(point.balance)}</span>
                       </div>
                     </div>
                   )}
 
                   {/* BARS: Entradas & Despesas */}
-                  <div className="flex items-end gap-1 sm:gap-2 mb-1 z-10">
+                  <div className="flex items-end gap-1 sm:gap-1.5 mb-0.5 z-10">
                     {/* Entradas Bar (Mint/Emerald) */}
                     <div className="flex flex-col items-center">
-                      <span className="text-[9px] font-bold text-[#00B074] mb-0.5 opacity-90 leading-none">
+                      <span className="text-[8px] font-bold text-[#00B074] mb-0.5 opacity-90 leading-none">
                         {point.entries > 0 ? formatBarTopLabel(point.entries) : ''}
                       </span>
                       <div
-                        className="w-4 sm:w-6 md:w-8 bg-[#00B074] rounded-t-md transition-all duration-300 group-hover:brightness-110 shadow-2xs"
+                        className="w-3.5 sm:w-5 md:w-6 bg-[#00B074] rounded-t transition-all duration-300 group-hover:brightness-110 shadow-2xs"
                         style={{ height: `${entriesHeight}px` }}
                       />
                     </div>
 
                     {/* Despesas Bar (Rose/Coral) */}
                     <div className="flex flex-col items-center">
-                      <span className="text-[9px] font-bold text-[#FF3B6F] mb-0.5 opacity-90 leading-none">
+                      <span className="text-[8px] font-bold text-[#FF3B6F] mb-0.5 opacity-90 leading-none">
                         {point.expenses > 0 ? formatBarTopLabel(point.expenses) : ''}
                       </span>
                       <div
-                        className="w-4 sm:w-6 md:w-8 bg-[#FF3B6F] rounded-t-md transition-all duration-300 group-hover:brightness-110 shadow-2xs"
+                        className="w-3.5 sm:w-5 md:w-6 bg-[#FF3B6F] rounded-t transition-all duration-300 group-hover:brightness-110 shadow-2xs"
                         style={{ height: `${expensesHeight}px` }}
                       />
                     </div>
@@ -191,9 +191,9 @@ export function MonthlyEvolutionChart({ data }: MonthlyEvolutionChartProps) {
 
                   {/* X-AXIS MONTH LABEL */}
                   <span
-                    className={`text-xs font-bold mt-1 transition-colors ${
+                    className={`text-[10px] font-bold mt-0.5 transition-colors ${
                       isCurrent
-                        ? 'text-[#02402E] underline decoration-2 decoration-[#F2B807] underline-offset-4'
+                        ? 'text-[#02402E] underline decoration-2 decoration-[#F2B807] underline-offset-2'
                         : 'text-[#5E6963]'
                     }`}
                   >
