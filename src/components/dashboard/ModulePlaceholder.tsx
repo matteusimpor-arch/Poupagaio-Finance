@@ -119,6 +119,13 @@ const moduleDetails: Record<ActiveTab, { title: string; subtitle: string; icon: 
     description: 'Acompanhe análises, tendências, evolução e relatórios mensais completos do seu espaço.',
     highlights: ['Evolução financeira', 'Composição de despesas', 'Comparativo de competências'],
   },
+  support: {
+    title: 'Suporte & Ajuda',
+    subtitle: 'Central de atendimento',
+    icon: Sparkles,
+    description: 'Tire suas dúvidas, consulte a central de ajuda ou entre em contato diretamente com nossa equipe.',
+    highlights: ['E-mail direto', 'Perguntas frequentes', 'Dicas do Poupagaio'],
+  },
 };
 
 export function ModulePlaceholder({ tab, onSelectTab }: ModulePlaceholderProps) {

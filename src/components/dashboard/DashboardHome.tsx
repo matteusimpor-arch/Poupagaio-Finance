@@ -2,12 +2,28 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useTheme } from '../../hooks/useTheme';
 import { POUPAGAIO_MASCOT_URL } from '../../assets/mascot';
-import { Card, CardContent } from '../ui/card';
-import { Button } from '../ui/button';
 import { entriesService } from '../../lib/services/entries';
-import { checklistService, NormalizedChecklistExpense, MonthlyChecklistResult, FinancialAlert } from '../../lib/services/checklist';
+import { checklistService, NormalizedChecklistExpense, MonthlyChecklistResult } from '../../lib/services/checklist';
 import { calendarNotesService, CalendarNote } from '../../lib/services/calendarNotes';
+import { goalsService } from '../../lib/services/goals';
+import { installmentsService } from '../../lib/services/installments';
+import { marketService } from '../../lib/services/market';
 import { formatCurrency } from '../../lib/formatters';
+import { ActiveTab, EntriesSummary, GoalWithProgress, InstallmentPurchaseWithInstallments, ShoppingListItem } from '../../types';
+import {
+  PieChart,
+  Pie,
+  Cell,
+  ResponsiveContainer,
+  Tooltip as RechartsTooltip,
+  Legend,
+  ComposedChart,
+  Bar,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+} from 'recharts';
 import {
   Wallet,
   ArrowUpRight,
@@ -27,22 +43,42 @@ import {
   ChevronRight as ChevronIcon,
   CalendarCheck,
   StickyNote,
+  Target,
+  ShoppingBag,
+  BarChart3,
+  Sparkles,
+  PieChart as PieIcon,
+  TrendingUp,
 } from 'lucide-react';
-import { ActiveTab, EntriesSummary } from '../../types';
 
 interface DashboardHomeProps {
   onSelectTab: (tab: ActiveTab) => void;
 }
 
+const MONTH_NAMES = [
+  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+];
+
+const MONTH_SHORT_NAMES = [
+  'JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN',
+  'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'
+];
+
+const PIE_COLORS = [
+  '#02402E', '#16A66A', '#F2B807', '#F29F05',
+  '#3B82F6', '#8B5CF6', '#EC4899', '#06B6D4', '#64748B'
+];
+
 export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
   const { profile, user, currentSpace } = useAuth();
-  const { theme, toggleTheme } = useTheme();
+  const { theme } = useTheme();
 
   const now = new Date();
   const [currentYear, setCurrentYear] = useState(now.getFullYear());
   const [currentMonth, setCurrentMonth] = useState(now.getMonth() + 1);
 
-  // States
+  // Core Operational Data States
   const [checklistResult, setChecklistResult] = useState<MonthlyChecklistResult | null>(null);
   const [entriesSummary, setEntriesSummary] = useState<EntriesSummary>({
     totalPlanned: 0,
@@ -51,31 +87,80 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
     count: 0,
   });
   const [calendarNotes, setCalendarNotes] = useState<CalendarNote[]>([]);
+  const [activeGoals, setActiveGoals] = useState<GoalWithProgress[]>([]);
+  const [activeInstallments, setActiveInstallments] = useState<InstallmentPurchaseWithInstallments[]>([]);
+  const [pendingMarketItems, setPendingMarketItems] = useState<ShoppingListItem[]>([]);
+  
+  // Historical evolution chart state
+  const [evolutionData, setEvolutionData] = useState<Array<{
+    monthLabel: string;
+    Entradas: number;
+    Despesas: number;
+    Saldo: number;
+  }>>([]);
+
   const [isLoading, setIsLoading] = useState(false);
   const [checklistFilter, setChecklistFilter] = useState<'pending' | 'paid' | 'all'>('pending');
   const [actionError, setActionError] = useState<string | null>(null);
-
-  // Selected Day in compact Mini Calendar
   const [selectedMiniDay, setSelectedMiniDay] = useState<number>(now.getDate());
 
-  // Load all operational financial data for the selected month/year
+  // Load All Dashboard Data
   const loadDashboardData = async () => {
     if (!currentSpace?.id) return;
     setIsLoading(true);
     setActionError(null);
 
     try {
-      const [checklistRes, entriesRes, notesRes] = await Promise.all([
+      const [
+        checklistRes,
+        entriesRes,
+        notesRes,
+        goalsRes,
+        installmentsRes,
+        marketListsRes,
+      ] = await Promise.all([
         checklistService.getMonthlyChecklist(currentSpace.id, currentYear, currentMonth),
         entriesService.getMonthSummary(currentSpace.id, currentYear, currentMonth),
         calendarNotesService.getNotesByMonth(currentSpace.id, currentYear, currentMonth),
+        goalsService.getGoalsWithProgress(currentSpace.id, { filterStatus: 'active' }),
+        installmentsService.getPurchasesWithInstallments(currentSpace.id, { filterStatus: 'active' }),
+        marketService.getShoppingLists(currentSpace.id, { filterStatus: 'active' }),
       ]);
 
       setChecklistResult(checklistRes);
       setEntriesSummary(entriesRes);
       setCalendarNotes(notesRes.notes || []);
+      setActiveGoals((goalsRes.goals || []).slice(0, 3));
+      setActiveInstallments((installmentsRes.purchases || []).slice(0, 3));
+      
+      const allItems = (marketListsRes.lists || []).flatMap(l => l.items || []).filter(i => !i.is_checked);
+      setPendingMarketItems(allItems.slice(0, 4));
+
+      // Build 6-month financial evolution data
+      const monthOffsets = [-3, -2, -1, 0, 1, 2];
+      const evolution = await Promise.all(
+        monthOffsets.map(async (offset) => {
+          const d = new Date(currentYear, currentMonth - 1 + offset, 1);
+          const y = d.getFullYear();
+          const m = d.getMonth() + 1;
+          const [ent, chk] = await Promise.all([
+            entriesService.getMonthSummary(currentSpace.id, y, m),
+            checklistService.getMonthlyChecklist(currentSpace.id, y, m),
+          ]);
+          const inc = ent.totalPlanned;
+          const exp = chk.stats.totalAmount;
+          return {
+            monthLabel: `${MONTH_SHORT_NAMES[m - 1]}/${String(y).slice(-2)}`,
+            Entradas: inc,
+            Despesas: exp,
+            Saldo: inc - exp,
+          };
+        })
+      );
+      setEvolutionData(evolution);
+
     } catch (err) {
-      console.warn('Erro ao carregar dados do painel operacional:', err);
+      console.warn('Erro ao carregar dados do painel:', err);
     } finally {
       setIsLoading(false);
     }
@@ -106,7 +191,7 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
     }
   };
 
-  // Toggle item payment status directly from checklist
+  // Toggle item payment status
   const handleToggleItemStatus = async (item: NormalizedChecklistExpense) => {
     if (!currentSpace?.id) return;
     const res = await checklistService.toggleItemPaymentStatus(item, currentSpace.id, currentYear, currentMonth);
@@ -136,31 +221,17 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
   const fullName = profile?.full_name || user?.full_name || user?.email?.split('@')[0] || '';
   const firstName = fullName.trim().split(' ')[0] || 'Usuário';
 
-  // Mascot dynamic messages
-  let mascotMessage = 'Tudo em ordem por aqui!';
-  let mascotActionLabel = 'Ver calendário';
-  let mascotActionTab: ActiveTab = 'calendar';
-
-  if (overdueItems.length > 0) {
-    mascotMessage = overdueItems.length === 1
-      ? 'Você tem 1 compromisso vencido. Vamos regularizar?'
-      : `Atenção: você tem ${overdueItems.length} compromissos vencidos!`;
-    mascotActionLabel = 'Ver pendentes';
-  } else if (todayItems.length > 0) {
-    mascotMessage = todayItems.length === 1
-      ? 'Hoje vence 1 compromisso importante. Não esqueça!'
-      : `Hoje vencem ${todayItems.length} compromissos. Vamos quitar?`;
-  } else if (upcomingItems.length > 0) {
-    mascotMessage = 'Você tem compromissos com vencimento próximo.';
-    mascotActionLabel = 'Ver calendário';
-  } else if (totalDespesas === 0 && totalReceitas === 0) {
-    mascotMessage = 'Vamos começar o mês? Registre suas primeiras receitas ou despesas.';
-    mascotActionLabel = '+ Lançamento';
-    mascotActionTab = 'entries';
-  } else {
-    mascotMessage = 'Parabéns! Seus compromissos do mês estão em dia!';
-    mascotActionLabel = 'Ver calendário';
+  // Category data for Donut Chart
+  const categoryMap: Record<string, number> = {};
+  if (checklistResult?.items) {
+    checklistResult.items.forEach((item) => {
+      categoryMap[item.category] = (categoryMap[item.category] || 0) + item.amount;
+    });
   }
+  const donutData = Object.entries(categoryMap).map(([name, value]) => ({
+    name,
+    value,
+  })).sort((a, b) => b.value - a.value);
 
   // Filter checklist items
   const filteredChecklistItems = checklistResult
@@ -171,19 +242,9 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
       })
     : [];
 
-  const MONTH_NAMES = [
-    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
-  ];
-
-  const MONTH_SHORT_NAMES = [
-    'JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN',
-    'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'
-  ];
-
-  // Helper calculations for calendar
+  // Helper calculations for mini calendar
   const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
-  const firstDayWeekday = new Date(currentYear, currentMonth - 1, 1).getDay(); // 0 = Sun
+  const firstDayWeekday = new Date(currentYear, currentMonth - 1, 1).getDay();
 
   const itemsByDate: Record<string, NormalizedChecklistExpense[]> = {};
   if (checklistResult) {
@@ -203,10 +264,8 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
   const miniSelectedDayItems = itemsByDate[selectedMiniDateStr] || [];
   const miniSelectedDayNotes = notesByDate[selectedMiniDateStr] || [];
 
-  // Próximos Vencimentos List (Line 4 LHS) - Sorted by urgency
   const rawPendingItems = checklistResult ? checklistResult.items.filter(i => i.status === 'pending') : [];
   const sortedUpcomingItems = [...rawPendingItems].sort((a, b) => {
-    // Urgency sorting helper
     const dateA = new Date(a.dueDate).getTime();
     const dateB = new Date(b.dueDate).getTime();
     if (a.visualStatus === 'overdue' && b.visualStatus !== 'overdue') return -1;
@@ -214,12 +273,13 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
     if (a.visualStatus === 'today' && b.visualStatus !== 'today') return -1;
     if (b.visualStatus === 'today' && a.visualStatus !== 'today') return 1;
     return dateA - dateB;
-  }).slice(0, 3); // Showing exactly 3 items to preserve height matching with calendar
+  }).slice(0, 5);
 
   return (
-    <div className="w-full h-full animate-in fade-in duration-300">
+    <div className="w-full space-y-8 pb-16 animate-in fade-in duration-300">
+      {/* Action error banner */}
       {actionError && (
-        <div className="p-2 mb-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 rounded-xl text-xs text-red-700 dark:text-red-300 flex items-center justify-between shrink-0">
+        <div className="p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 rounded-xl text-xs text-red-700 dark:text-red-300 flex items-center justify-between">
           <span>{actionError}</span>
           <button type="button" onClick={() => setActionError(null)} className="p-1 cursor-pointer">
             <X className="w-4 h-4" />
@@ -228,193 +288,328 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
       )}
 
       {/* ==================================================
-          A. DESKTOP VIEW (hidden md:flex)
-          Utilizes full viewport height, fits exactly inside 768px+ screens
+          SEÇÃO 1: RESUMO FINANCEIRO E CABEÇALHO
           ================================================== */}
-      <div className="hidden md:flex md:flex-col md:gap-4 w-full md:h-[calc(100dvh-3.6rem)] md:min-h-[550px]">
-        
-        {/* RESUMO PRINCIPAL (Saldo, Situação, Checklist) */}
-        <div className="grid grid-cols-12 gap-3.5 shrink-0">
+      <section className="space-y-4">
+        {/* Welcome Header & Month Control */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-[#1E2220] border border-[#DCE2DE] dark:border-[#2B322F] rounded-2xl p-5 shadow-3xs">
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl sm:text-2xl font-bold font-display text-[#202724] dark:text-[#F4F4F5]">
+                Olá, {firstName}! 👋
+              </h1>
+              {currentSpace?.name && (
+                <span className="text-[10px] font-extrabold uppercase bg-[#02402E] text-white dark:bg-[#78D9A6] dark:text-[#101614] px-2 py-0.5 rounded-md">
+                  {currentSpace.name}
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-[#5E6963] dark:text-[#95A39B] mt-0.5">
+              Acompanhe seu balanço, próximos vencimentos e saúde financeira.
+            </p>
+          </div>
+
+          {/* Month/Year Navigation Control */}
+          <div className="flex items-center gap-2 bg-[#F2F4F3] dark:bg-[#181B1A] p-1 rounded-xl border border-[#DCE2DE] dark:border-[#2B322F] self-start sm:self-auto">
+            <button
+              type="button"
+              onClick={handlePrevMonth}
+              className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-[#5E6963] dark:text-[#95A39B] cursor-pointer transition-colors"
+              aria-label="Mês anterior"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <span className="text-xs font-bold min-w-[95px] text-center font-display text-[#02402E] dark:text-[#78D9A6]">
+              {MONTH_NAMES[currentMonth - 1]} {currentYear}
+            </span>
+            <button
+              type="button"
+              onClick={handleNextMonth}
+              className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-[#5E6963] dark:text-[#95A39B] cursor-pointer transition-colors"
+              aria-label="Próximo mês"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* 4 Summary Cards Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           
-          {/* CARD 1: SALDO DO MÊS */}
-          <div className="col-span-4 bg-white dark:bg-[#1E2220] border border-[#E2E8E4] dark:border-[#2E3532] rounded-2xl p-4 flex flex-col justify-between shadow-3xs">
-            <div className="bg-[#EAFDF5] dark:bg-[#0F2F23]/70 border border-[#A7F3D0] dark:border-[#105E41] rounded-xl p-3 text-center space-y-1 relative">
-              <div className="flex items-center justify-between mb-1.5">
-                <div className="flex items-center gap-1 bg-white/85 dark:bg-[#18201D]/85 px-2 py-0.5 rounded-lg border border-emerald-200 dark:border-emerald-800/40 shadow-3xs">
-                  <button
-                    type="button"
-                    onClick={handlePrevMonth}
-                    className="p-0.5 hover:bg-black/5 dark:hover:bg-white/5 rounded text-emerald-800 dark:text-emerald-300 cursor-pointer transition-colors"
-                    aria-label="Mês anterior"
-                  >
-                    <ChevronLeft className="w-3 h-3" />
-                  </button>
-                  <span className="text-[10px] font-bold text-emerald-800 dark:text-emerald-300 min-w-[65px] text-center font-display">
-                    {MONTH_SHORT_NAMES[currentMonth - 1]} {currentYear}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleNextMonth}
-                    className="p-0.5 hover:bg-black/5 dark:hover:bg-white/5 rounded text-emerald-800 dark:text-emerald-300 cursor-pointer transition-colors"
-                    aria-label="Próximo mês"
-                  >
-                    <ChevronRight className="w-3 h-3" />
-                  </button>
-                </div>
-                {currentSpace?.name && (
-                  <span className="text-[8px] font-extrabold tracking-wider uppercase bg-emerald-600 dark:bg-emerald-500 text-white dark:text-[#101614] px-1.5 py-0.5 rounded-md shadow-3xs">
-                    {currentSpace.name}
-                  </span>
-                )}
-              </div>
-              <p className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
+          {/* Card 1: Saldo do Mês */}
+          <div className="bg-gradient-to-br from-[#02402E] to-[#04523B] text-white rounded-2xl p-5 shadow-sm space-y-3 relative overflow-hidden flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-emerald-200 font-display">
                 Saldo do Mês
-              </p>
-              <div className={`text-2xl font-extrabold font-display tracking-tight ${saldoConsolidado < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-[#075C45] dark:text-[#78D9A6]'}`}>
+              </span>
+              <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center text-[#F2B807]">
+                <Wallet className="w-4 h-4" />
+              </div>
+            </div>
+
+            <div>
+              <div className="text-2xl sm:text-3xl font-extrabold font-display tracking-tight text-white">
                 {formatCurrency(saldoConsolidado)}
               </div>
-              <p className="text-[9px] text-emerald-700/80 dark:text-emerald-400/80">
-                Balanço disponível para esta competência
+              <p className="text-[11px] text-emerald-100/80 mt-1">
+                {saldoConsolidado >= 0 ? 'Sua receita cobre as despesas do mês' : 'Suas despesas superam a receita prevista'}
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 mt-3.5">
-              <div
-                onClick={() => onSelectTab('entries')}
-                className="p-2.5 rounded-xl bg-[#F8F9F8] dark:bg-[#18201D] border border-[#E2E8E4] dark:border-[#2A312E] hover:border-emerald-500/40 cursor-pointer transition-all flex flex-col justify-between"
-              >
-                <div className="flex items-center gap-1 text-[9px] uppercase font-bold text-emerald-600 dark:text-emerald-400">
-                  <ArrowUpRight className="w-3.5 h-3.5 shrink-0" />
-                  <span>Entradas</span>
-                </div>
-                <p className="text-xs font-bold text-[#202724] dark:text-[#F4F4F5] mt-1.5 truncate">
-                  {formatCurrency(totalReceitas)}
-                </p>
-                <span className="text-[8px] text-[#5E6963] dark:text-[#95A39B] mt-0.5 block truncate">
-                  Receitas planejadas
-                </span>
-              </div>
-
-              <div
-                onClick={() => onSelectTab('fixed_expenses')}
-                className="p-2.5 rounded-xl bg-[#F8F9F8] dark:bg-[#18201D] border border-[#E2E8E4] dark:border-[#2A312E] hover:border-rose-500/40 cursor-pointer transition-all flex flex-col justify-between"
-              >
-                <div className="flex items-center gap-1 text-[9px] uppercase font-bold text-rose-600 dark:text-rose-400">
-                  <ArrowDownRight className="w-3.5 h-3.5 shrink-0" />
-                  <span>Despesas</span>
-                </div>
-                <p className="text-xs font-bold text-[#202724] dark:text-[#F4F4F5] mt-1.5 truncate">
-                  {formatCurrency(totalDespesas)}
-                </p>
-                <span className="text-[8px] text-[#5E6963] dark:text-[#95A39B] mt-0.5 block truncate">
-                  Total planejado
-                </span>
-              </div>
+            <div className="pt-2 border-t border-white/15 flex items-center justify-between text-[10px] text-emerald-200">
+              <span>Balanço da competência</span>
+              <span className="font-bold text-[#F2C438]">
+                {saldoConsolidado >= 0 ? '+ Sobra' : '- Déficit'}
+              </span>
             </div>
           </div>
 
-          {/* CARD 2: SITUAÇÃO DO MÊS */}
-          <div className="col-span-3 bg-white dark:bg-[#1E2220] border border-[#E2E8E4] dark:border-[#2E3532] rounded-2xl p-4 flex flex-col shadow-3xs">
-            <div className="border-b border-[#E2E8E4]/60 dark:border-[#2E3532]/60 pb-1.5">
-              <h3 className="text-xs font-bold font-display text-[#202724] dark:text-[#F4F4F5] uppercase tracking-wider">
+          {/* Card 2: Entradas */}
+          <div
+            onClick={() => onSelectTab('entries')}
+            className="bg-white dark:bg-[#1E2220] border border-[#DCE2DE] dark:border-[#2B322F] rounded-2xl p-5 shadow-3xs space-y-3 hover:border-emerald-500/40 transition-all cursor-pointer flex flex-col justify-between group"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 font-display flex items-center gap-1.5">
+                <ArrowUpRight className="w-4 h-4" />
+                Entradas
+              </span>
+              <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center group-hover:scale-105 transition-transform">
+                <ArrowUpRight className="w-4 h-4" />
+              </div>
+            </div>
+
+            <div>
+              <div className="text-xl sm:text-2xl font-bold font-display text-[#202724] dark:text-[#F4F4F5]">
+                {formatCurrency(totalReceitas)}
+              </div>
+              <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B] mt-1">
+                Receitas planejadas para este mês
+              </p>
+            </div>
+
+            <div className="pt-2 border-t border-[#DCE2DE]/60 dark:border-[#2B322F]/60 flex items-center justify-between text-[10px] text-[#5E6963] dark:text-[#95A39B]">
+              <span>Recebidas: {formatCurrency(entriesSummary.totalReceived)}</span>
+              <ChevronIcon className="w-3.5 h-3.5 text-[#16A66A]" />
+            </div>
+          </div>
+
+          {/* Card 3: Despesas */}
+          <div
+            onClick={() => onSelectTab('fixed_expenses')}
+            className="bg-white dark:bg-[#1E2220] border border-[#DCE2DE] dark:border-[#2B322F] rounded-2xl p-5 shadow-3xs space-y-3 hover:border-rose-500/40 transition-all cursor-pointer flex flex-col justify-between group"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400 font-display flex items-center gap-1.5">
+                <ArrowDownRight className="w-4 h-4" />
+                Despesas
+              </span>
+              <div className="w-8 h-8 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center group-hover:scale-105 transition-transform">
+                <ArrowDownRight className="w-4 h-4" />
+              </div>
+            </div>
+
+            <div>
+              <div className="text-xl sm:text-2xl font-bold font-display text-[#202724] dark:text-[#F4F4F5]">
+                {formatCurrency(totalDespesas)}
+              </div>
+              <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B] mt-1">
+                Soma de fixos, variáveis e parcelados
+              </p>
+            </div>
+
+            <div className="pt-2 border-t border-[#DCE2DE]/60 dark:border-[#2B322F]/60 flex items-center justify-between text-[10px] text-[#5E6963] dark:text-[#95A39B]">
+              <span>Pendente: {formatCurrency(totalPendente)}</span>
+              <ChevronIcon className="w-3.5 h-3.5 text-rose-500" />
+            </div>
+          </div>
+
+          {/* Card 4: Situação do Mês */}
+          <div className="bg-white dark:bg-[#1E2220] border border-[#DCE2DE] dark:border-[#2B322F] rounded-2xl p-5 shadow-3xs space-y-3 flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#202724] dark:text-[#F4F4F5] font-display">
                 Situação do Mês
-              </h3>
+              </span>
+              <Clock className="w-4 h-4 text-[#F29F05]" />
             </div>
 
-            <div className="space-y-2.5 mt-3">
-              <div className="p-2 rounded-xl bg-[#F0FDF4] dark:bg-[#0D241A] border border-[#D1FAE5] dark:border-[#154631] flex items-center justify-between">
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                  <div className="min-w-0">
-                    <p className="text-[9px] font-bold uppercase text-emerald-800 dark:text-emerald-300">Pago</p>
-                    <p className="text-[8px] text-[#5E6963] dark:text-[#95A39B] truncate">
-                      {checklistResult ? checklistResult.stats.paidCount : 0} quitados
-                    </p>
-                  </div>
-                </div>
-                <span className="text-xs font-extrabold text-emerald-700 dark:text-emerald-400">
-                  {formatCurrency(totalPago)}
-                </span>
+            <div className="space-y-1.5 text-xs">
+              <div className="flex items-center justify-between p-1.5 rounded-lg bg-emerald-500/10 text-emerald-800 dark:text-emerald-300">
+                <span className="font-semibold text-[11px]">Quitado:</span>
+                <span className="font-bold">{formatCurrency(totalPago)}</span>
               </div>
-
-              <div className="p-2 rounded-xl bg-[#FFFBEB] dark:bg-[#251F10] border border-[#FEF3C7] dark:border-[#4B3B1B] flex items-center justify-between">
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <Clock className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                  <div className="min-w-0">
-                    <p className="text-[9px] font-bold uppercase text-amber-800 dark:text-amber-300">Próximo</p>
-                    <p className="text-[8px] text-[#5E6963] dark:text-[#95A39B] truncate">
-                      Próx. 3 dias
-                    </p>
-                  </div>
-                </div>
-                <span className="text-xs font-extrabold text-amber-700 dark:text-amber-400">
-                  {formatCurrency(totalProximo)}
-                </span>
+              <div className="flex items-center justify-between p-1.5 rounded-lg bg-amber-500/10 text-amber-800 dark:text-amber-300">
+                <span className="font-semibold text-[11px]">Próximos 3 dias:</span>
+                <span className="font-bold">{formatCurrency(totalProximo)}</span>
               </div>
-
-              <div className={`p-2 rounded-xl flex items-center justify-between border ${
-                totalAtrasado > 0
-                  ? 'bg-[#FEF2F2] dark:bg-[#261214] border-[#FEE2E2] dark:border-[#4F1A21]'
-                  : 'bg-[#F8F9F8] dark:bg-[#1A1E1C]/40 border-[#E2E8E4]'
+              <div className={`flex items-center justify-between p-1.5 rounded-lg ${
+                totalAtrasado > 0 ? 'bg-rose-500/15 text-rose-800 dark:text-rose-300 font-bold' : 'bg-gray-50 dark:bg-gray-900/40 text-gray-600 dark:text-gray-400'
               }`}>
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <AlertCircle className={`w-3.5 h-3.5 shrink-0 ${totalAtrasado > 0 ? 'text-rose-600' : 'text-[#5E6963]'}`} />
-                  <div className="min-w-0">
-                    <p className={`text-[9px] font-bold uppercase ${totalAtrasado > 0 ? 'text-rose-800 dark:text-rose-300' : 'text-[#5E6963]'}`}>
-                      Atrasado / Hoje
-                    </p>
-                    <p className="text-[8px] text-[#5E6963] dark:text-[#95A39B] truncate">
-                      {overdueItems.length + todayItems.length} vencimentos
-                    </p>
-                  </div>
-                </div>
-                <span className={`text-xs font-extrabold ${totalAtrasado > 0 ? 'text-rose-600 dark:text-rose-400 animate-pulse' : 'text-[#202724] dark:text-[#F4F4F5]'}`}>
-                  {formatCurrency(totalAtrasado)}
-                </span>
+                <span className="font-semibold text-[11px]">Atrasado / Hoje:</span>
+                <span>{formatCurrency(totalAtrasado)}</span>
               </div>
             </div>
           </div>
 
-          {/* CARD 3: CHECKLIST FINANCEIRO */}
-          <div className="col-span-5 bg-white dark:bg-[#1E2220] border border-[#E2E8E4] dark:border-[#2E3532] rounded-2xl p-4 flex flex-col shadow-3xs">
-            <div className="flex items-center justify-between pb-1 border-b border-[#E2E8E4]/60 dark:border-[#2E3532]/60">
-              <div>
-                <h3 className="text-xs font-bold font-display text-[#202724] dark:text-[#F4F4F5] uppercase tracking-wider flex items-center gap-1">
-                  <CalendarCheck className="w-3.5 h-3.5 text-[#16A66A]" />
-                  Checklist Financeiro
-                </h3>
+        </div>
+      </section>
+
+      {/* ==================================================
+          SEÇÃO 2: ANÁLISE GRÁFICA & CHECKLIST
+          ================================================== */}
+      <section className="space-y-6">
+        <div className="flex items-center justify-between border-b border-[#DCE2DE] dark:border-[#2B322F] pb-3">
+          <div>
+            <h2 className="text-lg font-bold font-display text-[#02402E] dark:text-[#78D9A6] flex items-center gap-2">
+              <BarChart3 className="w-5 h-5 text-[#16A66A]" />
+              Análise e Evolução Financeira
+            </h2>
+            <p className="text-xs text-[#5E6963] dark:text-[#95A39B]">
+              Gráficos de composição de despesas e evolução mensal das suas contas.
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          
+          {/* Donut Chart: Composição das Despesas */}
+          <div className="bg-white dark:bg-[#1E2220] border border-[#DCE2DE] dark:border-[#2B322F] rounded-2xl p-5 shadow-3xs space-y-4">
+            <div className="flex items-center justify-between border-b border-[#DCE2DE]/60 dark:border-[#2B322F]/60 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-[#02402E]/10 dark:bg-[#78D9A6]/15 flex items-center justify-center text-[#02402E] dark:text-[#78D9A6]">
+                  <PieIcon className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold font-display text-[#202724] dark:text-[#F4F4F5]">
+                    Composição das Despesas
+                  </h3>
+                  <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B]">
+                    Distribuição por categoria neste mês
+                  </p>
+                </div>
               </div>
-              <button
-                type="button"
-                onClick={() => onSelectTab('calendar')}
-                className="text-[10px] font-bold text-[#075C45] dark:text-[#78D9A6] hover:underline"
-              >
-                Ver calendário →
-              </button>
+              <span className="text-xs font-bold text-[#02402E] dark:text-[#78D9A6]">
+                Total: {formatCurrency(totalDespesas)}
+              </span>
             </div>
 
-            {checklistResult && (
-              <div className="my-1.5">
-                <div className="flex items-center justify-between text-[9px] font-bold text-[#5E6963] dark:text-[#95A39B] mb-0.5">
-                  <span>Progresso: {checklistResult.stats.paidCount} de {checklistResult.stats.totalItems} pagos</span>
-                  <span className="text-[#075C45] dark:text-[#78D9A6] font-extrabold">{checklistResult.stats.progressPercentage}%</span>
-                </div>
-                <div className="w-full bg-[#EBECEE] dark:bg-[#2A302D] h-1.5 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-[#16A66A] rounded-full transition-all duration-300"
-                    style={{ width: `${checklistResult.stats.progressPercentage}%` }}
-                  />
-                </div>
+            {donutData.length === 0 ? (
+              <div className="py-12 text-center space-y-3">
+                <p className="text-xs text-[#5E6963] dark:text-[#95A39B]">
+                  Nenhuma despesa cadastrada para este mês.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => onSelectTab('variable_expenses')}
+                  className="px-4 py-2 rounded-xl bg-[#02402E] text-white text-xs font-bold hover:bg-[#04523B] transition-all cursor-pointer"
+                >
+                  + Adicionar Despesa
+                </button>
+              </div>
+            ) : (
+              <div className="h-64 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={donutData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={95}
+                      paddingAngle={3}
+                      dataKey="value"
+                    >
+                      {donutData.map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <RechartsTooltip
+                      formatter={(value: number) => [formatCurrency(value), 'Valor']}
+                      contentStyle={{
+                        backgroundColor: theme === 'dark' ? '#1E2220' : '#FFFFFF',
+                        borderColor: '#DCE2DE',
+                        borderRadius: '12px',
+                        fontSize: '12px',
+                      }}
+                    />
+                    <Legend
+                      layout="horizontal"
+                      verticalAlign="bottom"
+                      align="center"
+                      wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
               </div>
             )}
+          </div>
 
-            <div className="flex items-center gap-1 bg-[#F3F4F4] dark:bg-[#282E2B] p-0.5 rounded-lg border border-[#E2E8E4]/80 dark:border-[#2E3532]/80 shrink-0 mb-1.5">
+          {/* Bar/Line Chart: Evolução Financeira */}
+          <div className="bg-white dark:bg-[#1E2220] border border-[#DCE2DE] dark:border-[#2B322F] rounded-2xl p-5 shadow-3xs space-y-4">
+            <div className="flex items-center justify-between border-b border-[#DCE2DE]/60 dark:border-[#2B322F]/60 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                  <TrendingUp className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold font-display text-[#202724] dark:text-[#F4F4F5]">
+                    Evolução Financeira
+                  </h3>
+                  <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B]">
+                    Entradas vs Despesas e Tendência de Saldo
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="h-64 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart data={evolutionData}>
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                  <XAxis dataKey="monthLabel" tick={{ fontSize: 11 }} />
+                  <YAxis tick={{ fontSize: 10 }} tickFormatter={(val) => `R$${val}`} />
+                  <RechartsTooltip
+                    formatter={(value: number) => [formatCurrency(value)]}
+                    contentStyle={{
+                      backgroundColor: theme === 'dark' ? '#1E2220' : '#FFFFFF',
+                      borderColor: '#DCE2DE',
+                      borderRadius: '12px',
+                      fontSize: '12px',
+                    }}
+                  />
+                  <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
+                  <Bar dataKey="Entradas" fill="#16A66A" radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="Despesas" fill="#E11D48" radius={[6, 6, 0, 0]} />
+                  <Line type="monotone" dataKey="Saldo" stroke="#F2B807" strokeWidth={3} dot={{ r: 4 }} />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+        </div>
+
+        {/* Checklist Financeiro Completo */}
+        <div className="bg-white dark:bg-[#1E2220] border border-[#DCE2DE] dark:border-[#2B322F] rounded-2xl p-5 shadow-3xs space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#DCE2DE]/60 dark:border-[#2B322F]/60 pb-3">
+            <div className="flex items-center gap-2">
+              <CalendarCheck className="w-5 h-5 text-[#16A66A]" />
+              <div>
+                <h3 className="text-sm font-bold font-display text-[#202724] dark:text-[#F4F4F5]">
+                  Checklist e Vencimentos do Mês
+                </h3>
+                <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B]">
+                  Marque como pago diretamente aqui para atualizar seus relatórios
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1 bg-[#F2F4F3] dark:bg-[#181B1A] p-1 rounded-xl border border-[#DCE2DE] dark:border-[#2B322F]">
               <button
                 type="button"
                 onClick={() => setChecklistFilter('pending')}
-                className={`flex-1 text-center py-0.5 rounded text-[9px] font-bold cursor-pointer transition-colors ${
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                   checklistFilter === 'pending'
-                    ? 'bg-white text-[#075C45] dark:bg-[#1E2220] dark:text-[#78D9A6] shadow-3xs'
+                    ? 'bg-white text-[#02402E] dark:bg-[#1E2220] dark:text-[#78D9A6] shadow-3xs'
                     : 'text-[#5E6963] dark:text-[#95A39B]'
                 }`}
               >
@@ -423,9 +618,9 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
               <button
                 type="button"
                 onClick={() => setChecklistFilter('paid')}
-                className={`flex-1 text-center py-0.5 rounded text-[9px] font-bold cursor-pointer transition-colors ${
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                   checklistFilter === 'paid'
-                    ? 'bg-white text-[#075C45] dark:bg-[#1E2220] dark:text-[#78D9A6] shadow-3xs'
+                    ? 'bg-white text-[#02402E] dark:bg-[#1E2220] dark:text-[#78D9A6] shadow-3xs'
                     : 'text-[#5E6963] dark:text-[#95A39B]'
                 }`}
               >
@@ -434,62 +629,239 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
               <button
                 type="button"
                 onClick={() => setChecklistFilter('all')}
-                className={`flex-1 text-center py-0.5 rounded text-[9px] font-bold cursor-pointer transition-colors ${
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                   checklistFilter === 'all'
-                    ? 'bg-white text-[#075C45] dark:bg-[#1E2220] dark:text-[#78D9A6] shadow-3xs'
+                    ? 'bg-white text-[#02402E] dark:bg-[#1E2220] dark:text-[#78D9A6] shadow-3xs'
                     : 'text-[#5E6963] dark:text-[#95A39B]'
                 }`}
               >
                 Todas ({checklistResult ? checklistResult.stats.totalItems : 0})
               </button>
             </div>
+          </div>
 
-            <div className="overflow-y-auto max-h-[140px] pr-1 space-y-1.5">
-              {isLoading ? (
-                <p className="text-[10px] text-center text-[#5E6963] py-4">Carregando...</p>
-              ) : filteredChecklistItems.length === 0 ? (
-                <div className="text-center py-4 border border-dashed border-[#E2E8E4] dark:border-[#2A312E] rounded-xl bg-[#F8F9F8]/50 dark:bg-[#161918]/30">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-500/30 mx-auto mb-1" />
-                  <p className="text-[10px] font-bold text-[#202724] dark:text-[#F4F4F5]">Tudo limpo!</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {filteredChecklistItems.length === 0 ? (
+              <div className="col-span-2 text-center py-8 border border-dashed border-[#DCE2DE] dark:border-[#2B322F] rounded-xl bg-[#F7F9F8] dark:bg-[#181B1A]">
+                <CheckCircle2 className="w-6 h-6 text-emerald-500/40 mx-auto mb-1.5" />
+                <p className="text-xs font-bold text-[#202724] dark:text-[#F4F4F5]">Nenhum lançamento nesta lista.</p>
+              </div>
+            ) : (
+              filteredChecklistItems.map((item) => (
+                <div
+                  key={item.id}
+                  className={`p-3 rounded-xl border flex items-center justify-between gap-3 transition-all ${
+                    item.status === 'paid'
+                      ? 'bg-emerald-50/40 dark:bg-emerald-950/10 border-emerald-200 dark:border-emerald-800/30'
+                      : item.visualStatus === 'overdue' || item.visualStatus === 'today'
+                      ? 'bg-rose-50/50 dark:bg-rose-950/20 border-rose-200 dark:border-rose-800/30 font-semibold'
+                      : 'bg-[#F7F9F8] dark:bg-[#181B1A] border-[#DCE2DE] dark:border-[#2B322F]'
+                  }`}
+                >
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <button
+                      type="button"
+                      onClick={() => handleToggleItemStatus(item)}
+                      className={`w-5 h-5 rounded-md border flex items-center justify-center shrink-0 cursor-pointer transition-colors ${
+                        item.status === 'paid'
+                          ? 'bg-emerald-600 border-emerald-600 text-white dark:bg-emerald-500'
+                          : 'border-[#5E6963] dark:border-[#95A39B] hover:border-[#16A66A]'
+                      }`}
+                    >
+                      {item.status === 'paid' && <Check className="w-3.5 h-3.5 stroke-[3.5]" />}
+                    </button>
+                    <div className="min-w-0">
+                      <p className={`text-xs font-bold truncate ${item.status === 'paid' ? 'line-through text-[#5E6963] dark:text-[#95A39B]' : 'text-[#202724] dark:text-[#F4F4F5]'}`}>
+                        {item.title}
+                      </p>
+                      <span className="text-[10px] text-[#5E6963] dark:text-[#95A39B] uppercase font-bold tracking-wider block">
+                        {item.category} • Vence {item.dueDate.split('-').reverse().join('/')}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className={`text-xs font-bold ${item.status === 'paid' ? 'text-emerald-600 dark:text-emerald-400' : 'text-[#202724] dark:text-[#F4F4F5]'}`}>
+                      {formatCurrency(item.amount)}
+                    </p>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* ==================================================
+          SEÇÃO 3: ORGANIZAÇÃO & DADOS COMPLEMENTARES
+          ================================================== */}
+      <section className="space-y-6">
+        <div className="flex items-center justify-between border-b border-[#DCE2DE] dark:border-[#2B322F] pb-3">
+          <div>
+            <h2 className="text-lg font-bold font-display text-[#02402E] dark:text-[#78D9A6] flex items-center gap-2">
+              <Target className="w-5 h-5 text-[#F2B807]" />
+              Organização e Destaques
+            </h2>
+            <p className="text-xs text-[#5E6963] dark:text-[#95A39B]">
+              Seu calendário, metas de economia e lista de compras em um único lugar.
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          
+          {/* Card 1: Calendário do Mês */}
+          <div className="bg-white dark:bg-[#1E2220] border border-[#DCE2DE] dark:border-[#2B322F] rounded-2xl p-5 shadow-3xs space-y-4">
+            <div className="flex items-center justify-between border-b border-[#DCE2DE]/60 dark:border-[#2B322F]/60 pb-2.5">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-[#16A66A]" />
+                <h3 className="text-sm font-bold font-display text-[#202724] dark:text-[#F4F4F5]">
+                  Calendário ({MONTH_SHORT_NAMES[currentMonth - 1]})
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => onSelectTab('calendar')}
+                className="text-xs font-bold text-[#02402E] dark:text-[#78D9A6] hover:underline"
+              >
+                Abrir →
+              </button>
+            </div>
+
+            {/* Mini Calendar Matrix */}
+            <div className="space-y-2">
+              <div className="grid grid-cols-7 text-center text-[10px] font-bold text-[#5E6963]">
+                {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((wd, i) => (
+                  <span key={i}>{wd}</span>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-7 gap-1 text-center">
+                {Array.from({ length: firstDayWeekday }).map((_, idx) => (
+                  <div key={`empty-${idx}`} className="h-6" />
+                ))}
+
+                {Array.from({ length: daysInMonth }).map((_, idx) => {
+                  const dayNum = idx + 1;
+                  const dStr = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+                  const isDaySelected = dayNum === selectedMiniDay;
+                  const hasDayItems = (itemsByDate[dStr] || []).length > 0;
+
+                  return (
+                    <button
+                      key={dayNum}
+                      type="button"
+                      onClick={() => setSelectedMiniDay(dayNum)}
+                      className={`h-7 rounded-lg text-xs font-bold relative flex items-center justify-center cursor-pointer transition-all ${
+                        isDaySelected
+                          ? 'bg-[#02402E] text-white dark:bg-[#78D9A6] dark:text-[#101614]'
+                          : 'hover:bg-black/5 dark:hover:bg-white/5 text-[#202724] dark:text-[#F4F4F5]'
+                      }`}
+                    >
+                      <span>{dayNum}</span>
+                      {hasDayItems && (
+                        <span className="absolute bottom-1 w-1 h-1 rounded-full bg-[#F2B807]" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Day Details Preview */}
+              <div className="p-3 rounded-xl bg-[#F7F9F8] dark:bg-[#181B1A] border border-[#DCE2DE] dark:border-[#2B322F] space-y-1.5 text-xs">
+                <span className="font-bold text-[#02402E] dark:text-[#78D9A6] block">
+                  Dia {selectedMiniDay}: {miniSelectedDayItems.length} vencimento(s)
+                </span>
+                {miniSelectedDayItems.slice(0, 2).map((item) => (
+                  <div key={item.id} className="flex items-center justify-between text-[11px]">
+                    <span className="truncate">{item.title}</span>
+                    <span className="font-bold">{formatCurrency(item.amount)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Card 2: Metas em Destaque */}
+          <div className="bg-white dark:bg-[#1E2220] border border-[#DCE2DE] dark:border-[#2B322F] rounded-2xl p-5 shadow-3xs space-y-4">
+            <div className="flex items-center justify-between border-b border-[#DCE2DE]/60 dark:border-[#2B322F]/60 pb-2.5">
+              <div className="flex items-center gap-2">
+                <Target className="w-4 h-4 text-[#F2B807]" />
+                <h3 className="text-sm font-bold font-display text-[#202724] dark:text-[#F4F4F5]">
+                  Metas de Economia
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => onSelectTab('goals')}
+                className="text-xs font-bold text-[#02402E] dark:text-[#78D9A6] hover:underline"
+              >
+                Gerenciar →
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {activeGoals.length === 0 ? (
+                <div className="py-8 text-center space-y-2 border border-dashed border-[#DCE2DE] dark:border-[#2B322F] rounded-xl bg-[#F7F9F8] dark:bg-[#181B1A]">
+                  <p className="text-xs text-[#5E6963] dark:text-[#95A39B]">Nenhuma meta ativa cadastrada.</p>
+                  <button
+                    type="button"
+                    onClick={() => onSelectTab('goals')}
+                    className="text-xs font-bold text-[#02402E] dark:text-[#78D9A6] hover:underline"
+                  >
+                    + Criar Meta
+                  </button>
                 </div>
               ) : (
-                filteredChecklistItems.map((item) => (
-                  <div
-                    key={item.id}
-                    className={`p-2 rounded-xl border flex items-center justify-between gap-2.5 transition-colors ${
-                      item.status === 'paid'
-                        ? 'bg-emerald-50/40 dark:bg-emerald-950/10 border-emerald-200 dark:border-emerald-800/20'
-                        : item.visualStatus === 'overdue' || item.visualStatus === 'today'
-                        ? 'bg-rose-50/40 dark:bg-rose-950/10 border-rose-200 dark:border-rose-800/20 font-semibold'
-                        : 'bg-[#F8F9F8]/60 dark:bg-[#1A1E1C]/60 border-[#E2E8E4] dark:border-[#2A312E]'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
-                      <button
-                        type="button"
-                        onClick={() => handleToggleItemStatus(item)}
-                        className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 cursor-pointer transition-colors ${
-                          item.status === 'paid'
-                            ? 'bg-emerald-600 border-emerald-600 text-white dark:bg-emerald-500'
-                            : 'border-[#5E6963] dark:border-[#95A39B] hover:border-[#16A66A]'
-                        }`}
-                      >
-                        {item.status === 'paid' && <Check className="w-2.5 h-2.5 stroke-[3.5]" />}
-                      </button>
-                      <div className="min-w-0">
-                        <p className={`text-[11px] font-bold truncate ${item.status === 'paid' ? 'line-through text-[#5E6963] dark:text-[#95A39B]' : 'text-[#202724] dark:text-[#F4F4F5]'}`}>
-                          {item.title}
-                        </p>
-                        <span className="text-[8px] text-[#5E6963] dark:text-[#95A39B] uppercase font-bold tracking-wider">
-                          {item.category} • Vence {item.dueDate.split('-').slice(2).join('/')}
-                        </span>
+                activeGoals.map((goal) => {
+                  const pct = Math.min(goal.progressPercentage, 100);
+                  return (
+                    <div key={goal.id} className="p-3 rounded-xl border border-[#DCE2DE] dark:border-[#2B322F] bg-[#F7F9F8] dark:bg-[#181B1A] space-y-2">
+                      <div className="flex items-center justify-between text-xs font-bold">
+                        <span className="truncate">{goal.name}</span>
+                        <span className="text-[#02402E] dark:text-[#78D9A6]">{pct}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 dark:bg-gray-700 h-2 rounded-full overflow-hidden">
+                        <div className="h-full bg-[#16A66A] rounded-full transition-all" style={{ width: `${pct}%` }} />
+                      </div>
+                      <div className="flex items-center justify-between text-[10px] text-[#5E6963] dark:text-[#95A39B]">
+                        <span>Acumulado: {formatCurrency(goal.currentAmount)}</span>
+                        <span>Alvo: {formatCurrency(goal.targetAmount)}</span>
                       </div>
                     </div>
-                    <div className="text-right shrink-0">
-                      <p className={`text-[11px] font-bold ${item.status === 'paid' ? 'text-emerald-600 dark:text-emerald-400' : 'text-[#202724] dark:text-[#F4F4F5]'}`}>
-                        {formatCurrency(item.amount)}
-                      </p>
-                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          {/* Card 3: Destaque de Mercado e Compras */}
+          <div className="bg-white dark:bg-[#1E2220] border border-[#DCE2DE] dark:border-[#2B322F] rounded-2xl p-5 shadow-3xs space-y-4">
+            <div className="flex items-center justify-between border-b border-[#DCE2DE]/60 dark:border-[#2B322F]/60 pb-2.5">
+              <div className="flex items-center gap-2">
+                <ShoppingBag className="w-4 h-4 text-orange-500" />
+                <h3 className="text-sm font-bold font-display text-[#202724] dark:text-[#F4F4F5]">
+                  Lista de Mercado
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => onSelectTab('market')}
+                className="text-xs font-bold text-[#02402E] dark:text-[#78D9A6] hover:underline"
+              >
+                Ver lista →
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              {pendingMarketItems.length === 0 ? (
+                <div className="py-8 text-center border border-dashed border-[#DCE2DE] dark:border-[#2B322F] rounded-xl bg-[#F7F9F8] dark:bg-[#181B1A]">
+                  <p className="text-xs text-[#5E6963] dark:text-[#95A39B]">Nenhum item pendente no mercado.</p>
+                </div>
+              ) : (
+                pendingMarketItems.map((item) => (
+                  <div key={item.id} className="p-2.5 rounded-xl border border-[#DCE2DE] dark:border-[#2B322F] bg-[#F7F9F8] dark:bg-[#181B1A] flex items-center justify-between text-xs">
+                    <span className="font-semibold text-[#202724] dark:text-[#F4F4F5] truncate">{item.name}</span>
+                    <span className="text-[10px] font-bold text-gray-500 uppercase">{item.category}</span>
                   </div>
                 ))
               )}
@@ -497,423 +869,7 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
           </div>
 
         </div>
-
-        {/* LINHA 4: PRÓXIMOS VENCIMENTOS + CALENDÁRIO DO MÊS */}
-        <div className="grid grid-cols-12 gap-3.5 flex-grow flex-shrink flex-1 min-h-0">
-          
-          {/* COLUNA ESQUERDA: PRÓXIMOS VENCIMENTOS */}
-          <div className="col-span-5 bg-white dark:bg-[#1E2220] border border-[#E2E8E4] dark:border-[#2E3532] rounded-2xl p-4 flex flex-col shadow-3xs h-full">
-            <div className="flex items-center justify-between pb-1.5 border-b border-[#E2E8E4]/60 dark:border-[#2E3532]/60 shrink-0 mb-3">
-              <div>
-                <h3 className="text-xs font-bold font-display text-[#202724] dark:text-[#F4F4F5] uppercase tracking-wider">
-                  Próximos Vencimentos
-                </h3>
-                <p className="text-[9px] text-[#5E6963] dark:text-[#95A39B]">
-                  Suas próximas contas e compromissos
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => onSelectTab('fixed_expenses')}
-                className="text-[10px] font-bold text-[#075C45] dark:text-[#78D9A6] hover:underline"
-              >
-                Ver todos →
-              </button>
-            </div>
-
-            <div className="flex-grow flex-shrink flex-1 min-h-0 flex flex-col justify-center">
-              {sortedUpcomingItems.length === 0 ? (
-                <div className="text-center py-6 border border-dashed border-[#E2E8E4] dark:border-[#2A312E] rounded-xl bg-[#F8F9F8]/50 dark:bg-[#161918]/30 my-auto">
-                  <CheckCircle2 className="w-6 h-6 text-emerald-500/30 mx-auto mb-1" />
-                  <p className="text-[10px] font-semibold text-[#202724] dark:text-[#F4F4F5]">Tudo pago por enquanto!</p>
-                </div>
-              ) : (
-                <div className="space-y-2 flex-1 overflow-y-auto pr-0.5">
-                  {sortedUpcomingItems.map((item) => {
-                    const [, m, d] = item.dueDate.split('-');
-                    const shortMonth = MONTH_SHORT_NAMES[Number(m) - 1];
-                    
-                    let relativeLabel = 'Próximo';
-                    let badgeStyle = 'bg-slate-100 text-slate-800 dark:bg-slate-900/40 dark:text-slate-400';
-                    if (item.visualStatus === 'overdue') {
-                      relativeLabel = 'Atrasado';
-                      badgeStyle = 'bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-400 animate-pulse';
-                    } else if (item.visualStatus === 'today') {
-                      relativeLabel = 'Hoje';
-                      badgeStyle = 'bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-400 font-bold';
-                    } else if (item.visualStatus === 'upcoming') {
-                      relativeLabel = 'Amanhã';
-                      badgeStyle = 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-400';
-                    }
-
-                    return (
-                      <div
-                        key={item.id}
-                        className="p-2.5 rounded-xl border border-[#E2E8E4] dark:border-[#2A312E] bg-white dark:bg-[#1A1E1C] flex items-center justify-between gap-3 group hover:border-[#16A66A]/40 transition-colors"
-                      >
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className="w-10 h-10 rounded-xl bg-[#F3F4F4] dark:bg-[#282E2B] flex flex-col items-center justify-center border border-[#E2E8E4] dark:border-[#2E3532] shrink-0 select-none">
-                            <span className="text-[13px] font-extrabold text-[#202724] dark:text-[#F4F4F5] leading-none">
-                              {d}
-                            </span>
-                            <span className="text-[7px] font-bold text-[#5E6963] dark:text-[#95A39B] tracking-wider mt-0.5 leading-none">
-                              {shortMonth}
-                            </span>
-                          </div>
-
-                          <div className="min-w-0">
-                            <h4 className="text-xs font-bold text-[#202724] dark:text-[#F4F4F5] truncate leading-normal">
-                              {item.title}
-                            </h4>
-                            <span className="text-[9px] text-[#5E6963] dark:text-[#95A39B] block truncate leading-none mt-0.5">
-                              {item.sourceType === 'fixed' ? 'Gasto fixo' : item.sourceType === 'variable' ? 'Gasto variável' : 'Parcelado'} • {formatCurrency(item.amount)}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-2 shrink-0">
-                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${badgeStyle}`}>
-                            {relativeLabel}
-                          </span>
-                          <ChevronIcon className="w-3.5 h-3.5 text-[#5E6963]/40 group-hover:text-[#16A66A] transition-colors" />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* COLUNA DIREITA: CALENDÁRIO COMPACTO */}
-          <div className="col-span-7 bg-white dark:bg-[#1E2220] border border-[#E2E8E4] dark:border-[#2E3532] rounded-2xl p-4 flex flex-col shadow-3xs h-full">
-            <div className="flex items-center justify-between pb-1.5 border-b border-[#E2E8E4]/60 dark:border-[#2E3532]/60 shrink-0 mb-3">
-              <div>
-                <h3 className="text-xs font-bold font-display text-[#202724] dark:text-[#F4F4F5] uppercase tracking-wider">
-                  Calendário do Mês
-                </h3>
-                <p className="text-[9px] text-[#5E6963] dark:text-[#95A39B]">
-                  Visualize seus vencimentos e anotações
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => onSelectTab('calendar')}
-                className="text-[10px] font-bold text-[#075C45] dark:text-[#78D9A6] hover:underline"
-              >
-                Ver mês completo →
-              </button>
-            </div>
-
-            <div className="flex-grow flex-shrink flex-1 min-h-0 flex flex-row gap-4">
-              
-              {/* Matrix days left */}
-              <div className="w-[58%] flex flex-col h-full justify-between">
-                <div className="grid grid-cols-7 text-center gap-1.5 pb-1 border-b border-[#E2E8E4]/40 dark:border-[#2E3532]/40">
-                  {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((wd, i) => (
-                    <span key={i} className={`text-[8px] font-bold ${i === 0 || i === 6 ? 'text-rose-500' : 'text-[#5E6963]'}`}>
-                      {wd}
-                    </span>
-                  ))}
-                </div>
-
-                <div className="flex-grow grid grid-cols-7 gap-x-1.5 gap-y-1 sm:gap-y-1.5 mt-2 justify-items-center items-center content-around">
-                  {Array.from({ length: firstDayWeekday }).map((_, idx) => (
-                    <div key={`empty-${idx}`} className="w-5.5 h-5.5" />
-                  ))}
-
-                  {Array.from({ length: daysInMonth }).map((_, idx) => {
-                    const dayNum = idx + 1;
-                    const dStr = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
-                    const isDaySelected = dayNum === selectedMiniDay;
-
-                    const hasDayItems = (itemsByDate[dStr] || []).length > 0;
-                    const hasDayNotes = (notesByDate[dStr] || []).length > 0;
-                    const hasDayOverdue = (itemsByDate[dStr] || []).some(i => i.visualStatus === 'overdue' && i.status === 'pending');
-
-                    return (
-                      <button
-                        key={dayNum}
-                        type="button"
-                        onClick={() => setSelectedMiniDay(dayNum)}
-                        className={`w-6 h-6 md:w-7 md:h-7 rounded-full flex flex-col items-center justify-center text-[10px] md:text-xs font-bold relative transition-all cursor-pointer ${
-                          isDaySelected
-                            ? 'bg-[#16A66A] text-white dark:text-[#101614] scale-105 shadow-3xs'
-                            : dStr === `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
-                            ? 'border border-[#075C45] dark:border-[#78D9A6] text-[#075C45] dark:text-[#78D9A6]'
-                            : 'hover:bg-black/5 dark:hover:bg-white/5 text-[#202724] dark:text-[#F4F4F5]'
-                        }`}
-                      >
-                        <span>{dayNum}</span>
-                        
-                        <div className="absolute -bottom-0.5 flex gap-0.5 justify-center">
-                          {hasDayItems && (
-                            <span className={`w-1 h-1 rounded-full ${hasDayOverdue ? 'bg-rose-500' : 'bg-emerald-500'}`} />
-                          )}
-                          {hasDayNotes && (
-                            <span className="w-1 h-1 rounded-full bg-amber-500" />
-                          )}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Day details right */}
-              <div className="w-[42%] bg-[#F8F9F8] dark:bg-[#18201D] border border-[#E2E8E4] dark:border-[#2A312E] rounded-xl p-3 flex flex-col justify-between h-full">
-                <div className="space-y-2 flex-grow flex-shrink flex-1 min-h-0 overflow-y-auto pr-0.5">
-                  <div className="flex items-center justify-between pb-1 border-b border-[#E2E8E4]/60 dark:border-[#2E3532]/60 sticky top-0 bg-[#F8F9F8] dark:bg-[#18201D] z-10">
-                    <span className="text-[10px] font-bold text-[#075C45] dark:text-[#78D9A6]">
-                      {selectedMiniDay} de {MONTH_NAMES[currentMonth - 1].toLowerCase()}
-                    </span>
-                    <span className="text-[8px] uppercase tracking-wider font-extrabold bg-[#16A66A]/15 text-[#075C45] dark:text-[#78D9A6] px-1.5 py-0.5 rounded">
-                      Info
-                    </span>
-                  </div>
-
-                  {miniSelectedDayItems.length === 0 && miniSelectedDayNotes.length === 0 ? (
-                    <p className="text-[9px] text-[#5E6963] dark:text-[#95A39B] italic pt-4 text-center">
-                      Nenhum lançamento ou nota.
-                    </p>
-                  ) : (
-                    <div className="space-y-1.5 pt-1">
-                      {miniSelectedDayItems.slice(0, 2).map(item => (
-                        <div key={item.id} className="text-[9px] font-semibold text-[#202724] dark:text-[#F4F4F5] flex items-center justify-between">
-                          <span className="truncate max-w-[70%]">• {item.title}</span>
-                          <span className="shrink-0">{formatCurrency(item.amount)}</span>
-                        </div>
-                      ))}
-                      {miniSelectedDayNotes.slice(0, 2).map(note => (
-                        <div key={note.id} className="text-[9px] font-medium text-amber-700 dark:text-amber-400 flex items-start gap-1">
-                          <StickyNote className="w-2.5 h-2.5 shrink-0 mt-0.5" />
-                          <span className="break-words line-clamp-2">{note.content}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => onSelectTab('calendar')}
-                  className="mt-2 w-full text-center text-[9px] font-bold text-[#16A66A] hover:underline flex items-center justify-center gap-0.5 shrink-0 pt-1"
-                >
-                  <Plus className="w-2.5 h-2.5" />
-                  <span>Gerenciar anotações</span>
-                </button>
-              </div>
-
-            </div>
-          </div>
-
-        </div>
-
-      </div>
-
-      {/* ==================================================
-          B. MOBILE VIEW (flex flex-col md:hidden)
-          Highly streamlined, compact operational cards only
-          ================================================== */}
-      <div className="flex flex-col md:hidden gap-3.5 pb-20">
-        
-        {/* CABEÇALHO COMPACTO MOBILE */}
-        <div className="flex items-center justify-between bg-white dark:bg-[#1E2220] px-3.5 py-2.5 rounded-xl border border-[#E2E8E4] dark:border-[#2E3532] shadow-3xs">
-          <div>
-            <h1 className="text-sm font-bold font-display text-[#202724] dark:text-[#F4F4F5] tracking-tight">
-              Olá, {firstName}! 👋
-            </h1>
-            <p className="text-[9px] text-[#5E6963] dark:text-[#95A39B]">
-              Organize suas contas hoje.
-            </p>
-          </div>
-
-          {/* Selector */}
-          <div className="flex items-center gap-1.5 bg-[#F3F4F4] dark:bg-[#282E2B] p-0.5 rounded-lg border border-[#E2E8E4] dark:border-[#2E3532]">
-            <button
-              type="button"
-              onClick={handlePrevMonth}
-              className="p-1 rounded hover:bg-black/5 dark:hover:bg-white/5 text-[#5E6963] dark:text-[#95A39B] cursor-pointer"
-            >
-              <ChevronLeft className="w-3 h-3" />
-            </button>
-            <span className="text-[10px] font-bold min-w-[75px] text-center font-display text-[#075C45] dark:text-[#78D9A6]">
-              {MONTH_SHORT_NAMES[currentMonth - 1]} {currentYear}
-            </span>
-            <button
-              type="button"
-              onClick={handleNextMonth}
-              className="p-1 rounded hover:bg-black/5 dark:hover:bg-white/5 text-[#5E6963] dark:text-[#95A39B] cursor-pointer"
-            >
-              <ChevronRight className="w-3 h-3" />
-            </button>
-          </div>
-        </div>
-
-        {/* ALERTA POUPAGAIO (Omitido se não houver atrasos/hoje) */}
-        {overdueItems.length > 0 || todayItems.length > 0 ? (
-          <div className="flex items-center justify-between gap-2.5 px-3 py-2 rounded-xl border border-rose-200 dark:border-rose-800/30 bg-rose-500/5 dark:bg-rose-950/20 shadow-3xs">
-            <div className="flex items-center gap-2 min-w-0">
-              <div className="w-6 h-6 rounded-lg overflow-hidden border border-[#16A66A]/30 bg-[#F3F4F4] dark:bg-[#282E2B] p-0.5 shrink-0 flex items-center justify-center">
-                <img
-                  src={POUPAGAIO_MASCOT_URL}
-                  alt="Poupagaio"
-                  referrerPolicy="no-referrer"
-                  className="w-full h-full object-contain"
-                />
-              </div>
-              <p className="text-[10px] text-rose-800 dark:text-rose-300 truncate font-semibold">
-                {mascotMessage}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => onSelectTab('fixed_expenses')}
-              className="shrink-0 text-[10px] font-bold text-rose-700 dark:text-rose-400 flex items-center gap-0.5"
-            >
-              <span>Ver</span>
-              <ArrowRight className="w-2.5 h-2.5" />
-            </button>
-          </div>
-        ) : null}
-
-        {/* CARD UNIFICADO: SALDO DO MÊS */}
-        <div className="bg-white dark:bg-[#1E2220] border border-[#E2E8E4] dark:border-[#2E3532] rounded-2xl p-4 shadow-3xs">
-          <div className="flex items-center justify-between border-b border-[#E2E8E4]/60 dark:border-[#2E3532]/60 pb-2">
-            <div className="flex items-center gap-1.5">
-              <div className="w-5 h-5 rounded bg-[#16A66A]/10 text-[#075C45] dark:text-[#78D9A6] flex items-center justify-center">
-                <Wallet className="w-3 h-3" />
-              </div>
-              <span className="text-[10px] font-bold text-[#5E6963] dark:text-[#95A39B] uppercase tracking-wider">Saldo do Mês</span>
-            </div>
-            <span className="text-[9px] font-bold text-[#075C45] dark:text-[#78D9A6] uppercase tracking-wider bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded">
-              Disponível
-            </span>
-          </div>
-
-          <div className="mt-3 text-center">
-            <h2 className={`text-3xl font-extrabold font-display tracking-tight ${saldoConsolidado < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-[#075C45] dark:text-[#78D9A6]'}`}>
-              {formatCurrency(saldoConsolidado)}
-            </h2>
-            <p className="text-[9px] text-[#5E6963] dark:text-[#95A39B] mt-0.5">
-              Balanço projetado para esta competência
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 mt-4 pt-3.5 border-t border-[#E2E8E4]/60 dark:border-[#2E3532]/60">
-            <div className="bg-[#F8F9F8] dark:bg-[#1A1D1B] rounded-xl p-2.5 border border-[#E2E8E4]/60 dark:border-[#2A312E]/60 text-center">
-              <p className="text-[9px] uppercase font-bold text-emerald-600 dark:text-emerald-400 flex items-center justify-center gap-0.5">
-                <ArrowUpRight className="w-3 h-3" /> Entradas
-              </p>
-              <p className="text-sm font-bold text-[#202724] dark:text-[#F4F4F5] mt-1">
-                {formatCurrency(totalReceitas)}
-              </p>
-            </div>
-            <div className="bg-[#F8F9F8] dark:bg-[#1A1D1B] rounded-xl p-2.5 border border-[#E2E8E4]/60 dark:border-[#2A312E]/60 text-center">
-              <p className="text-[9px] uppercase font-bold text-rose-600 dark:text-rose-400 flex items-center justify-center gap-0.5">
-                <ArrowDownRight className="w-3 h-3" /> Despesas
-              </p>
-              <p className="text-sm font-bold text-[#202724] dark:text-[#F4F4F5] mt-1">
-                {formatCurrency(totalDespesas)}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* SITUAÇÃO DO MÊS MOBILE COMPACTA */}
-        <div className="bg-white dark:bg-[#1E2220] border border-[#E2E8E4] dark:border-[#2E3532] rounded-2xl p-3.5 shadow-3xs">
-          <p className="text-[10px] font-bold text-[#5E6963] dark:text-[#95A39B] uppercase tracking-wider mb-2.5">Situação do Mês</p>
-          <div className="grid grid-cols-3 gap-2">
-            <div className="p-2 rounded-xl bg-[#F0FDF4] dark:bg-[#0D241A] border border-[#D1FAE5]/60 dark:border-[#154631]/40 text-center">
-              <span className="text-[8px] font-bold uppercase text-emerald-800 dark:text-emerald-300 block">Pago</span>
-              <span className="text-xs font-extrabold text-emerald-700 dark:text-emerald-400 block mt-0.5">
-                {formatCurrency(totalPago)}
-              </span>
-            </div>
-            <div className="p-2 rounded-xl bg-[#FFFBEB] dark:bg-[#251F10] border border-[#FEF3C7]/60 dark:border-[#4B3B1B]/40 text-center">
-              <span className="text-[8px] font-bold uppercase text-amber-800 dark:text-amber-300 block">Próximo</span>
-              <span className="text-xs font-extrabold text-amber-700 dark:text-amber-400 block mt-0.5">
-                {formatCurrency(totalProximo)}
-              </span>
-            </div>
-            <div className={`p-2 rounded-xl border text-center ${
-              totalAtrasado > 0 
-                ? 'bg-[#FEF2F2] dark:bg-[#261214] border-[#FEE2E2]/60 dark:border-[#4F1A21]/40' 
-                : 'bg-[#F8F9F8] dark:bg-[#1A1E1C]/40 border-[#E2E8E4]/60'
-            }`}>
-              <span className={`text-[8px] font-bold uppercase block ${totalAtrasado > 0 ? 'text-rose-800 dark:text-rose-300' : 'text-[#5E6963]'}`}>Atrasado</span>
-              <span className={`text-xs font-extrabold block mt-0.5 ${totalAtrasado > 0 ? 'text-rose-600 dark:text-rose-400 font-extrabold animate-pulse' : 'text-[#202724] dark:text-[#F4F4F5]'}`}>
-                {formatCurrency(totalAtrasado)}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* PRÓXIMOS COMPROMISSOS MOBILE */}
-        <div className="bg-white dark:bg-[#1E2220] border border-[#E2E8E4] dark:border-[#2E3532] rounded-2xl p-4 shadow-3xs">
-          <div className="flex items-center justify-between pb-2 border-b border-[#E2E8E4]/60 dark:border-[#2E3532]/60 mb-3">
-            <h3 className="text-xs font-bold font-display text-[#202724] dark:text-[#F4F4F5] uppercase tracking-wider">
-              Próximos Compromissos
-            </h3>
-            <span className="text-[8px] uppercase font-extrabold bg-amber-500/10 text-amber-600 px-1.5 py-0.5 rounded">
-              Lembretes
-            </span>
-          </div>
-
-          <div className="space-y-2">
-            {sortedUpcomingItems.length === 0 ? (
-              <div className="text-center py-5 border border-dashed border-[#E2E8E4]/60 dark:border-[#2E3532]/60 rounded-xl bg-[#F8F9F8]/50 dark:bg-[#161918]/30">
-                <CheckCircle2 className="w-5 h-5 text-emerald-500/30 mx-auto mb-1" />
-                <p className="text-[10px] font-semibold text-[#202724] dark:text-[#F4F4F5]">Tudo pago por enquanto!</p>
-              </div>
-            ) : (
-              sortedUpcomingItems.map((item) => {
-                const [, m, d] = item.dueDate.split('-');
-                let relativeLabel = 'Próximo';
-                if (item.visualStatus === 'overdue') relativeLabel = 'Atrasado';
-                else if (item.visualStatus === 'today') relativeLabel = 'Hoje';
-                else if (item.visualStatus === 'upcoming') relativeLabel = 'Amanhã';
-
-                return (
-                  <div key={item.id} className="flex items-center justify-between py-2 border-b border-[#F3F4F4]/60 dark:border-[#282E2B]/60 last:border-0 last:pb-0">
-                    <div className="min-w-0 flex-1 pr-2">
-                      <p className="text-xs font-bold text-[#202724] dark:text-[#F4F4F5] truncate">{item.title}</p>
-                      <span className="text-[9px] text-[#5E6963] dark:text-[#95A39B] uppercase font-bold tracking-wider">
-                        Vence {d}/{m} • {item.sourceType === 'fixed' ? 'Fixo' : item.sourceType === 'variable' ? 'Variável' : 'Parcelado'}
-                      </span>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <p className="text-xs font-bold text-[#202724] dark:text-[#F4F4F5]">{formatCurrency(item.amount)}</p>
-                      <span className={`text-[8px] font-extrabold uppercase px-1 py-0.5 rounded ${
-                        item.visualStatus === 'overdue' 
-                          ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-400 animate-pulse' 
-                          : item.visualStatus === 'today' 
-                          ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-400 font-bold' 
-                          : 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-400'
-                      }`}>
-                        {relativeLabel}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-
-          <div className="mt-4 pt-3 border-t border-[#E2E8E4]/60 dark:border-[#2E3532]/60">
-            <button
-              type="button"
-              onClick={() => onSelectTab('calendar')}
-              className="w-full py-2 rounded-xl bg-[#F3F4F4] hover:bg-[#16A66A]/10 dark:bg-[#282E2B] text-center text-xs font-bold text-[#075C45] dark:text-[#78D9A6] flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-            >
-              <Calendar className="w-3.5 h-3.5" />
-              <span>Ver calendário do mês completo</span>
-            </button>
-          </div>
-        </div>
-
-      </div>
-
+      </section>
     </div>
   );
 }

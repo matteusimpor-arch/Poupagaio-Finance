@@ -48,6 +48,7 @@ export type ActiveTab =
   | 'closing' 
   | 'reports'
   | 'calendar'
+  | 'support'
   | 'profile';
 
 export type EntryStatus = 'pending' | 'received';

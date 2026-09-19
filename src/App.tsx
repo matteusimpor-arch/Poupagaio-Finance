@@ -17,6 +17,7 @@ import { ReportsScreen } from './components/reports/ReportsScreen';
 import { CalendarScreen } from './components/calendar/CalendarScreen';
 import { ModulePlaceholder } from './components/dashboard/ModulePlaceholder';
 import { ProfileScreen } from './components/profile/ProfileScreen';
+import { SupportScreen } from './components/support/SupportScreen';
 import { Skeleton } from './components/ui/skeleton';
 import { ActiveTab } from './types';
 import { POUPAGAIO_MASCOT_URL } from './assets/mascot';
@@ -103,6 +104,9 @@ function AppContent() {
     }
     if (currentTab === 'profile') {
       return <ProfileScreen />;
+    }
+    if (currentTab === 'support') {
+      return <SupportScreen />;
     }
     return <ModulePlaceholder tab={currentTab} onSelectTab={setCurrentTab} />;
   };
