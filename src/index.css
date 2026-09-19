@@ -4,60 +4,33 @@
 
 @layer base {
   :root {
-    --bg-page: #F3F4F4;
+    --bg-page: #F2EFDC;
     --card-bg: #FFFFFF;
-    --surface-secondary: #EBECEE;
+    --surface-secondary: #FAF8EE;
     --surface-elevated: #FFFFFF;
-    --card-border: #E2E5E4;
-    --text-main: #1F2421;
-    --text-muted: #5D6661;
-    --color-emerald-deep: #075C45;
-    --color-emerald-main: #16A66A;
-    --color-emerald-light: #78D9A6;
-    --color-gold: #D6A84B;
-    --color-champagne: #F2D58A;
-    --color-cream: #EBECEE;
-    --color-graphite: #1F2421;
-  }
-
-  .dark {
-    --bg-page: #181B1A;
-    --card-bg: #232725;
-    --surface-secondary: #2B302E;
-    --surface-elevated: #323835;
-    --card-border: #2E3532;
-    --text-main: #F4F4F5;
-    --text-muted: #9BA5A0;
-    --color-emerald-deep: #0E744B;
-    --color-emerald-main: #10B981;
-    --color-emerald-light: #34D399;
-    --color-gold: #F59E0B;
-    --color-champagne: #FDE047;
-    --color-cream: #232725;
-    --color-graphite: #F4F4F5;
+    --card-border: #E8E4D5;
+    --text-main: #202724;
+    --text-muted: #5E6963;
+    --color-primary: #02402E;
+    --color-gold: #F2B807;
+    --color-gold-light: #F2C438;
+    --color-orange: #F29F05;
+    --color-sand: #F2EFDC;
   }
 
   ::selection,
   *::selection,
   input::selection,
   textarea::selection {
-    background-color: rgba(22, 166, 106, 0.22);
-    color: #075C45;
-  }
-
-  .dark ::selection,
-  .dark *::selection,
-  .dark input::selection,
-  .dark textarea::selection {
-    background-color: rgba(120, 217, 166, 0.25);
-    color: #FFFFFF;
+    background-color: rgba(242, 184, 7, 0.35);
+    color: #02402E;
   }
 
   body {
     font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-    background-color: var(--bg-page);
-    color: var(--text-main);
-    transition: background-color 0.2s ease, color 0.2s ease;
+    background-color: #F2EFDC;
+    color: #202724;
+    -webkit-font-smoothing: antialiased;
   }
 
   h1, h2, h3, .font-display {

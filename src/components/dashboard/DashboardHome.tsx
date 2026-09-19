@@ -1,930 +1,866 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '../../hooks/useAuth';
-import { useTheme } from '../../hooks/useTheme';
-import { POUPAGAIO_MASCOT_URL } from '../../assets/mascot';
 import { entriesService } from '../../lib/services/entries';
+import { checklistService, MonthlyChecklistResult, NormalizedChecklistExpense } from '../../lib/services/checklist';
+import { formatCurrency, MONTH_NAMES } from '../../lib/formatters';
+import { POUPAGAIO_MASCOT_URL } from '../../assets/mascot';
+import { ExpensesDonutChart } from './ExpensesDonutChart';
+import { MonthlyEvolutionChart, MonthlyHistoryPoint } from './MonthlyEvolutionChart';
+import { ActiveTab, Entry } from '../../types';
 import {
-  checklistService,
-  NormalizedChecklistExpense,
-  MonthlyChecklistResult,
-} from '../../lib/services/checklist';
-import { calendarNotesService, CalendarNote } from '../../lib/services/calendarNotes';
-import { formatCurrency } from '../../lib/formatters';
-import {
-  Wallet,
   ArrowUpRight,
   ArrowDownRight,
-  CreditCard,
-  FileText,
-  Calendar,
+  Wallet,
+  ChevronRight,
+  ChevronLeft,
+  Calendar as CalendarIcon,
   CheckCircle2,
   Clock,
   AlertCircle,
-  Plus,
-  ArrowRight,
-  X,
-  Check,
-  ChevronLeft,
-  ChevronRight,
+  FileText,
+  CreditCard,
   CalendarCheck,
-  StickyNote,
+  BarChart3,
+  Sparkles,
+  PieChart,
+  Receipt,
+  RotateCcw,
 } from 'lucide-react';
-import { ActiveTab, EntriesSummary } from '../../types';
 
 interface DashboardHomeProps {
-  onSelectTab: (tab: ActiveTab) => void;
+  onSelectTab?: (tab: ActiveTab) => void;
+  onNavigateTab?: (tab: ActiveTab) => void;
 }
 
-const MONTH_NAMES = [
-  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
-];
-
-const MONTH_SHORT_NAMES = [
-  'JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN',
-  'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'
-];
-
-export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
-  const { profile, user, currentSpace } = useAuth();
-  const { theme } = useTheme();
+export function DashboardHome({ onSelectTab, onNavigateTab }: DashboardHomeProps) {
+  const handleNavigate = (tab: ActiveTab) => {
+    if (onSelectTab) onSelectTab(tab);
+    if (onNavigateTab) onNavigateTab(tab);
+  };
+  const { currentSpace, user, profile } = useAuth();
 
   const now = new Date();
-  const [currentYear, setCurrentYear] = useState(now.getFullYear());
-  const [currentMonth, setCurrentMonth] = useState(now.getMonth() + 1);
+  const [currentYear, setCurrentYear] = useState<number>(now.getFullYear());
+  const [currentMonth, setCurrentMonth] = useState<number>(now.getMonth() + 1);
 
-  // States
-  const [checklistResult, setChecklistResult] = useState<MonthlyChecklistResult | null>(null);
-  const [entriesSummary, setEntriesSummary] = useState<EntriesSummary>({
-    totalPlanned: 0,
-    totalReceived: 0,
-    totalPending: 0,
-    count: 0,
-  });
-  const [calendarNotes, setCalendarNotes] = useState<CalendarNote[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [checklistFilter, setChecklistFilter] = useState<'pending' | 'paid' | 'all'>('pending');
-  const [actionError, setActionError] = useState<string | null>(null);
+  // Financial States
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [entries, setEntries] = useState<Entry[]>([]);
+  const [totalReceitas, setTotalReceitas] = useState<number>(0);
 
-  // Selected Day in compact Mini Calendar
-  const [selectedMiniDay, setSelectedMiniDay] = useState<number>(now.getDate());
+  const [totalFixed, setTotalFixed] = useState<number>(0);
+  const [totalVariable, setTotalVariable] = useState<number>(0);
+  const [totalInstallments, setTotalInstallments] = useState<number>(0);
 
-  // Load operational financial data
-  const loadDashboardData = async () => {
-    if (!currentSpace?.id) return;
-    setIsLoading(true);
-    setActionError(null);
+  const [checklistData, setChecklistData] = useState<MonthlyChecklistResult | null>(null);
+  const [historyData, setHistoryData] = useState<MonthlyHistoryPoint[]>([]);
 
-    try {
-      const [checklistRes, entriesRes, notesRes] = await Promise.all([
-        checklistService.getMonthlyChecklist(currentSpace.id, currentYear, currentMonth),
-        entriesService.getMonthSummary(currentSpace.id, currentYear, currentMonth),
-        calendarNotesService.getNotesByMonth(currentSpace.id, currentYear, currentMonth),
-      ]);
-
-      setChecklistResult(checklistRes);
-      setEntriesSummary(entriesRes);
-      setCalendarNotes(notesRes.notes || []);
-    } catch (err) {
-      console.warn('Erro ao carregar dados do painel operacional:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadDashboardData();
-  }, [currentSpace?.id, currentYear, currentMonth]);
-
+  // Navigation handlers for Competency Month
   const handlePrevMonth = () => {
-    setSelectedMiniDay(1);
     if (currentMonth === 1) {
       setCurrentMonth(12);
-      setCurrentYear(currentYear - 1);
+      setCurrentYear((prev) => prev - 1);
     } else {
-      setCurrentMonth(currentMonth - 1);
+      setCurrentMonth((prev) => prev - 1);
     }
   };
 
   const handleNextMonth = () => {
-    setSelectedMiniDay(1);
     if (currentMonth === 12) {
       setCurrentMonth(1);
-      setCurrentYear(currentYear + 1);
+      setCurrentYear((prev) => prev + 1);
     } else {
-      setCurrentMonth(currentMonth + 1);
+      setCurrentMonth((prev) => prev + 1);
     }
   };
 
-  const handleToggleItemStatus = async (item: NormalizedChecklistExpense) => {
+  const handleResetToCurrentMonth = () => {
+    const d = new Date();
+    setCurrentYear(d.getFullYear());
+    setCurrentMonth(d.getMonth() + 1);
+  };
+
+  // Load Main Data
+  const loadDashboardData = useCallback(async () => {
     if (!currentSpace?.id) return;
-    const res = await checklistService.toggleItemPaymentStatus(item, currentSpace.id, currentYear, currentMonth);
-    if (res.success) {
-      await loadDashboardData();
-    } else if (res.error) {
-      setActionError(res.error);
+    setIsLoading(true);
+
+    try {
+      // 1. Fetch current month's entries and checklist in parallel
+      const [entriesRes, checklistRes] = await Promise.all([
+        entriesService.getEntriesByMonth(currentSpace.id, currentYear, currentMonth),
+        checklistService.getMonthlyChecklist(currentSpace.id, currentYear, currentMonth),
+      ]);
+
+      setEntries(entriesRes.entries || []);
+      setTotalReceitas(entriesRes.summary.totalPlanned || 0);
+
+      const items = checklistRes.items || [];
+      const fixedSum = items.filter((i) => i.sourceType === 'fixed').reduce((acc, curr) => acc + (curr.amount || 0), 0);
+      const varSum = items.filter((i) => i.sourceType === 'variable').reduce((acc, curr) => acc + (curr.amount || 0), 0);
+      const instSum = items.filter((i) => i.sourceType === 'installment').reduce((acc, curr) => acc + (curr.amount || 0), 0);
+
+      setTotalFixed(fixedSum);
+      setTotalVariable(varSum);
+      setTotalInstallments(instSum);
+      setChecklistData(checklistRes);
+
+      // 2. Fetch 6-month historical data for the combo chart
+      const monthsList: { year: number; month: number }[] = [];
+      for (let i = 5; i >= 0; i--) {
+        let targetM = currentMonth - i;
+        let targetY = currentYear;
+        while (targetM <= 0) {
+          targetM += 12;
+          targetY -= 1;
+        }
+        monthsList.push({ year: targetY, month: targetM });
+      }
+
+      const historyResults: MonthlyHistoryPoint[] = await Promise.all(
+        monthsList.map(async ({ year, month }) => {
+          try {
+            if (year === currentYear && month === currentMonth) {
+              const eSum = entriesRes.summary.totalPlanned || 0;
+              const expSum = checklistRes.stats.totalAmount || fixedSum + varSum + instSum || 0;
+              return {
+                monthKey: `${year}-${String(month).padStart(2, '0')}`,
+                shortLabel: MONTH_NAMES[month - 1].slice(0, 3),
+                fullLabel: `${MONTH_NAMES[month - 1]} ${year}`,
+                entries: eSum,
+                expenses: expSum,
+                balance: eSum - expSum,
+                isCurrent: true,
+              };
+            }
+
+            const [mEntries, mChecklist] = await Promise.all([
+              entriesService.getEntriesByMonth(currentSpace.id, year, month),
+              checklistService.getMonthlyChecklist(currentSpace.id, year, month),
+            ]);
+
+            const eSum = mEntries.summary.totalPlanned || 0;
+            const expSum = mChecklist.stats.totalAmount || 0;
+            return {
+              monthKey: `${year}-${String(month).padStart(2, '0')}`,
+              shortLabel: MONTH_NAMES[month - 1].slice(0, 3),
+              fullLabel: `${MONTH_NAMES[month - 1]} ${year}`,
+              entries: eSum,
+              expenses: expSum,
+              balance: eSum - expSum,
+              isCurrent: year === currentYear && month === currentMonth,
+            };
+          } catch {
+            return {
+              monthKey: `${year}-${String(month).padStart(2, '0')}`,
+              shortLabel: MONTH_NAMES[month - 1].slice(0, 3),
+              fullLabel: `${MONTH_NAMES[month - 1]} ${year}`,
+              entries: 0,
+              expenses: 0,
+              balance: 0,
+              isCurrent: year === currentYear && month === currentMonth,
+            };
+          }
+        })
+      );
+
+      setHistoryData(historyResults);
+    } catch (err) {
+      console.error('Erro ao carregar dados do Dashboard:', err);
+    } finally {
+      setIsLoading(false);
     }
-  };
+  }, [currentSpace?.id, currentYear, currentMonth]);
 
-  // Financial calculations
-  const totalReceitas = entriesSummary.totalPlanned;
-  const totalDespesas = checklistResult ? checklistResult.stats.totalAmount : 0;
-  const saldoConsolidado = totalReceitas - totalDespesas;
+  useEffect(() => {
+    loadDashboardData();
+  }, [loadDashboardData]);
 
-  // Breakdown by subsystem
-  const allItems = checklistResult ? checklistResult.items : [];
-  const totalFixed = allItems.filter(i => i.sourceType === 'fixed').reduce((acc, i) => acc + i.amount, 0);
-  const totalVariable = allItems.filter(i => i.sourceType === 'variable').reduce((acc, i) => acc + i.amount, 0);
-  const totalInstallments = allItems.filter(i => i.sourceType === 'installment').reduce((acc, i) => acc + i.amount, 0);
+  // Calculations
+  const totalDespesas = useMemo(() => {
+    return checklistData?.stats?.totalAmount ?? (totalFixed + totalVariable + totalInstallments);
+  }, [checklistData, totalFixed, totalVariable, totalInstallments]);
 
-  const countFixed = allItems.filter(i => i.sourceType === 'fixed').length;
-  const countVariable = allItems.filter(i => i.sourceType === 'variable').length;
-  const countInstallments = allItems.filter(i => i.sourceType === 'installment').length;
+  const saldoConsolidado = useMemo(() => {
+    return totalReceitas - totalDespesas;
+  }, [totalReceitas, totalDespesas]);
 
-  const totalPago = checklistResult ? checklistResult.stats.paidAmount : 0;
-  const totalPendente = checklistResult ? checklistResult.stats.pendingAmount : 0;
+  const expensesPctOfIncome = useMemo(() => {
+    if (totalReceitas <= 0) return 0;
+    return Math.min(999, Math.round((totalDespesas / totalReceitas) * 100));
+  }, [totalReceitas, totalDespesas]);
 
-  const overdueItems = allItems.filter(i => i.visualStatus === 'overdue' && i.status === 'pending');
-  const todayItems = allItems.filter(i => i.visualStatus === 'today' && i.status === 'pending');
-  const upcomingItems = allItems.filter(i => i.visualStatus === 'upcoming' && i.status === 'pending');
+  const fixedPct = totalDespesas > 0 ? Math.round((totalFixed / totalDespesas) * 100) : 0;
+  const variablePct = totalDespesas > 0 ? Math.round((totalVariable / totalDespesas) * 100) : 0;
+  const installmentsPct = totalDespesas > 0 ? Math.round((totalInstallments / totalDespesas) * 100) : 0;
 
-  const totalAtrasado = overdueItems.reduce((acc, i) => acc + i.amount, 0) + todayItems.reduce((acc, i) => acc + i.amount, 0);
-  const totalProximo = upcomingItems.reduce((acc, i) => acc + i.amount, 0);
+  // Checklist Stats
+  const paidCount = checklistData?.stats?.paidCount || 0;
+  const pendingCount = checklistData?.stats?.pendingCount || 0;
+  const overdueCount = checklistData?.stats?.overdueCount || 0;
+  const totalItemsCount = checklistData?.stats?.totalItems || 1;
 
-  // User name
-  const fullName = profile?.full_name || user?.full_name || user?.email?.split('@')[0] || '';
-  const firstName = fullName.trim().split(' ')[0] || 'Usuário';
+  const paidPct = Math.round((paidCount / totalItemsCount) * 100);
+  const pendingPct = Math.round((pendingCount / totalItemsCount) * 100);
+  const overduePct = Math.round((overdueCount / totalItemsCount) * 100);
 
-  // Mascot dynamic messages
-  let mascotMessage = 'Tudo em ordem por aqui!';
-  let mascotActionLabel = 'Ver calendário';
-  let mascotActionTab: ActiveTab = 'calendar';
+  // Upcoming items (next due dates in current month)
+  const upcomingItems = useMemo(() => {
+    if (!checklistData?.items) return [];
+    return checklistData.items
+      .filter((item) => item.status === 'pending')
+      .sort((a, b) => a.dueDate.localeCompare(b.dueDate))
+      .slice(0, 3);
+  }, [checklistData]);
 
-  if (overdueItems.length > 0) {
-    mascotMessage = overdueItems.length === 1
-      ? 'Você tem 1 compromisso vencido. Vamos regularizar?'
-      : `Atenção: você tem ${overdueItems.length} compromissos vencidos!`;
-    mascotActionLabel = 'Ver pendentes';
-  } else if (todayItems.length > 0) {
-    mascotMessage = todayItems.length === 1
-      ? 'Hoje vence 1 compromisso importante. Não esqueça!'
-      : `Hoje vencem ${todayItems.length} compromissos. Vamos quitar?`;
-  } else if (upcomingItems.length > 0) {
-    mascotMessage = 'Você tem compromissos com vencimento próximo.';
-    mascotActionLabel = 'Ver calendário';
-  } else if (totalDespesas === 0 && totalReceitas === 0) {
-    mascotMessage = 'Vamos começar o mês? Registre suas primeiras receitas ou despesas.';
-    mascotActionLabel = '+ Lançamento';
-    mascotActionTab = 'entries';
-  } else {
-    mascotMessage = 'Parabéns! Seus compromissos do mês estão em dia!';
-    mascotActionLabel = 'Ver calendário';
-  }
+  // Calendar matrix calculation for current month
+  const calendarGrid = useMemo(() => {
+    const firstDay = new Date(currentYear, currentMonth - 1, 1).getDay();
+    const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
 
-  // Filter checklist items
-  const filteredChecklistItems = checklistResult
-    ? checklistResult.items.filter((item) => {
-        if (checklistFilter === 'pending') return item.status === 'pending';
-        if (checklistFilter === 'paid') return item.status === 'paid';
-        return true;
-      })
-    : [];
+    const days: ({ day: number; isCurrentMonth: boolean; hasFixed?: boolean; hasVariable?: boolean; hasInstallment?: boolean; hasEntry?: boolean; isToday?: boolean } | null)[] = [];
 
-  // Helper calculations for calendar
-  const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
-  const firstDayWeekday = new Date(currentYear, currentMonth - 1, 1).getDay();
+    // Empty lead slots
+    for (let i = 0; i < firstDay; i++) {
+      days.push(null);
+    }
 
-  const itemsByDate: Record<string, NormalizedChecklistExpense[]> = {};
-  if (checklistResult) {
-    checklistResult.items.forEach((item) => {
-      if (!itemsByDate[item.dueDate]) itemsByDate[item.dueDate] = [];
-      itemsByDate[item.dueDate].push(item);
-    });
-  }
+    const todayDate = new Date();
+    const isThisYearMonth = todayDate.getFullYear() === currentYear && todayDate.getMonth() + 1 === currentMonth;
 
-  const notesByDate: Record<string, CalendarNote[]> = {};
-  calendarNotes.forEach((note) => {
-    if (!notesByDate[note.note_date]) notesByDate[note.note_date] = [];
-    notesByDate[note.note_date].push(note);
-  });
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dayStr = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      
+      const dayItems = checklistData?.items?.filter((item) => item.dueDate === dayStr) || [];
+      const hasFixed = dayItems.some((i) => i.sourceType === 'fixed');
+      const hasVariable = dayItems.some((i) => i.sourceType === 'variable');
+      const hasInstallment = dayItems.some((i) => i.sourceType === 'installment');
+      const hasEntry = entries.some((e) => e.date === dayStr);
 
-  const selectedMiniDateStr = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(selectedMiniDay).padStart(2, '0')}`;
-  const miniSelectedDayItems = itemsByDate[selectedMiniDateStr] || [];
-  const miniSelectedDayNotes = notesByDate[selectedMiniDateStr] || [];
+      const isToday = isThisYearMonth && todayDate.getDate() === d;
 
-  // Próximos Vencimentos
-  const rawPendingItems = checklistResult ? checklistResult.items.filter(i => i.status === 'pending') : [];
-  const sortedUpcomingItems = [...rawPendingItems].sort((a, b) => {
-    const dateA = new Date(a.dueDate).getTime();
-    const dateB = new Date(b.dueDate).getTime();
-    if (a.visualStatus === 'overdue' && b.visualStatus !== 'overdue') return -1;
-    if (b.visualStatus === 'overdue' && a.visualStatus !== 'overdue') return 1;
-    if (a.visualStatus === 'today' && b.visualStatus !== 'today') return -1;
-    if (b.visualStatus === 'today' && a.visualStatus !== 'today') return 1;
-    return dateA - dateB;
-  }).slice(0, 4);
+      days.push({
+        day: d,
+        isCurrentMonth: true,
+        hasFixed,
+        hasVariable,
+        hasInstallment,
+        hasEntry,
+        isToday,
+      });
+    }
+
+    return days;
+  }, [currentYear, currentMonth, checklistData, entries]);
+
+  const firstName = profile?.full_name?.split(' ')[0] || user?.full_name?.split(' ')[0] || 'Mateus';
+  const monthName = MONTH_NAMES[currentMonth - 1];
 
   return (
-    <div className="w-full space-y-4 pb-12 animate-in fade-in duration-300 max-w-7xl mx-auto">
-      {actionError && (
-        <div className="p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 rounded-xl text-xs text-rose-700 dark:text-rose-300 flex items-center justify-between">
-          <span>{actionError}</span>
-          <button type="button" onClick={() => setActionError(null)} className="p-1 cursor-pointer">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      )}
-
+    <div className="w-full max-w-7xl mx-auto space-y-4 pb-12 select-none animate-in fade-in duration-200">
+      
       {/* ==================================================
-          1. CABEÇALHO OPERACIONAL (Saudação + Seletor de Competência)
+          TOP GREEN BANNER (Olá Mateus + Navegador + Mascote)
           ================================================== */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-[#18211D] p-3.5 sm:p-4 rounded-2xl border border-[#E2E8E4] dark:border-[#24312B] shadow-xs">
-        <div>
-          <h1 className="text-lg sm:text-xl font-bold font-display text-[#202724] dark:text-[#F7F4EA] tracking-tight">
-            Olá, {firstName}! 👋
-          </h1>
-          <p className="text-xs text-[#5E6963] dark:text-[#95A39B]">
-            Visão consolidada das suas finanças
+      <div className="w-full rounded-2xl bg-[#02402E] text-white p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm border border-[#03543D] relative overflow-hidden">
+        {/* Subtle decorative background gradient */}
+        <div className="absolute -right-10 -bottom-10 w-48 h-48 bg-[#F2B807]/10 rounded-full blur-2xl pointer-events-none" />
+
+        {/* Left: Greeting and subtitle */}
+        <div className="flex flex-col text-center sm:text-left z-10">
+          <h2 className="text-xl sm:text-2xl font-bold font-display tracking-tight text-white flex items-center justify-center sm:justify-start gap-2">
+            <span>Olá, {firstName}!</span>
+            <span className="inline-block animate-wave">👋</span>
+          </h2>
+          <p className="text-xs sm:text-sm text-emerald-100/85 font-medium mt-0.5">
+            {monthName} {currentYear} • Organização hoje, tranquilidade sempre.
           </p>
         </div>
 
-        {/* Competency Month Navigation Selector */}
-        <div className="flex items-center gap-2 bg-[#F7F4EA] dark:bg-[#101614] p-1 rounded-xl border border-[#E2E8E4] dark:border-[#24312B] self-start sm:self-auto">
+        {/* Center: Competency Month Pill Navigator */}
+        <div className="flex items-center gap-1.5 bg-[#012E21] border border-[#03543D] p-1 rounded-xl shadow-inner z-10">
           <button
             type="button"
             onClick={handlePrevMonth}
-            className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-[#5E6963] dark:text-[#95A39B] cursor-pointer transition-colors"
             aria-label="Mês anterior"
+            className="p-1.5 rounded-lg hover:bg-white/10 text-emerald-200 hover:text-white transition-colors cursor-pointer"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
-          <span className="text-xs sm:text-sm font-bold min-w-[120px] text-center font-display text-[#075C45] dark:text-[#78D9A6]">
-            {MONTH_NAMES[currentMonth - 1]} {currentYear}
-          </span>
+
+          <button
+            type="button"
+            onClick={handleResetToCurrentMonth}
+            title="Clique para voltar ao mês atual"
+            className="px-3 py-1 text-xs font-bold text-white hover:text-[#F2B807] flex items-center gap-1.5 transition-colors cursor-pointer"
+          >
+            <CalendarIcon className="w-3.5 h-3.5 text-[#F2B807]" />
+            <span>
+              {monthName} {currentYear}
+            </span>
+          </button>
+
           <button
             type="button"
             onClick={handleNextMonth}
-            className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-[#5E6963] dark:text-[#95A39B] cursor-pointer transition-colors"
             aria-label="Próximo mês"
+            className="p-1.5 rounded-lg hover:bg-white/10 text-emerald-200 hover:text-white transition-colors cursor-pointer"
           >
             <ChevronRight className="w-4 h-4" />
           </button>
         </div>
-      </div>
 
-      {/* ==================================================
-          2. FAIXA POUPAGAIO DIZ
-          ================================================== */}
-      <div className="flex items-center justify-between gap-3 px-3.5 sm:px-4 py-2.5 rounded-2xl border border-[#E2E8E4] dark:border-[#24312B] bg-white dark:bg-[#18211D] shadow-xs">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-8 h-8 rounded-xl overflow-hidden border border-[#075C45]/20 bg-[#F7F4EA] dark:bg-[#101614] p-0.5 shrink-0 flex items-center justify-center">
+        {/* Right: Mascot speech card */}
+        <div className="hidden lg:flex items-center gap-3 z-10 bg-white/10 border border-white/15 px-3.5 py-2 rounded-xl backdrop-blur-xs">
+          <div className="w-8 h-8 rounded-lg overflow-hidden bg-white p-0.5 shrink-0 shadow-2xs">
             <img
               src={POUPAGAIO_MASCOT_URL}
-              alt="Poupagaio"
+              alt="Mascote Poupagaio"
               referrerPolicy="no-referrer"
               className="w-full h-full object-contain"
             />
           </div>
-          <p className="text-xs sm:text-sm text-[#202724] dark:text-[#F7F4EA] truncate font-medium">
-            <span className="font-semibold text-[#075C45] dark:text-[#78D9A6] mr-1.5">Poupagaio diz:</span>
-            {mascotMessage}
+          <p className="text-xs font-medium text-white max-w-[200px] leading-tight">
+            Disciplina hoje, conquistas amanhã! ✍️
           </p>
         </div>
-        {mascotActionLabel && (
-          <button
-            type="button"
-            onClick={() => {
-              if (mascotActionLabel === 'Ver pendentes') {
-                setChecklistFilter('pending');
-              } else {
-                onSelectTab(mascotActionTab);
-              }
-            }}
-            className="shrink-0 text-xs font-bold text-[#075C45] hover:text-[#075C45]/80 dark:text-[#78D9A6] dark:hover:text-[#78D9A6]/80 flex items-center gap-1 px-2.5 py-1.5 rounded-xl hover:bg-[#075C45]/10 transition-colors cursor-pointer"
-          >
-            <span>{mascotActionLabel}</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
-        )}
       </div>
 
       {/* ==================================================
-          3. NÍVEL 1: "COMO ESTÁ MEU MÊS?" (RESUMO PRINCIPAL)
+          NÍVEL 1 — RESUMO DO MÊS (3 Cards principais)
           ================================================== */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-3.5">
-        
-        {/* CARD SALDO CONSOLIDADO */}
-        <div className="md:col-span-6 bg-white dark:bg-[#18211D] border border-[#E2E8E4] dark:border-[#24312B] rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-xs">
-          <div className="flex items-center justify-between border-b border-[#E2E8E4]/60 dark:border-[#24312B]/60 pb-2.5">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-[#075C45]/10 dark:bg-[#78D9A6]/10 text-[#075C45] dark:text-[#78D9A6] flex items-center justify-center">
-                <Wallet className="w-4 h-4" />
-              </div>
-              <span className="text-xs font-bold uppercase tracking-wider text-[#5E6963] dark:text-[#95A39B]">
-                Saldo do Mês
-              </span>
-            </div>
-            {currentSpace?.name && (
-              <span className="text-[10px] font-extrabold tracking-wider uppercase bg-[#075C45]/10 dark:bg-[#78D9A6]/15 text-[#075C45] dark:text-[#78D9A6] px-2 py-0.5 rounded-md">
-                {currentSpace.name}
-              </span>
-            )}
+      <section className="bg-white border border-[#E8E4D5] rounded-2xl p-4 sm:p-5 shadow-xs">
+        {/* Section Header */}
+        <div className="flex items-center gap-2.5 mb-4">
+          <div className="w-7 h-7 rounded-lg bg-[#EAF8F1] text-[#02402E] flex items-center justify-center">
+            <Sparkles className="w-4 h-4 text-[#00B074]" />
           </div>
-
-          <div className="my-3.5 text-center">
-            <div className={`text-3xl sm:text-4xl font-extrabold font-display tracking-tight ${saldoConsolidado < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-[#075C45] dark:text-[#78D9A6]'}`}>
-              {formatCurrency(saldoConsolidado)}
-            </div>
-            <p className="text-xs text-[#5E6963] dark:text-[#95A39B] mt-1">
-              Balanço disponível projetado para esta competência
+          <div>
+            <h3 className="text-sm sm:text-base font-bold text-[#02402E] font-display">
+              Resumo do mês
+            </h3>
+            <p className="text-[11px] sm:text-xs text-[#5E6963]">
+              Visão geral das suas finanças em {monthName}
             </p>
           </div>
-
-          <div className="grid grid-cols-2 gap-2.5 pt-3 border-t border-[#E2E8E4]/60 dark:border-[#24312B]/60">
-            <div
-              onClick={() => onSelectTab('entries')}
-              className="p-2.5 sm:p-3 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-500/20 hover:border-emerald-500/40 cursor-pointer transition-all flex flex-col justify-between"
-            >
-              <div className="flex items-center gap-1.5 text-xs font-bold uppercase text-emerald-800 dark:text-emerald-300">
-                <ArrowUpRight className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                <span className="truncate">Entradas</span>
-              </div>
-              <p className="text-sm sm:text-base font-extrabold text-emerald-700 dark:text-emerald-300 mt-1 truncate">
-                {formatCurrency(totalReceitas)}
-              </p>
-            </div>
-
-            <div
-              onClick={() => onSelectTab('reports')}
-              className="p-2.5 sm:p-3 rounded-xl bg-rose-50/50 dark:bg-rose-950/20 border border-rose-500/20 hover:border-rose-500/40 cursor-pointer transition-all flex flex-col justify-between"
-            >
-              <div className="flex items-center gap-1.5 text-xs font-bold uppercase text-rose-800 dark:text-rose-300">
-                <ArrowDownRight className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
-                <span className="truncate">Despesas</span>
-              </div>
-              <p className="text-sm sm:text-base font-extrabold text-rose-700 dark:text-rose-300 mt-1 truncate">
-                {formatCurrency(totalDespesas)}
-              </p>
-            </div>
-          </div>
         </div>
 
-        {/* CARD SITUAÇÃO DAS DESPESAS DO MÊS */}
-        <div className="md:col-span-6 bg-white dark:bg-[#18211D] border border-[#E2E8E4] dark:border-[#24312B] rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-xs">
-          <div className="border-b border-[#E2E8E4]/60 dark:border-[#24312B]/60 pb-2.5">
-            <h3 className="text-xs font-bold font-display text-[#202724] dark:text-[#F7F4EA] uppercase tracking-wider flex items-center gap-2">
-              <CalendarCheck className="w-4 h-4 text-[#075C45] dark:text-[#78D9A6]" />
-              Situação dos Pagamentos
-            </h3>
-          </div>
-
-          <div className="grid grid-cols-3 gap-2.5 my-3.5">
-            {/* Pago */}
-            <div className="p-3 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-500/20 flex flex-col justify-between">
-              <div className="flex items-center gap-1.5 text-xs font-bold uppercase text-emerald-800 dark:text-emerald-300">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                <span className="truncate">Pago</span>
-              </div>
-              <p className="text-sm sm:text-base font-extrabold text-emerald-600 dark:text-emerald-400 mt-1.5 truncate">
-                {formatCurrency(totalPago)}
-              </p>
-              <span className="text-[10px] text-emerald-700/80 dark:text-emerald-400/80 truncate mt-0.5">
-                {checklistResult ? checklistResult.stats.paidCount : 0} quitados
-              </span>
-            </div>
-
-            {/* Próximo */}
-            <div className="p-3 rounded-xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-500/20 flex flex-col justify-between">
-              <div className="flex items-center gap-1.5 text-xs font-bold uppercase text-amber-800 dark:text-amber-300">
-                <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
-                <span className="truncate">Próximo</span>
-              </div>
-              <p className="text-sm sm:text-base font-extrabold text-amber-700 dark:text-amber-300 mt-1.5 truncate">
-                {formatCurrency(totalProximo)}
-              </p>
-              <span className="text-[10px] text-amber-700/80 dark:text-amber-400/80 truncate mt-0.5">
-                Próx. 3 dias
-              </span>
-            </div>
-
-            {/* Atrasado / Hoje */}
-            <div className={`p-3 rounded-xl border flex flex-col justify-between ${
-              totalAtrasado > 0
-                ? 'bg-rose-50/50 dark:bg-rose-950/20 border-rose-500/30'
-                : 'bg-[#F7F4EA]/70 dark:bg-[#101614] border-[#E2E8E4] dark:border-[#24312B]'
-            }`}>
-              <div className="flex items-center gap-1.5 text-xs font-bold uppercase">
-                <AlertCircle className={`w-3.5 h-3.5 shrink-0 ${totalAtrasado > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-[#5E6963] dark:text-[#95A39B]'}`} />
-                <span className={`truncate ${totalAtrasado > 0 ? 'text-rose-800 dark:text-rose-300' : 'text-[#5E6963] dark:text-[#95A39B]'}`}>
-                  Atrasado
-                </span>
-              </div>
-              <p className={`text-sm sm:text-base font-extrabold mt-1.5 truncate ${totalAtrasado > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-[#202724] dark:text-[#F7F4EA]'}`}>
-                {formatCurrency(totalAtrasado)}
-              </p>
-              <span className={`text-[10px] truncate mt-0.5 ${totalAtrasado > 0 ? 'text-rose-700/80 dark:text-rose-400/80 font-bold' : 'text-[#5E6963] dark:text-[#95A39B]'}`}>
-                {overdueItems.length + todayItems.length} vencidos
-              </span>
-            </div>
-          </div>
-
-          {/* Barra de Progresso Global do Mês */}
-          {checklistResult && (
-            <div className="pt-2 border-t border-[#E2E8E4]/60 dark:border-[#24312B]/60">
-              <div className="flex items-center justify-between text-[11px] font-bold text-[#5E6963] dark:text-[#95A39B] mb-1">
-                <span>Progresso: {checklistResult.stats.paidCount} de {checklistResult.stats.totalItems} obrigações pagas</span>
-                <span className="text-[#075C45] dark:text-[#78D9A6] font-extrabold">{checklistResult.stats.progressPercentage}%</span>
-              </div>
-              <div className="w-full bg-[#E2E8E4] dark:bg-[#24312B] h-2 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-[#075C45] dark:bg-[#78D9A6] rounded-full transition-all duration-300"
-                  style={{ width: `${checklistResult.stats.progressPercentage}%` }}
-                />
-              </div>
-            </div>
-          )}
-        </div>
-
-      </div>
-
-      {/* ==================================================
-          4. NÍVEL 2: "PARA ONDE VAI O DINHEIRO?" (COMPOSIÇÃO DAS DESPESAS)
-          Apenas os 3 pilares de despesas:
-          Gastos Fixos (amber), Gastos Variáveis (rose), Parcelados (indigo)
-          ================================================== */}
-      <div>
-        <div className="flex items-center justify-between mb-2.5">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-[#5E6963] dark:text-[#95A39B]">
-            Composição das Despesas
-          </h2>
-          <button
-            type="button"
-            onClick={() => onSelectTab('reports')}
-            className="text-xs font-bold text-[#075C45] dark:text-[#78D9A6] hover:underline"
-          >
-            Ver relatório completo →
-          </button>
-        </div>
-
+        {/* 3 Metrics Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
-          
-          {/* 1. GASTOS FIXOS (AMBER) */}
+          {/* Card 1: Entradas */}
           <div
-            onClick={() => onSelectTab('fixed_expenses')}
-            className="p-3.5 sm:p-4 rounded-2xl border border-amber-500/20 bg-amber-50/50 dark:bg-amber-950/20 hover:border-amber-500/40 hover:shadow-xs cursor-pointer transition-all flex flex-col justify-between group"
+            onClick={() => handleNavigate('entries')}
+            className="bg-[#EAF8F1] border border-[#BDEBD5] rounded-2xl p-4 flex flex-col justify-between hover:shadow-xs transition-all cursor-pointer group"
           >
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 flex items-center justify-center">
-                  <FileText className="w-4 h-4" />
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-[#00B074]/15 text-[#00B074] flex items-center justify-center">
+                  <ArrowUpRight className="w-4 h-4 stroke-[2.5]" />
                 </div>
-                <span className="text-xs font-bold uppercase tracking-wider text-amber-900 dark:text-amber-200">
-                  Gastos Fixos
+                <span className="text-xs font-bold text-[#02402E] uppercase tracking-wider">
+                  Entradas
                 </span>
               </div>
-              <ArrowRight className="w-4 h-4 text-amber-600/40 group-hover:text-amber-600 transition-colors" />
+              <ChevronRight className="w-4 h-4 text-[#00B074] group-hover:translate-x-0.5 transition-transform" />
             </div>
-            <div className="mt-3">
-              <p className="text-xl sm:text-2xl font-extrabold font-display text-amber-800 dark:text-amber-300 truncate">
-                {formatCurrency(totalFixed)}
-              </p>
-              <p className="text-[11px] text-amber-800/80 dark:text-amber-300/80 mt-0.5 truncate">
-                {countFixed} {countFixed === 1 ? 'compromisso recorrente' : 'compromissos recorrentes'}
-              </p>
+
+            <div className="my-3">
+              <span className="text-2xl sm:text-3xl font-extrabold text-[#02402E] font-display tracking-tight">
+                {formatCurrency(totalReceitas)}
+              </span>
+            </div>
+
+            <div className="text-[11px] font-semibold text-[#00B074]">
+              {entries.length > 0 ? `${entries.length} receitas registradas` : '100% do planejado'}
             </div>
           </div>
 
-          {/* 2. GASTOS VARIÁVEIS (ROSE) */}
+          {/* Card 2: Despesas */}
           <div
-            onClick={() => onSelectTab('variable_expenses')}
-            className="p-3.5 sm:p-4 rounded-2xl border border-rose-500/20 bg-rose-50/50 dark:bg-rose-950/20 hover:border-rose-500/40 hover:shadow-xs cursor-pointer transition-all flex flex-col justify-between group"
+            onClick={() => handleNavigate('fixed_expenses')}
+            className="bg-[#FDF1F3] border border-[#FAD1D8] rounded-2xl p-4 flex flex-col justify-between hover:shadow-xs transition-all cursor-pointer group"
           >
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-300 flex items-center justify-center">
-                  <CreditCard className="w-4 h-4" />
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-[#FF3B6F]/15 text-[#FF3B6F] flex items-center justify-center">
+                  <ArrowDownRight className="w-4 h-4 stroke-[2.5]" />
                 </div>
-                <span className="text-xs font-bold uppercase tracking-wider text-rose-900 dark:text-rose-200">
-                  Gastos Variáveis
+                <span className="text-xs font-bold text-[#FF3B6F] uppercase tracking-wider">
+                  Despesas
                 </span>
               </div>
-              <ArrowRight className="w-4 h-4 text-rose-600/40 group-hover:text-rose-600 transition-colors" />
+              <ChevronRight className="w-4 h-4 text-[#FF3B6F] group-hover:translate-x-0.5 transition-transform" />
             </div>
-            <div className="mt-3">
-              <p className="text-xl sm:text-2xl font-extrabold font-display text-rose-800 dark:text-rose-300 truncate">
-                {formatCurrency(totalVariable)}
-              </p>
-              <p className="text-[11px] text-rose-800/80 dark:text-rose-300/80 mt-0.5 truncate">
-                {countVariable} {countVariable === 1 ? 'despesa eventual' : 'despesas eventuais'}
-              </p>
+
+            <div className="my-3">
+              <span className="text-2xl sm:text-3xl font-extrabold text-[#FF3B6F] font-display tracking-tight">
+                {formatCurrency(totalDespesas)}
+              </span>
+            </div>
+
+            <div className="text-[11px] font-semibold text-[#FF3B6F]">
+              {expensesPctOfIncome}% das entradas
             </div>
           </div>
 
-          {/* 3. PARCELADOS (INDIGO) */}
+          {/* Card 3: Saldo do mês */}
           <div
-            onClick={() => onSelectTab('installments')}
-            className="p-3.5 sm:p-4 rounded-2xl border border-indigo-500/20 bg-indigo-50/50 dark:bg-indigo-950/20 hover:border-indigo-500/40 hover:shadow-xs cursor-pointer transition-all flex flex-col justify-between group"
+            onClick={() => handleNavigate('reports')}
+            className="bg-[#FFF9EA] border border-[#FDE5A3] rounded-2xl p-4 flex flex-col justify-between hover:shadow-xs transition-all cursor-pointer group"
           >
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 flex items-center justify-center">
-                  <Calendar className="w-4 h-4" />
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-[#F2B807]/25 text-[#B45309] flex items-center justify-center">
+                  <Wallet className="w-4 h-4 stroke-[2.5]" />
                 </div>
-                <span className="text-xs font-bold uppercase tracking-wider text-indigo-900 dark:text-indigo-200">
-                  Parcelados
+                <span className="text-xs font-bold text-[#02402E] uppercase tracking-wider">
+                  Saldo do mês
                 </span>
               </div>
-              <ArrowRight className="w-4 h-4 text-indigo-600/40 group-hover:text-indigo-600 transition-colors" />
+              <ChevronRight className="w-4 h-4 text-[#B45309] group-hover:translate-x-0.5 transition-transform" />
             </div>
-            <div className="mt-3">
-              <p className="text-xl sm:text-2xl font-extrabold font-display text-indigo-800 dark:text-indigo-300 truncate">
-                {formatCurrency(totalInstallments)}
-              </p>
-              <p className="text-[11px] text-indigo-800/80 dark:text-indigo-300/80 mt-0.5 truncate">
-                {countInstallments} {countInstallments === 1 ? 'parcela neste mês' : 'parcelas neste mês'}
-              </p>
+
+            <div className="my-3">
+              <span
+                className={`text-2xl sm:text-3xl font-extrabold font-display tracking-tight ${
+                  saldoConsolidado >= 0 ? 'text-[#02402E]' : 'text-rose-600'
+                }`}
+              >
+                {formatCurrency(saldoConsolidado)}
+              </span>
+            </div>
+
+            <div className="text-[11px] font-semibold text-[#B45309]">
+              {saldoConsolidado > 0 ? 'Positivo' : saldoConsolidado === 0 ? 'Equilíbrio' : 'Atenção'}
             </div>
           </div>
-
         </div>
-      </div>
+      </section>
 
       {/* ==================================================
-          5. NÍVEL 3: "O QUE PRECISA DA MINHA ATENÇÃO?" + DETALHES
-          Checklist interativo, Próximos Vencimentos e Mini Calendário
+          NÍVEL 2 — COMPOSIÇÃO DAS DESPESAS & DISTRIBUIÇÃO
           ================================================== */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5">
-        
-        {/* CHECKLIST FINANCEIRO INTERATIVO (7 COLS) */}
-        <div className="lg:col-span-7 bg-white dark:bg-[#18211D] border border-[#E2E8E4] dark:border-[#24312B] rounded-2xl p-4 sm:p-5 flex flex-col shadow-xs">
-          <div className="flex items-center justify-between pb-2 border-b border-[#E2E8E4]/60 dark:border-[#24312B]/60 mb-3">
-            <div>
-              <h3 className="text-xs sm:text-sm font-bold font-display text-[#202724] dark:text-[#F7F4EA] uppercase tracking-wider flex items-center gap-1.5">
-                <CalendarCheck className="w-4 h-4 text-[#075C45] dark:text-[#78D9A6]" />
-                Checklist de Contas
-              </h3>
-              <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B]">
-                Marque as contas conforme forem pagas
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => onSelectTab('calendar')}
-              className="text-xs font-bold text-[#075C45] dark:text-[#78D9A6] hover:underline"
-            >
-              Ver no calendário →
-            </button>
-          </div>
-
-          {/* Filtros de Status do Checklist */}
-          <div className="flex items-center gap-1 bg-[#F7F4EA] dark:bg-[#101614] p-1 rounded-xl border border-[#E2E8E4] dark:border-[#24312B] mb-3">
-            <button
-              type="button"
-              onClick={() => setChecklistFilter('pending')}
-              className={`flex-1 text-center py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-colors ${
-                checklistFilter === 'pending'
-                  ? 'bg-white text-[#075C45] dark:bg-[#18211D] dark:text-[#78D9A6] shadow-xs'
-                  : 'text-[#5E6963] dark:text-[#95A39B]'
-              }`}
-            >
-              Pendentes ({checklistResult ? checklistResult.stats.pendingCount : 0})
-            </button>
-            <button
-              type="button"
-              onClick={() => setChecklistFilter('paid')}
-              className={`flex-1 text-center py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-colors ${
-                checklistFilter === 'paid'
-                  ? 'bg-white text-[#075C45] dark:bg-[#18211D] dark:text-[#78D9A6] shadow-xs'
-                  : 'text-[#5E6963] dark:text-[#95A39B]'
-              }`}
-            >
-              Pagas ({checklistResult ? checklistResult.stats.paidCount : 0})
-            </button>
-            <button
-              type="button"
-              onClick={() => setChecklistFilter('all')}
-              className={`flex-1 text-center py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-colors ${
-                checklistFilter === 'all'
-                  ? 'bg-white text-[#075C45] dark:bg-[#18211D] dark:text-[#78D9A6] shadow-xs'
-                  : 'text-[#5E6963] dark:text-[#95A39B]'
-              }`}
-            >
-              Todas ({checklistResult ? checklistResult.stats.totalItems : 0})
-            </button>
-          </div>
-
-          {/* Lista de Itens do Checklist */}
-          <div className="overflow-y-auto max-h-[300px] pr-1 space-y-2">
-            {isLoading ? (
-              <p className="text-xs text-center text-[#5E6963] py-4">Carregando...</p>
-            ) : filteredChecklistItems.length === 0 ? (
-              <div className="text-center py-3.5 px-3 border border-dashed border-[#E2E8E4] dark:border-[#24312B] rounded-xl bg-[#F7F4EA]/40 dark:bg-[#101614]/40 flex items-center justify-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-[#075C45]/50 dark:text-[#78D9A6]/50 shrink-0" />
-                <p className="text-xs font-medium text-[#5E6963] dark:text-[#95A39B]">Nenhuma conta nesta categoria</p>
+      <section className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        {/* Left Box: Composição das despesas (7 cols) */}
+        <div className="lg:col-span-7 bg-white border border-[#E8E4D5] rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-xs">
+          <div>
+            <div className="flex items-center gap-2.5 mb-4">
+              <div className="w-7 h-7 rounded-lg bg-[#F2B807]/20 text-[#02402E] flex items-center justify-center">
+                <Receipt className="w-4 h-4 text-[#B45309]" />
               </div>
-            ) : (
-              filteredChecklistItems.map((item) => (
-                <div
-                  key={item.id}
-                  className={`p-2.5 sm:p-3 rounded-xl border flex items-center justify-between gap-3 transition-colors ${
-                    item.status === 'paid'
-                      ? 'bg-emerald-50/40 dark:bg-emerald-950/10 border-emerald-200 dark:border-emerald-800/20'
-                      : item.visualStatus === 'overdue' || item.visualStatus === 'today'
-                      ? 'bg-rose-50/40 dark:bg-rose-950/10 border-rose-200 dark:border-rose-800/20'
-                      : 'bg-[#F7F4EA]/40 dark:bg-[#101614]/40 border-[#E2E8E4] dark:border-[#24312B]'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                    <button
-                      type="button"
-                      onClick={() => handleToggleItemStatus(item)}
-                      className={`w-5 h-5 rounded-lg border flex items-center justify-center shrink-0 cursor-pointer transition-colors ${
-                        item.status === 'paid'
-                          ? 'bg-emerald-600 border-emerald-600 text-white dark:bg-emerald-500'
-                          : 'border-[#5E6963] dark:border-[#95A39B] hover:border-[#075C45] dark:hover:border-[#78D9A6]'
-                      }`}
-                    >
-                      {item.status === 'paid' && <Check className="w-3.5 h-3.5 stroke-[3.5]" />}
-                    </button>
-                    <div className="min-w-0">
-                      <p className={`text-xs font-bold truncate ${item.status === 'paid' ? 'line-through text-[#5E6963] dark:text-[#95A39B]' : 'text-[#202724] dark:text-[#F7F4EA]'}`}>
-                        {item.title}
-                      </p>
-                      <span className="text-[10px] text-[#5E6963] dark:text-[#95A39B] uppercase font-bold tracking-wider">
-                        {item.sourceType === 'fixed' ? 'Fixo' : item.sourceType === 'variable' ? 'Variável' : 'Parcelado'} • Vence {item.dueDate.split('-').slice(2).join('/')}
-                      </span>
+              <div>
+                <h3 className="text-sm sm:text-base font-bold text-[#02402E] font-display">
+                  Composição das despesas
+                </h3>
+                <p className="text-[11px] sm:text-xs text-[#5E6963]">
+                  Para onde vai o seu dinheiro neste mês?
+                </p>
+              </div>
+            </div>
+
+            {/* 3 Sub-category Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {/* Gastos Fixos */}
+              <div
+                onClick={() => handleNavigate('fixed_expenses')}
+                className="bg-[#F7F5FE] border border-[#E2DCFD] rounded-xl p-3.5 flex flex-col justify-between hover:shadow-xs transition-all cursor-pointer group"
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="w-7 h-7 rounded-lg bg-[#8B5CF6]/15 text-[#7C3AED] flex items-center justify-center">
+                      <FileText className="w-3.5 h-3.5" />
                     </div>
+                    <ChevronRight className="w-3.5 h-3.5 text-[#7C3AED] group-hover:translate-x-0.5 transition-transform" />
                   </div>
-                  <div className="text-right shrink-0">
-                    <p className={`text-xs sm:text-sm font-bold ${item.status === 'paid' ? 'text-emerald-600 dark:text-emerald-400' : 'text-[#202724] dark:text-[#F7F4EA]'}`}>
-                      {formatCurrency(item.amount)}
-                    </p>
+                  <p className="text-[11px] font-bold text-[#5B21B6] uppercase tracking-wider">
+                    Gastos Fixos
+                  </p>
+                  <p className="text-base sm:text-lg font-bold text-[#5B21B6] mt-1 font-display">
+                    {formatCurrency(totalFixed)}
+                  </p>
+                </div>
+
+                <div className="mt-3">
+                  <p className="text-[10px] text-[#7C3AED] font-semibold mb-1">
+                    {fixedPct}% das despesas
+                  </p>
+                  <div className="w-full h-1.5 bg-[#E2DCFD] rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-[#8B5CF6] rounded-full transition-all duration-500"
+                      style={{ width: `${fixedPct}%` }}
+                    />
                   </div>
                 </div>
-              ))
-            )}
+              </div>
+
+              {/* Gastos Variáveis */}
+              <div
+                onClick={() => handleNavigate('variable_expenses')}
+                className="bg-[#FFF1F4] border border-[#FED4DD] rounded-xl p-3.5 flex flex-col justify-between hover:shadow-xs transition-all cursor-pointer group"
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="w-7 h-7 rounded-lg bg-[#FF3B6F]/15 text-[#FF3B6F] flex items-center justify-center">
+                      <CreditCard className="w-3.5 h-3.5" />
+                    </div>
+                    <ChevronRight className="w-3.5 h-3.5 text-[#FF3B6F] group-hover:translate-x-0.5 transition-transform" />
+                  </div>
+                  <p className="text-[11px] font-bold text-[#BE123C] uppercase tracking-wider">
+                    Gastos Variáveis
+                  </p>
+                  <p className="text-base sm:text-lg font-bold text-[#BE123C] mt-1 font-display">
+                    {formatCurrency(totalVariable)}
+                  </p>
+                </div>
+
+                <div className="mt-3">
+                  <p className="text-[10px] text-[#FF3B6F] font-semibold mb-1">
+                    {variablePct}% das despesas
+                  </p>
+                  <div className="w-full h-1.5 bg-[#FED4DD] rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-[#FF3B6F] rounded-full transition-all duration-500"
+                      style={{ width: `${variablePct}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Parcelados */}
+              <div
+                onClick={() => handleNavigate('installments')}
+                className="bg-[#FFF9EA] border border-[#FEE8B6] rounded-xl p-3.5 flex flex-col justify-between hover:shadow-xs transition-all cursor-pointer group"
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="w-7 h-7 rounded-lg bg-[#F59E0B]/15 text-[#F59E0B] flex items-center justify-center">
+                      <CalendarIcon className="w-3.5 h-3.5" />
+                    </div>
+                    <ChevronRight className="w-3.5 h-3.5 text-[#F59E0B] group-hover:translate-x-0.5 transition-transform" />
+                  </div>
+                  <p className="text-[11px] font-bold text-[#B45309] uppercase tracking-wider">
+                    Parcelados
+                  </p>
+                  <p className="text-base sm:text-lg font-bold text-[#B45309] mt-1 font-display">
+                    {formatCurrency(totalInstallments)}
+                  </p>
+                </div>
+
+                <div className="mt-3">
+                  <p className="text-[10px] text-[#B45309] font-semibold mb-1">
+                    {installmentsPct}% das despesas
+                  </p>
+                  <div className="w-full h-1.5 bg-[#FEE8B6] rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-[#F59E0B] rounded-full transition-all duration-500"
+                      style={{ width: `${installmentsPct}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* PRÓXIMOS VENCIMENTOS & CALENDÁRIO (5 COLS) */}
-        <div className="lg:col-span-5 space-y-3.5">
-          
-          {/* PRÓXIMOS VENCIMENTOS */}
-          <div className="bg-white dark:bg-[#18211D] border border-[#E2E8E4] dark:border-[#24312B] rounded-2xl p-4 shadow-xs">
-            <div className="flex items-center justify-between pb-2 border-b border-[#E2E8E4]/60 dark:border-[#24312B]/60 mb-2.5">
-              <h3 className="text-xs font-bold font-display text-[#202724] dark:text-[#F7F4EA] uppercase tracking-wider">
-                Próximos Vencimentos
+        {/* Right Box: Distribuição das despesas (5 cols) */}
+        <div className="lg:col-span-5 bg-white border border-[#E8E4D5] rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-xs">
+          <div className="flex items-center gap-2.5 mb-2">
+            <div className="w-7 h-7 rounded-lg bg-[#F2B807]/20 text-[#02402E] flex items-center justify-center">
+              <PieChart className="w-4 h-4 text-[#B45309]" />
+            </div>
+            <div>
+              <h3 className="text-sm sm:text-base font-bold text-[#02402E] font-display">
+                Distribuição das despesas
               </h3>
+            </div>
+          </div>
+
+          <div className="py-2 flex-1 flex items-center">
+            <ExpensesDonutChart
+              totalAmount={totalDespesas}
+              fixedAmount={totalFixed}
+              variableAmount={totalVariable}
+              installmentsAmount={totalInstallments}
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* ==================================================
+          NÍVEL 3 — OPERAÇÃO (3 Cards em linha)
+          ================================================== */}
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* 1. Situação dos pagamentos */}
+        <div className="bg-white border border-[#E8E4D5] rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-xs">
+          <div>
+            <div className="flex items-center gap-2.5 mb-3">
+              <div className="w-7 h-7 rounded-lg bg-[#F2B807]/20 text-[#02402E] flex items-center justify-center">
+                <Receipt className="w-4 h-4 text-[#B45309]" />
+              </div>
+              <div>
+                <h3 className="text-sm sm:text-base font-bold text-[#02402E] font-display">
+                  Situação dos pagamentos
+                </h3>
+                <p className="text-[11px] text-[#5E6963]">Suas contas e compromissos</p>
+              </div>
+            </div>
+
+            {/* 3 Status mini cards */}
+            <div className="grid grid-cols-3 gap-2 mt-3">
+              {/* Pagas */}
+              <div className="bg-[#EAF8F1] border border-[#BDEBD5] rounded-xl p-2.5 text-center flex flex-col justify-between">
+                <div>
+                  <div className="flex justify-center mb-1">
+                    <CheckCircle2 className="w-4 h-4 text-[#00B074]" />
+                  </div>
+                  <span className="text-[10px] font-bold text-[#00B074] uppercase block">
+                    Pagas
+                  </span>
+                  <span className="text-lg font-bold text-[#02402E] block my-0.5">
+                    {paidCount}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-[#00B074] font-semibold">{paidPct}%</span>
+                  <div className="w-full h-1 bg-[#BDEBD5] rounded-full mt-1 overflow-hidden">
+                    <div className="h-full bg-[#00B074] rounded-full" style={{ width: `${paidPct}%` }} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Pendentes */}
+              <div className="bg-[#FFF9EA] border border-[#FDE5A3] rounded-xl p-2.5 text-center flex flex-col justify-between">
+                <div>
+                  <div className="flex justify-center mb-1">
+                    <Clock className="w-4 h-4 text-[#F59E0B]" />
+                  </div>
+                  <span className="text-[10px] font-bold text-[#B45309] uppercase block">
+                    Pendentes
+                  </span>
+                  <span className="text-lg font-bold text-[#02402E] block my-0.5">
+                    {pendingCount}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-[#B45309] font-semibold">{pendingPct}%</span>
+                  <div className="w-full h-1 bg-[#FDE5A3] rounded-full mt-1 overflow-hidden">
+                    <div className="h-full bg-[#F59E0B] rounded-full" style={{ width: `${pendingPct}%` }} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Atrasadas */}
+              <div className="bg-[#FDF1F3] border border-[#FAD1D8] rounded-xl p-2.5 text-center flex flex-col justify-between">
+                <div>
+                  <div className="flex justify-center mb-1">
+                    <AlertCircle className="w-4 h-4 text-[#FF3B6F]" />
+                  </div>
+                  <span className="text-[10px] font-bold text-[#FF3B6F] uppercase block">
+                    Atrasadas
+                  </span>
+                  <span className="text-lg font-bold text-[#BE123C] block my-0.5">
+                    {overdueCount}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-[#FF3B6F] font-semibold">{overduePct}%</span>
+                  <div className="w-full h-1 bg-[#FAD1D8] rounded-full mt-1 overflow-hidden">
+                    <div className="h-full bg-[#FF3B6F] rounded-full" style={{ width: `${overduePct}%` }} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 2. Próximos vencimentos */}
+        <div className="bg-white border border-[#E8E4D5] rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-xs">
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-lg bg-[#F2B807]/20 text-[#02402E] flex items-center justify-center">
+                  <CalendarIcon className="w-4 h-4 text-[#B45309]" />
+                </div>
+                <div>
+                  <h3 className="text-sm sm:text-base font-bold text-[#02402E] font-display">
+                    Próximos vencimentos
+                  </h3>
+                  <p className="text-[11px] text-[#5E6963]">Contas do mês</p>
+                </div>
+              </div>
               <button
                 type="button"
-                onClick={() => onSelectTab('calendar')}
-                className="text-[11px] font-bold text-[#075C45] dark:text-[#78D9A6] hover:underline"
+                onClick={() => handleNavigate('calendar')}
+                className="text-[11px] font-bold text-[#02402E] hover:underline cursor-pointer"
               >
                 Ver todos →
               </button>
             </div>
 
-            <div className="space-y-2">
-              {sortedUpcomingItems.length === 0 ? (
-                <div className="text-center py-2.5 px-3 border border-dashed border-[#E2E8E4] dark:border-[#24312B] rounded-xl bg-[#F7F4EA]/40 dark:bg-[#101614]/40 flex items-center justify-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500/60 shrink-0" />
-                  <p className="text-xs font-semibold text-[#075C45] dark:text-[#78D9A6]">Tudo em dia!</p>
+            {/* Content List */}
+            <div className="space-y-2 mt-2">
+              {upcomingItems.length === 0 ? (
+                <div className="py-6 text-center space-y-1">
+                  <div className="w-8 h-8 rounded-full bg-[#EAF8F1] text-[#00B074] mx-auto flex items-center justify-center">
+                    <CheckCircle2 className="w-4 h-4" />
+                  </div>
+                  <p className="text-xs font-bold text-[#02402E]">Tudo em dia!</p>
+                  <p className="text-[10px] text-[#5E6963]">Nenhum vencimento pendente.</p>
                 </div>
               ) : (
-                sortedUpcomingItems.map((item) => {
-                  const [, m, d] = item.dueDate.split('-');
-                  let relativeLabel = 'Próximo';
-                  let badgeStyle = 'bg-slate-100 text-slate-800 dark:bg-slate-900/40 dark:text-slate-400';
-                  if (item.visualStatus === 'overdue') {
-                    relativeLabel = 'Atrasado';
-                    badgeStyle = 'bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-400 font-bold';
-                  } else if (item.visualStatus === 'today') {
-                    relativeLabel = 'Hoje';
-                    badgeStyle = 'bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-400 font-bold';
-                  } else if (item.visualStatus === 'upcoming') {
-                    relativeLabel = 'Amanhã';
-                    badgeStyle = 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-400';
+                upcomingItems.map((item) => (
+                  <div
+                    key={item.id}
+                    onClick={() => handleNavigate('calendar')}
+                    className="flex items-center justify-between p-2 rounded-xl border border-[#E8E4D5] bg-[#FAF8EE]/50 hover:bg-[#FAF8EE] transition-colors cursor-pointer text-left"
+                  >
+                    <div className="min-w-0 flex-1 mr-2">
+                      <p className="text-xs font-bold text-[#02402E] truncate">{item.title}</p>
+                      <p className="text-[10px] text-[#5E6963]">
+                        {item.dueDate.split('-').reverse().join('/')} • {item.category}
+                      </p>
+                    </div>
+                    <span className="text-xs font-extrabold text-[#BE123C] shrink-0">
+                      {formatCurrency(item.amount)}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* 3. Calendário do mês */}
+        <div className="bg-white border border-[#E8E4D5] rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-xs">
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-lg bg-[#F2B807]/20 text-[#02402E] flex items-center justify-center">
+                  <CalendarCheck className="w-4 h-4 text-[#B45309]" />
+                </div>
+                <div>
+                  <h3 className="text-sm sm:text-base font-bold text-[#02402E] font-display">
+                    Calendário do mês
+                  </h3>
+                  <p className="text-[11px] text-[#5E6963]">
+                    {monthName} {currentYear}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleNavigate('calendar')}
+                className="text-[11px] font-bold text-[#02402E] hover:underline cursor-pointer"
+              >
+                Ver calendário →
+              </button>
+            </div>
+
+            {/* Mini Calendar Grid */}
+            <div className="mt-2">
+              {/* Day Headers */}
+              <div className="grid grid-cols-7 gap-1 text-center mb-1">
+                {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((d, i) => (
+                  <span key={i} className="text-[9px] font-bold text-[#5E6963]">
+                    {d}
+                  </span>
+                ))}
+              </div>
+
+              {/* Day Cells */}
+              <div className="grid grid-cols-7 gap-1 text-center">
+                {calendarGrid.map((item, idx) => {
+                  if (!item) {
+                    return <div key={`empty-${idx}`} className="h-6" />;
                   }
 
                   return (
                     <div
-                      key={item.id}
-                      className="p-2.5 rounded-xl border border-[#E2E8E4] dark:border-[#24312B] bg-[#F7F4EA]/40 dark:bg-[#101614]/40 flex items-center justify-between gap-2.5"
+                      key={`day-${item.day}`}
+                      onClick={() => handleNavigate('calendar')}
+                      className={`h-6 rounded-md flex flex-col items-center justify-center cursor-pointer transition-colors relative ${
+                        item.isToday
+                          ? 'bg-[#02402E] text-white font-extrabold shadow-2xs'
+                          : 'hover:bg-black/5 text-[#202724]'
+                      }`}
                     >
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs font-bold text-[#202724] dark:text-[#F7F4EA] truncate">
-                          {item.title}
-                        </p>
-                        <span className="text-[10px] text-[#5E6963] dark:text-[#95A39B] uppercase font-bold">
-                          Vence {d}/{m} • {formatCurrency(item.amount)}
-                        </span>
+                      <span className="text-[10px] leading-none">{item.day}</span>
+                      
+                      {/* Dots */}
+                      <div className="flex items-center gap-0.5 mt-0.5">
+                        {item.hasFixed && <span className="w-1 h-1 rounded-full bg-[#8B5CF6]" />}
+                        {item.hasVariable && <span className="w-1 h-1 rounded-full bg-[#FF3B6F]" />}
+                        {item.hasInstallment && <span className="w-1 h-1 rounded-full bg-[#F59E0B]" />}
+                        {item.hasEntry && <span className="w-1 h-1 rounded-full bg-[#00B074]" />}
                       </div>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md shrink-0 ${badgeStyle}`}>
-                        {relativeLabel}
-                      </span>
                     </div>
                   );
-                })
-              )}
-            </div>
-          </div>
-
-          {/* MINI CALENDÁRIO COM ANOTAÇÕES */}
-          <div className="bg-white dark:bg-[#18211D] border border-[#E2E8E4] dark:border-[#24312B] rounded-2xl p-4 shadow-xs">
-            <div className="flex items-center justify-between pb-2 border-b border-[#E2E8E4]/60 dark:border-[#24312B]/60 mb-2.5">
-              <h3 className="text-xs font-bold font-display text-[#202724] dark:text-[#F7F4EA] uppercase tracking-wider">
-                Calendário Financeiro
-              </h3>
-              <button
-                type="button"
-                onClick={() => onSelectTab('calendar')}
-                className="text-[11px] font-bold text-[#075C45] dark:text-[#78D9A6] hover:underline"
-              >
-                Mês completo →
-              </button>
-            </div>
-
-            <div className="grid grid-cols-7 text-center gap-1 pb-1 border-b border-[#E2E8E4]/40 dark:border-[#24312B]/40">
-              {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((wd, i) => (
-                <span key={i} className={`text-[10px] font-bold ${i === 0 || i === 6 ? 'text-rose-500' : 'text-[#5E6963]'}`}>
-                  {wd}
-                </span>
-              ))}
-            </div>
-
-            <div className="grid grid-cols-7 gap-1 mt-1.5 justify-items-center items-center">
-              {Array.from({ length: firstDayWeekday }).map((_, idx) => (
-                <div key={`empty-${idx}`} className="w-7 h-7" />
-              ))}
-
-              {Array.from({ length: daysInMonth }).map((_, idx) => {
-                const dayNum = idx + 1;
-                const dStr = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
-                const isDaySelected = dayNum === selectedMiniDay;
-
-                const hasDayItems = (itemsByDate[dStr] || []).length > 0;
-                const hasDayNotes = (notesByDate[dStr] || []).length > 0;
-                const hasDayOverdue = (itemsByDate[dStr] || []).some(i => i.visualStatus === 'overdue' && i.status === 'pending');
-
-                return (
-                  <button
-                    key={dayNum}
-                    type="button"
-                    onClick={() => setSelectedMiniDay(dayNum)}
-                    className={`w-7 h-7 rounded-full flex flex-col items-center justify-center text-[11px] font-bold relative transition-all cursor-pointer ${
-                      isDaySelected
-                        ? 'bg-[#075C45] text-white dark:bg-[#78D9A6] dark:text-[#101614] shadow-xs'
-                        : dStr === `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
-                        ? 'border border-[#075C45] dark:border-[#78D9A6] text-[#075C45] dark:text-[#78D9A6]'
-                        : 'hover:bg-black/5 dark:hover:bg-white/5 text-[#202724] dark:text-[#F7F4EA]'
-                    }`}
-                  >
-                    <span>{dayNum}</span>
-                    <div className="absolute -bottom-0.5 flex gap-0.5 justify-center">
-                      {hasDayItems && (
-                        <span className={`w-1 h-1 rounded-full ${hasDayOverdue ? 'bg-rose-500' : 'bg-emerald-500'}`} />
-                      )}
-                      {hasDayNotes && (
-                        <span className="w-1 h-1 rounded-full bg-amber-500" />
-                      )}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Detalhe do dia selecionado */}
-            <div className="mt-2.5 p-2.5 rounded-xl bg-[#F7F4EA]/70 dark:bg-[#101614] border border-[#E2E8E4] dark:border-[#24312B] text-xs">
-              <div className="flex items-center justify-between pb-1 border-b border-[#E2E8E4]/60 dark:border-[#24312B]/60 font-bold text-[#075C45] dark:text-[#78D9A6]">
-                <span>{selectedMiniDay} de {MONTH_NAMES[currentMonth - 1]}</span>
-                <span className="text-[10px] uppercase">{miniSelectedDayItems.length} conta(s)</span>
+                })}
               </div>
-              {miniSelectedDayItems.length === 0 && miniSelectedDayNotes.length === 0 ? (
-                <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B] italic pt-1">
-                  Nenhum compromisso agendado para este dia.
-                </p>
-              ) : (
-                <div className="space-y-1 pt-1">
-                  {miniSelectedDayItems.slice(0, 2).map(item => (
-                    <div key={item.id} className="text-[11px] font-semibold text-[#202724] dark:text-[#F7F4EA] flex items-center justify-between">
-                      <span className="truncate max-w-[70%]">• {item.title}</span>
-                      <span className="shrink-0">{formatCurrency(item.amount)}</span>
-                    </div>
-                  ))}
-                  {miniSelectedDayNotes.slice(0, 1).map(note => (
-                    <div key={note.id} className="text-[11px] font-medium text-amber-700 dark:text-amber-400 flex items-start gap-1">
-                      <StickyNote className="w-3 h-3 shrink-0 mt-0.5" />
-                      <span className="truncate">{note.content}</span>
-                    </div>
-                  ))}
+
+              {/* Mini Legend */}
+              <div className="flex flex-wrap items-center justify-between gap-1 mt-3 pt-2 border-t border-[#E8E4D5] text-[9px] text-[#5E6963]">
+                <div className="flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#8B5CF6]" />
+                  <span>Fixo</span>
                 </div>
-              )}
+                <div className="flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#FF3B6F]" />
+                  <span>Variável</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#F59E0B]" />
+                  <span>Parcela</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#00B074]" />
+                  <span>Entrada</span>
+                </div>
+              </div>
             </div>
           </div>
-
         </div>
-
-      </div>
+      </section>
 
       {/* ==================================================
-          6. NÍVEL 4: AÇÕES RÁPIDAS
+          NÍVEL 4 — EVOLUÇÃO DO MÊS (Combo Chart)
           ================================================== */}
-      <div>
-        <h2 className="text-xs font-bold uppercase tracking-wider text-[#5E6963] dark:text-[#95A39B] mb-2.5">
-          Ações Rápidas
-        </h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          
-          {/* + Nova Entrada */}
-          <button
-            type="button"
-            onClick={() => onSelectTab('entries')}
-            className="flex items-center justify-between p-3.5 rounded-2xl border border-emerald-500/20 bg-emerald-50/50 dark:bg-emerald-950/20 hover:border-emerald-500/40 hover:shadow-xs cursor-pointer text-left transition-all group shrink-0 active:scale-98"
-          >
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 flex items-center justify-center shrink-0">
-                <ArrowUpRight className="w-4 h-4 stroke-[2.5]" />
-              </div>
-              <div className="min-w-0">
-                <h4 className="font-bold text-xs sm:text-sm text-[#202724] dark:text-[#F7F4EA] group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors truncate">
-                  + Entrada
-                </h4>
-                <p className="text-[10px] text-[#5E6963] dark:text-[#95A39B] truncate">
-                  Novas receitas
-                </p>
-              </div>
+      <section className="bg-white border border-[#E8E4D5] rounded-2xl p-4 sm:p-5 shadow-xs">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-4">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-lg bg-[#F2B807]/20 text-[#02402E] flex items-center justify-center">
+              <BarChart3 className="w-4 h-4 text-[#B45309]" />
             </div>
-            <ArrowRight className="w-4 h-4 text-emerald-600/40 group-hover:text-emerald-600 transition-colors shrink-0" />
-          </button>
-
-          {/* + Gasto Fixo */}
-          <button
-            type="button"
-            onClick={() => onSelectTab('fixed_expenses')}
-            className="flex items-center justify-between p-3.5 rounded-2xl border border-amber-500/20 bg-amber-50/50 dark:bg-amber-950/20 hover:border-amber-500/40 hover:shadow-xs cursor-pointer text-left transition-all group shrink-0 active:scale-98"
-          >
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-xl bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 flex items-center justify-center shrink-0">
-                <FileText className="w-4 h-4" />
-              </div>
-              <div className="min-w-0">
-                <h4 className="font-bold text-xs sm:text-sm text-[#202724] dark:text-[#F7F4EA] group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors truncate">
-                  + Gasto Fixo
-                </h4>
-                <p className="text-[10px] text-[#5E6963] dark:text-[#95A39B] truncate">
-                  Recorrentes
-                </p>
-              </div>
+            <div>
+              <h3 className="text-sm sm:text-base font-bold text-[#02402E] font-display">
+                Evolução do mês
+              </h3>
+              <p className="text-[11px] sm:text-xs text-[#5E6963]">
+                Entradas vs Despesas nos últimos 6 meses
+              </p>
             </div>
-            <ArrowRight className="w-4 h-4 text-amber-600/40 group-hover:text-amber-600 transition-colors shrink-0" />
-          </button>
+          </div>
 
-          {/* + Gasto Variável */}
-          <button
-            type="button"
-            onClick={() => onSelectTab('variable_expenses')}
-            className="flex items-center justify-between p-3.5 rounded-2xl border border-rose-500/20 bg-rose-50/50 dark:bg-rose-950/20 hover:border-rose-500/40 hover:shadow-xs cursor-pointer text-left transition-all group shrink-0 active:scale-98"
-          >
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-xl bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-300 flex items-center justify-center shrink-0">
-                <CreditCard className="w-4 h-4" />
-              </div>
-              <div className="min-w-0">
-                <h4 className="font-bold text-xs sm:text-sm text-[#202724] dark:text-[#F7F4EA] group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors truncate">
-                  + Gasto Variável
-                </h4>
-                <p className="text-[10px] text-[#5E6963] dark:text-[#95A39B] truncate">
-                  Do dia a dia
-                </p>
-              </div>
+          {/* Right Legend */}
+          <div className="flex items-center gap-3 text-xs font-semibold text-[#202724]">
+            <div className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-sm bg-[#00B074]" />
+              <span>Entradas</span>
             </div>
-            <ArrowRight className="w-4 h-4 text-rose-600/40 group-hover:text-rose-600 transition-colors shrink-0" />
-          </button>
-
-          {/* + Parcelamento */}
-          <button
-            type="button"
-            onClick={() => onSelectTab('installments')}
-            className="flex items-center justify-between p-3.5 rounded-2xl border border-indigo-500/20 bg-indigo-50/50 dark:bg-indigo-950/20 hover:border-indigo-500/40 hover:shadow-xs cursor-pointer text-left transition-all group shrink-0 active:scale-98"
-          >
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-xl bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 flex items-center justify-center shrink-0">
-                <Calendar className="w-4 h-4" />
-              </div>
-              <div className="min-w-0">
-                <h4 className="font-bold text-xs sm:text-sm text-[#202724] dark:text-[#F7F4EA] group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors truncate">
-                  + Parcelamento
-                </h4>
-                <p className="text-[10px] text-[#5E6963] dark:text-[#95A39B] truncate">
-                  Compras em parcelas
-                </p>
-              </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-sm bg-[#FF3B6F]" />
+              <span>Despesas</span>
             </div>
-            <ArrowRight className="w-4 h-4 text-indigo-600/40 group-hover:text-indigo-600 transition-colors shrink-0" />
-          </button>
-
+            <div className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#F2B807]" />
+              <span>Saldo</span>
+            </div>
+          </div>
         </div>
-      </div>
+
+        {/* Combo Chart */}
+        <MonthlyEvolutionChart data={historyData} />
+      </section>
 
     </div>
   );

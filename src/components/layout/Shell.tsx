@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
-import { useTheme } from '../../hooks/useTheme';
 import { POUPAGAIO_MASCOT_URL } from '../../assets/mascot';
 import { SpaceSelector } from './SpaceSelector';
 import { SupabaseSchemaNotice } from './SupabaseSchemaNotice';
@@ -19,16 +18,15 @@ import {
   Gift,
   CalendarCheck,
   BarChart3,
-  MoreHorizontal,
   User,
-  Sun,
-  Moon,
+  Settings,
   LogOut,
   X,
   Plus,
   Bell,
   AlertCircle,
   Clock,
+  Menu,
 } from 'lucide-react';
 import { ActiveTab } from '../../types';
 import { QUICK_ACTION_ITEMS } from '../../lib/constants/quickActions';
@@ -39,345 +37,331 @@ interface ShellProps {
   children: React.ReactNode;
 }
 
-interface NavGroup {
-  title: string;
-  items: { id: ActiveTab; label: string; icon: React.ElementType }[];
-}
-
 export function Shell({ currentTab, onSelectTab, children }: ShellProps) {
   const { user, profile, currentSpace, signOut } = useAuth();
-  const { theme, toggleTheme } = useTheme();
-  const [isSidebarHovered, setIsSidebarHovered] = useState(false);
-  const [isSidebarFocused, setIsSidebarFocused] = useState(false);
-  const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
+  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [isActionSheetOpen, setIsActionSheetOpen] = useState(false);
   const [isMobileNotificationsOpen, setIsMobileNotificationsOpen] = useState(false);
   const [alerts, setAlerts] = useState<FinancialAlert[]>([]);
-
-  const isDesktopExpanded = isSidebarHovered || isSidebarFocused;
 
   useEffect(() => {
     async function loadAlerts() {
       if (!currentSpace?.id) return;
       const now = new Date();
       try {
-        const res = await checklistService.getMonthlyChecklist(currentSpace.id, now.getFullYear(), now.getMonth() + 1);
+        const res = await checklistService.getMonthlyChecklist(
+          currentSpace.id,
+          now.getFullYear(),
+          now.getMonth() + 1
+        );
         setAlerts(res.alerts);
       } catch (e) {
         console.warn('Erro ao carregar alertas na barra de navegação:', e);
       }
     }
     loadAlerts();
-    // Atualiza a cada 60 segundos
     const interval = setInterval(loadAlerts, 60000);
     return () => clearInterval(interval);
   }, [currentSpace?.id]);
 
-  const sidebarNavGroups: NavGroup[] = [
-    {
-      title: 'Visão Geral',
-      items: [
-        { id: 'home', label: 'Início', icon: Home },
-        { id: 'movements', label: 'Movimentações', icon: ArrowLeftRight },
-        { id: 'planning', label: 'Planejamento', icon: Target },
-      ],
-    },
-    {
-      title: 'Finanças',
-      items: [
-        { id: 'entries', label: 'Entradas', icon: ArrowUpRight },
-        { id: 'fixed_expenses', label: 'Gastos Fixos', icon: FileText },
-        { id: 'variable_expenses', label: 'Gastos Variáveis', icon: CreditCard },
-        { id: 'installments', label: 'Parcelados', icon: Calendar },
-      ],
-    },
-    {
-      title: 'Organização',
-      items: [
-        { id: 'market', label: 'Mercado', icon: ShoppingBag },
-        { id: 'goals', label: 'Metas', icon: Target },
-        { id: 'wishlist', label: 'Lista de Desejos', icon: Gift },
-      ],
-    },
-    {
-      title: 'Relatórios',
-      items: [
-        { id: 'reports', label: 'Visão Financeira', icon: BarChart3 },
-        { id: 'closing', label: 'Fechamento', icon: CalendarCheck },
-      ],
-    },
+  const navItems: { id: ActiveTab; label: string; icon: React.ElementType }[] = [
+    { id: 'home', label: 'Início', icon: Home },
+    { id: 'entries', label: 'Entradas', icon: ArrowLeftRight },
+    { id: 'fixed_expenses', label: 'Gastos Fixos', icon: FileText },
+    { id: 'variable_expenses', label: 'Gastos Variáveis', icon: CreditCard },
+    { id: 'installments', label: 'Parcelados', icon: Calendar },
+    { id: 'market', label: 'Mercado', icon: ShoppingBag },
+    { id: 'goals', label: 'Metas', icon: Target },
+    { id: 'wishlist', label: 'Lista de Desejos', icon: Gift },
+    { id: 'reports', label: 'Visão Financeira', icon: BarChart3 },
+    { id: 'closing', label: 'Fechamento', icon: CalendarCheck },
   ];
-
-  // Reutiliza a configuração unificada de ações rápidas
-  const actionSheetItems = QUICK_ACTION_ITEMS;
 
   const handleNavClick = (tab: ActiveTab) => {
     onSelectTab(tab);
-    setIsMoreMenuOpen(false);
+    setIsMobileDrawerOpen(false);
     setIsActionSheetOpen(false);
   };
 
-  return (
-    <div className="h-[100dvh] w-full flex bg-[#F3F4F4] dark:bg-[#181B1A] text-[#202724] dark:text-[#F4F4F5] transition-colors duration-200 overflow-hidden">
-      {/* DESKTOP SIDEBAR WRAPPER (Fixed 72px base width so main content NEVER moves or shifts) */}
-      <div
-        className="hidden md:block w-[72px] shrink-0 h-[100dvh] relative z-40"
-        onMouseEnter={() => setIsSidebarHovered(true)}
-        onMouseLeave={() => setIsSidebarHovered(false)}
-      >
-        <aside
-          onFocus={() => setIsSidebarFocused(true)}
-          onBlur={(e) => {
-            if (!e.currentTarget.contains(e.relatedTarget)) {
-              setIsSidebarFocused(false);
-            }
-          }}
-          className={`absolute top-0 left-0 h-[100dvh] transition-[width] duration-200 ease-out border-r border-[#E2E8E4] dark:border-[#2E3532] bg-white dark:bg-[#1E2220] p-3 flex flex-col shrink-0 select-none z-40 overflow-x-hidden ${
-            isDesktopExpanded ? 'w-64 shadow-2xl' : 'w-[72px] shadow-sm'
-          }`}
-        >
-          {/* Top Header: Brand & Space Selector (shrink-0) */}
-          <div className="shrink-0 space-y-3 pb-2">
-            {/* Brand Header */}
-            <div className={`flex items-center ${isDesktopExpanded ? 'gap-3 px-1' : 'justify-center'}`}>
-              <div
-                className="w-10 h-10 rounded-xl overflow-hidden border-2 border-[#16A66A]/30 bg-[#F3F4F4] dark:bg-[#232725] p-0.5 shrink-0 shadow-2xs"
-                title={!isDesktopExpanded ? 'Poupagaio Finance' : undefined}
-              >
-                <img
-                  src={POUPAGAIO_MASCOT_URL}
-                  alt="Poupagaio Mascot"
-                  referrerPolicy="no-referrer"
-                  className="w-full h-full object-contain rounded-lg"
-                />
-              </div>
-              {isDesktopExpanded && (
-                <div className="min-w-0 transition-opacity duration-150 animate-in fade-in">
-                  <h1 className="font-bold text-sm lg:text-base tracking-tight font-display text-[#075C45] dark:text-[#78D9A6] truncate">
-                    Poupagaio Finance
-                  </h1>
-                  <p className="text-[10px] text-[#5E6963] dark:text-[#95A39B] truncate">
-                    Organize hoje. Voe mais longe.
-                  </p>
-                </div>
-              )}
-            </div>
+  const actionSheetItems = QUICK_ACTION_ITEMS;
 
-            {/* Space Selector */}
-            <div className="w-full">
-              <SpaceSelector isCollapsed={!isDesktopExpanded} />
+  const fullName = profile?.full_name || user?.full_name || 'Mateus Araujo';
+  const userEmail = user?.email || 'matteuss.a@icloud.com';
+
+  return (
+    <div className="h-[100dvh] w-full flex bg-[#F2EFDC] text-[#202724] font-sans antialiased overflow-hidden">
+      {/* ==================================================
+          DESKTOP SIDEBAR (Visible on md and up)
+          Matching visual reference:
+          Warm cream bg #FAF8EE, gold active pill, clean icons
+          ================================================== */}
+      <aside className="hidden md:flex flex-col w-60 lg:w-64 h-[100dvh] border-r border-[#E8E4D5] bg-[#FAF8EE] p-4 lg:p-5 shrink-0 select-none z-20 shadow-xs">
+        {/* Top Header: Brand Header */}
+        <div className="shrink-0 flex items-center gap-3 pb-4">
+          <div className="w-10 h-10 rounded-xl overflow-hidden border border-[#02402E]/20 bg-white p-0.5 shrink-0 shadow-2xs">
+            <img
+              src={POUPAGAIO_MASCOT_URL}
+              alt="Poupagaio Mascot"
+              referrerPolicy="no-referrer"
+              className="w-full h-full object-contain rounded-lg"
+            />
+          </div>
+          <div className="min-w-0">
+            <h1 className="font-bold text-base tracking-tight font-display text-[#02402E] truncate">
+              Poupagaio
+            </h1>
+            <p className="text-[11px] font-semibold text-[#02402E] -mt-1 truncate">
+              Finance
+            </p>
+            <p className="text-[10px] text-[#5E6963] truncate leading-tight mt-0.5">
+              Mais que controle, mais liberdade.
+            </p>
+          </div>
+        </div>
+
+        {/* Navigation Items (Scrollable if necessary) */}
+        <nav className="flex-1 min-h-0 overflow-y-auto py-1 pr-1 space-y-1.5 no-scrollbar">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = currentTab === item.id;
+            return (
+              <button
+                key={item.id}
+                id={`nav-desktop-${item.id}`}
+                onClick={() => handleNavClick(item.id)}
+                type="button"
+                className={`w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-150 cursor-pointer ${
+                  isActive
+                    ? 'bg-[#F2B807] text-[#02402E] font-bold shadow-xs'
+                    : 'text-[#202724] hover:bg-[#02402E]/5 hover:text-[#02402E]'
+                }`}
+              >
+                <Icon
+                  className={`w-4 h-4 shrink-0 ${
+                    isActive ? 'text-[#02402E] stroke-[2.5]' : 'text-[#5E6963]'
+                  }`}
+                />
+                <span className="truncate">{item.label}</span>
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* Space Selector Card */}
+        <div className="shrink-0 pt-3 pb-2 border-t border-[#E8E4D5]">
+          <SpaceSelector />
+        </div>
+
+        {/* Bottom Sidebar: User Profile & Actions */}
+        <div className="shrink-0 pt-2 border-t border-[#E8E4D5] space-y-1.5">
+          {/* User Info Card */}
+          <div className="flex items-center gap-3 p-1.5 rounded-xl">
+            <Avatar name={fullName} size="sm" />
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-bold text-[#02402E] truncate">{fullName}</p>
+              <p className="text-[10px] text-[#5E6963] truncate">{userEmail}</p>
             </div>
           </div>
 
-          {/* Navigation Groups: Independent scroll (flex-1 min-h-0 overflow-y-auto) */}
-          <nav className="flex-1 min-h-0 overflow-y-auto py-1 pr-0.5 space-y-2.5">
-            {sidebarNavGroups.map((group) => (
-              <div key={group.title} className="space-y-0.5">
-                {isDesktopExpanded ? (
-                  <p className="px-3 text-[10px] font-bold uppercase tracking-wider text-[#5E6963]/75 dark:text-[#95A39B]/65 select-none truncate">
-                    {group.title}
-                  </p>
-                ) : (
-                  <div className="h-0.5 border-t border-[#E2E8E4]/60 dark:border-[#2E3532]/60 my-1 mx-2" />
-                )}
-                <div className="space-y-0.5">
-                  {group.items.map((item) => {
-                    const Icon = item.icon;
-                    const isActive = currentTab === item.id;
-                    return (
-                      <button
-                        key={item.id}
-                        id={`nav-desktop-${item.id}`}
-                        onClick={() => handleNavClick(item.id)}
-                        type="button"
-                        title={!isDesktopExpanded ? item.label : undefined}
-                        aria-label={item.label}
-                        className={`w-full flex items-center rounded-xl font-medium text-xs transition-all duration-150 cursor-pointer ${
-                          isDesktopExpanded
-                            ? 'justify-between px-3 py-2'
-                            : 'justify-center p-2.5'
-                        } ${
-                          isActive
-                            ? 'bg-[#075C45] text-white shadow-xs dark:bg-[#16A66A] dark:text-[#101614]'
-                            : 'hover:bg-black/5 text-[#202724] dark:hover:bg-white/5 dark:text-[#F4F4F5]'
-                        }`}
-                      >
-                        <div className={`flex items-center ${isDesktopExpanded ? 'gap-2.5 min-w-0' : 'justify-center'}`}>
-                          <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white dark:text-[#101614]' : 'text-[#16A66A]'}`} />
-                          {isDesktopExpanded && (
-                            <span className="truncate">{item.label}</span>
-                          )}
-                        </div>
-                      </button>
-                    );
-                  })}
+          {/* Configurações Link */}
+          <button
+            type="button"
+            id="nav-desktop-settings"
+            onClick={() => handleNavClick('profile')}
+            className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+              currentTab === 'profile'
+                ? 'bg-[#02402E]/10 text-[#02402E] font-bold'
+                : 'text-[#5E6963] hover:text-[#02402E] hover:bg-black/5'
+            }`}
+          >
+            <Settings className="w-3.5 h-3.5 shrink-0" />
+            <span>Configurações</span>
+          </button>
+
+          {/* Sair Button */}
+          <button
+            type="button"
+            id="sidebar-logout-btn"
+            onClick={() => signOut()}
+            aria-label="Sair da conta"
+            className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-rose-600 hover:bg-rose-50 hover:text-rose-700 transition-colors cursor-pointer"
+          >
+            <LogOut className="w-3.5 h-3.5 shrink-0" />
+            <span>Sair</span>
+          </button>
+        </div>
+      </aside>
+
+      {/* ==================================================
+          MOBILE DRAWER SIDEBAR (When opened via Menu button)
+          ================================================== */}
+      {isMobileDrawerOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-50 flex md:hidden animate-in fade-in duration-200"
+          onClick={() => setIsMobileDrawerOpen(false)}
+        >
+          <div
+            className="w-72 max-w-[85vw] h-full bg-[#FAF8EE] border-r border-[#E8E4D5] p-5 flex flex-col justify-between shadow-2xl animate-in slide-in-from-left duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div>
+              {/* Drawer Header */}
+              <div className="flex items-center justify-between pb-4 border-b border-[#E8E4D5]">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl overflow-hidden border border-[#02402E]/20 bg-white p-0.5 shrink-0">
+                    <img
+                      src={POUPAGAIO_MASCOT_URL}
+                      alt="Poupagaio Mascot"
+                      referrerPolicy="no-referrer"
+                      className="w-full h-full object-contain rounded-lg"
+                    />
+                  </div>
+                  <div>
+                    <h2 className="font-bold text-sm text-[#02402E]">Poupagaio Finance</h2>
+                    <p className="text-[10px] text-[#5E6963]">Organize hoje. Voe mais longe.</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsMobileDrawerOpen(false)}
+                  className="p-1 rounded-lg hover:bg-black/5 text-[#5E6963]"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Space Selector in Drawer */}
+              <div className="py-3">
+                <SpaceSelector />
+              </div>
+
+              {/* Navigation list */}
+              <nav className="space-y-1 py-1 max-h-[50vh] overflow-y-auto">
+                {navItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = currentTab === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => handleNavClick(item.id)}
+                      type="button"
+                      className={`w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-xs font-semibold cursor-pointer ${
+                        isActive
+                          ? 'bg-[#F2B807] text-[#02402E] font-bold shadow-xs'
+                          : 'text-[#202724] hover:bg-[#02402E]/5'
+                      }`}
+                    >
+                      <Icon className="w-4 h-4 shrink-0" />
+                      <span>{item.label}</span>
+                    </button>
+                  );
+                })}
+              </nav>
+            </div>
+
+            {/* Bottom Profile */}
+            <div className="pt-3 border-t border-[#E8E4D5] space-y-2">
+              <div className="flex items-center gap-2.5">
+                <Avatar name={fullName} size="sm" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-bold text-[#02402E] truncate">{fullName}</p>
+                  <p className="text-[10px] text-[#5E6963] truncate">{userEmail}</p>
                 </div>
               </div>
-            ))}
-          </nav>
-
-          {/* Bottom Sidebar: User Profile & Preferences (shrink-0, permanently accessible) */}
-          <div className="shrink-0 pt-2.5 border-t border-[#E2E8E4] dark:border-[#2E3532] space-y-2">
-            <button
-              type="button"
-              id="nav-desktop-profile"
-              onClick={() => handleNavClick('profile')}
-              title={!isDesktopExpanded ? (profile?.full_name || user?.full_name || user?.email || 'Perfil') : undefined}
-              aria-label="Perfil do usuário"
-              className={`w-full flex items-center rounded-xl transition-colors cursor-pointer text-left ${
-                isDesktopExpanded ? 'gap-3 p-2' : 'justify-center p-1.5'
-              } ${
-                currentTab === 'profile'
-                  ? 'bg-[#16A66A]/15 text-[#075C45] dark:bg-[#16A66A]/25 dark:text-[#78D9A6]'
-                  : 'hover:bg-black/5 text-[#202724] dark:hover:bg-white/5 dark:text-[#F4F4F5]'
-              }`}
-            >
-              <Avatar
-                name={profile?.full_name || user?.full_name || user?.email || 'U'}
-                size="sm"
-              />
-              {isDesktopExpanded && (
-                <>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-bold truncate">
-                      {profile?.full_name || user?.full_name || 'Usuário'}
-                    </p>
-                    <p className="text-[10px] text-[#5E6963] dark:text-[#95A39B] truncate">
-                      {user?.email}
-                    </p>
-                  </div>
-                  <User className="w-4 h-4 text-[#5E6963] dark:text-[#95A39B] shrink-0" />
-                </>
-              )}
-            </button>
-
-            {isDesktopExpanded ? (
-              <div className="flex items-center justify-between pt-0.5 animate-in fade-in duration-150">
+              <div className="flex items-center justify-between pt-1">
                 <button
                   type="button"
-                  id="sidebar-toggle-theme"
-                  onClick={toggleTheme}
-                  aria-label="Alternar tema"
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-[#E2E8E4] hover:bg-black/5 dark:border-[#2E3532] dark:hover:bg-white/5 text-xs text-[#5E6963] dark:text-[#95A39B] cursor-pointer transition-colors"
+                  onClick={() => handleNavClick('profile')}
+                  className="text-xs text-[#5E6963] font-medium flex items-center gap-1 hover:text-[#02402E]"
                 >
-                  {theme === 'light' ? (
-                    <>
-                      <Moon className="w-3.5 h-3.5" />
-                      <span>Escuro</span>
-                    </>
-                  ) : (
-                    <>
-                      <Sun className="w-3.5 h-3.5 text-[#D6A84B]" />
-                      <span>Claro</span>
-                    </>
-                  )}
+                  <Settings className="w-3.5 h-3.5" />
+                  <span>Configurações</span>
                 </button>
-
                 <button
                   type="button"
-                  id="sidebar-logout-btn"
                   onClick={() => signOut()}
-                  aria-label="Sair da conta"
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl hover:bg-red-50 text-red-600 dark:hover:bg-red-950/40 dark:text-red-400 text-xs font-medium cursor-pointer transition-colors"
+                  className="text-xs text-rose-600 font-medium flex items-center gap-1 hover:text-rose-700"
                 >
                   <LogOut className="w-3.5 h-3.5" />
                   <span>Sair</span>
                 </button>
               </div>
-            ) : (
-              <div className="flex flex-col items-center gap-1.5 pt-0.5">
-                <button
-                  type="button"
-                  id="sidebar-toggle-theme-compact"
-                  onClick={toggleTheme}
-                  title={theme === 'light' ? 'Modo Escuro' : 'Modo Claro'}
-                  aria-label="Alternar tema"
-                  className="w-10 h-8 rounded-xl border border-[#E2E8E4] hover:bg-black/5 dark:border-[#2E3532] dark:hover:bg-white/5 flex items-center justify-center text-[#5E6963] dark:text-[#95A39B] cursor-pointer transition-colors"
-                >
-                  {theme === 'light' ? (
-                    <Moon className="w-4 h-4" />
-                  ) : (
-                    <Sun className="w-4 h-4 text-[#D6A84B]" />
-                  )}
-                </button>
-                <button
-                  type="button"
-                  id="sidebar-logout-btn-compact"
-                  onClick={() => signOut()}
-                  title="Sair da conta"
-                  aria-label="Sair da conta"
-                  className="w-10 h-8 rounded-xl hover:bg-red-50 text-red-600 dark:hover:bg-red-950/40 dark:text-red-400 flex items-center justify-center cursor-pointer transition-colors"
-                >
-                  <LogOut className="w-4 h-4" />
-                </button>
-              </div>
-            )}
-          </div>
-        </aside>
-      </div>
-
-      {/* MAIN CONTENT AREA */}
-      <div className="flex-1 flex flex-col min-w-0 h-[100dvh] overflow-hidden">
-        {/* MOBILE TOP BAR */}
-        <header className="md:hidden flex items-center justify-between px-4 py-2.5 pt-[calc(0.625rem+env(safe-area-inset-top))] border-b border-[#E2E8E4] dark:border-[#2E3532] bg-white dark:bg-[#1E2220] sticky top-0 z-30">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl overflow-hidden border border-[#16A66A]/30 bg-[#F2F5F3] dark:bg-[#18211D] p-0.5 shrink-0">
-              <img
-                src={POUPAGAIO_MASCOT_URL}
-                alt="Poupagaio Mascot"
-                referrerPolicy="no-referrer"
-                className="w-full h-full object-contain rounded-lg"
-              />
             </div>
-            <span className="font-bold text-sm tracking-tight font-display text-[#075C45] dark:text-[#78D9A6]">
-              Poupagaio Finance
-            </span>
+          </div>
+        </div>
+      )}
+
+      {/* ==================================================
+          MAIN CONTENT AREA
+          ================================================== */}
+      <div className="flex-1 flex flex-col min-w-0 h-[100dvh] overflow-hidden bg-[#F2EFDC]">
+        {/* MOBILE TOP BAR */}
+        <header className="md:hidden flex items-center justify-between px-4 py-2.5 pt-[calc(0.625rem+env(safe-area-inset-top))] border-b border-[#E8E4D5] bg-[#FAF8EE] sticky top-0 z-30 shadow-2xs">
+          <div className="flex items-center gap-2.5">
+            <button
+              type="button"
+              onClick={() => setIsMobileDrawerOpen(true)}
+              aria-label="Menu"
+              className="p-1.5 rounded-lg border border-[#E8E4D5] bg-white text-[#02402E] hover:bg-black/5 cursor-pointer"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg overflow-hidden border border-[#02402E]/20 bg-white p-0.5 shrink-0">
+                <img
+                  src={POUPAGAIO_MASCOT_URL}
+                  alt="Poupagaio Mascot"
+                  referrerPolicy="no-referrer"
+                  className="w-full h-full object-contain"
+                />
+              </div>
+              <span className="font-bold text-sm tracking-tight font-display text-[#02402E]">
+                Poupagaio Finance
+              </span>
+            </div>
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Sino de Notificações no Topo Mobile */}
+            {/* Notification Bell */}
             <div className="relative">
               <button
                 type="button"
                 id="mobile-header-notifications-btn"
                 onClick={() => setIsMobileNotificationsOpen(!isMobileNotificationsOpen)}
                 aria-label="Notificações"
-                className="p-2 rounded-xl border border-[#E2E8E4] hover:bg-black/5 dark:border-[#24312B] dark:hover:bg-white/5 text-[#5E6963] dark:text-[#95A39B] cursor-pointer relative"
+                className="p-2 rounded-xl border border-[#E8E4D5] bg-white hover:bg-black/5 text-[#5E6963] cursor-pointer relative"
               >
                 <Bell className="w-4 h-4" />
                 {alerts.length > 0 && (
-                  <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-rose-600 rounded-full ring-2 ring-white dark:ring-[#1E2220]" />
+                  <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-rose-600 rounded-full ring-2 ring-white" />
                 )}
-                <span className="sr-only">Notificações</span>
               </button>
 
               {isMobileNotificationsOpen && (
-                <div className="absolute right-0 mt-2 w-80 rounded-2xl border border-[#E2E8E4] dark:border-[#24312B] bg-white dark:bg-[#18211D] p-4 shadow-xl z-50 animate-in fade-in zoom-in-95 duration-150">
-                  <div className="flex items-center justify-between pb-2 border-b border-[#E2E8E4] dark:border-[#24312B]">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-[#075C45] dark:text-[#78D9A6] flex items-center gap-1.5">
-                      <Bell className="w-3.5 h-3.5 text-[#16A66A]" />
+                <div className="absolute right-0 mt-2 w-80 rounded-2xl border border-[#E8E4D5] bg-white p-4 shadow-xl z-50 animate-in fade-in zoom-in-95 duration-150">
+                  <div className="flex items-center justify-between pb-2 border-b border-[#E8E4D5]">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-[#02402E] flex items-center gap-1.5">
+                      <Bell className="w-3.5 h-3.5 text-[#02402E]" />
                       Alertas Ativos ({alerts.length})
                     </h4>
                     <button
                       type="button"
                       onClick={() => setIsMobileNotificationsOpen(false)}
-                      className="p-1 text-[#5E6963] dark:text-[#95A39B] hover:text-[#202724] dark:hover:text-[#F7F4EA] cursor-pointer"
+                      className="p-1 text-[#5E6963] hover:text-[#202724] cursor-pointer"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
                   </div>
-                  
+
                   {alerts.length === 0 ? (
                     <div className="py-5 text-center space-y-1">
-                      <p className="text-xs font-semibold text-[#202724] dark:text-[#F7F4EA]">
-                        Tudo em dia!
-                      </p>
-                      <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B]">
+                      <p className="text-xs font-semibold text-[#202724]">Tudo em dia!</p>
+                      <p className="text-[11px] text-[#5E6963]">
                         Você não tem lembretes ou avisos pendentes.
                       </p>
                     </div>
                   ) : (
-                    <div className="py-2 divide-y divide-[#E2E8E4]/50 dark:divide-[#24312B]/50 max-h-[280px] overflow-y-auto">
+                    <div className="py-2 divide-y divide-[#E8E4D5]/50 max-h-[280px] overflow-y-auto">
                       {alerts.slice(0, 5).map((alert) => (
                         <div
                           key={alert.id}
@@ -385,78 +369,51 @@ export function Shell({ currentTab, onSelectTab, children }: ShellProps) {
                             setIsMobileNotificationsOpen(false);
                             onSelectTab('calendar');
                           }}
-                          className="py-2.5 text-left cursor-pointer hover:bg-black/2 dark:hover:bg-white/2 transition-colors flex items-start gap-2.5"
+                          className="py-2.5 text-left cursor-pointer hover:bg-black/2 transition-colors flex items-start gap-2.5"
                         >
                           {alert.severity === 'critical' ? (
-                            <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 mt-0.5 shrink-0" />
+                            <AlertCircle className="w-4 h-4 text-rose-600 mt-0.5 shrink-0" />
                           ) : (
-                            <Clock className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+                            <Clock className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
                           )}
                           <div className="min-w-0 flex-1">
-                            <p className="text-xs font-bold text-[#202724] dark:text-[#F4F4F5] truncate">
+                            <p className="text-xs font-bold text-[#202724] truncate">
                               {alert.title}
                             </p>
-                            <p className="text-[10px] text-[#5E6963] dark:text-[#95A39B]">
-                              Vence em: {alert.dueDate.split('-').reverse().join('/')} • {formatCurrency(alert.amount)}
+                            <p className="text-[10px] text-[#5E6963]">
+                              Vence em: {alert.dueDate.split('-').reverse().join('/')} •{' '}
+                              {formatCurrency(alert.amount)}
                             </p>
                           </div>
-                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0 ${
-                            alert.severity === 'critical'
-                              ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-400'
-                              : 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-400'
-                          }`}>
+                          <span
+                            className={`text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0 ${
+                              alert.severity === 'critical'
+                                ? 'bg-rose-100 text-rose-800'
+                                : 'bg-amber-100 text-amber-800'
+                            }`}
+                          >
                             {alert.badgeText}
                           </span>
                         </div>
                       ))}
-                      {alerts.length > 5 && (
-                        <div className="pt-2 text-center">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setIsMobileNotificationsOpen(false);
-                              onSelectTab('calendar');
-                            }}
-                            className="text-[11px] font-bold text-[#16A66A] hover:underline"
-                          >
-                            Ver mais {alerts.length - 5} alertas no Calendário →
-                          </button>
-                        </div>
-                      )}
                     </div>
                   )}
                 </div>
               )}
             </div>
-
-            {/* Alternância Tema no Topo Mobile */}
-            <button
-              type="button"
-              id="mobile-header-toggle-theme-btn"
-              onClick={toggleTheme}
-              aria-label="Alternar tema"
-              className="p-2 rounded-xl border border-[#E2E8E4] hover:bg-black/5 dark:border-[#24312B] dark:hover:bg-white/5 text-[#5E6963] dark:text-[#95A39B] cursor-pointer"
-            >
-              {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4 text-[#D6A84B]" />}
-            </button>
           </div>
         </header>
-
-        {/* MOBILE SPACE SELECTOR BAR */}
-        <div className="md:hidden px-3.5 py-1.5 border-b border-[#E2E8E4] dark:border-[#2E3532] bg-[#EBECEE]/80 dark:bg-[#181B1A]/80 backdrop-blur-sm">
-          <SpaceSelector />
-        </div>
 
         {/* SUPABASE SCHEMA NOTICE */}
         <SupabaseSchemaNotice />
 
-        {/* SCROLLABLE VIEW CONTAINER (flex-1 min-h-0 overflow-y-auto) */}
-        <main className="flex-1 min-h-0 overflow-y-auto px-3.5 py-3 sm:px-6 sm:py-5 md:px-8 md:py-6 pb-24 md:pb-8">
+        {/* SCROLLABLE VIEW CONTAINER */}
+        <main className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-5 lg:p-6 pb-24 md:pb-6">
           {children}
         </main>
 
-        {/* MOBILE BOTTOM NAVIGATION (5 Ícones com + Central) */}
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 border-t border-[#E2E8E4] dark:border-[#2E3532] bg-white/95 dark:bg-[#1E2220]/95 backdrop-blur-md px-2 py-1.5 pb-[calc(0.5rem+env(safe-area-inset-bottom))] z-40 flex items-center justify-between">
+        {/* MOBILE BOTTOM NAVIGATION */}
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 border-t border-[#E8E4D5] bg-[#FAF8EE]/95 backdrop-blur-md px-2 py-1.5 pb-[calc(0.5rem+env(safe-area-inset-bottom))] z-40 flex items-center justify-between shadow-lg">
           {/* Item 1: Início */}
           <button
             type="button"
@@ -464,27 +421,31 @@ export function Shell({ currentTab, onSelectTab, children }: ShellProps) {
             onClick={() => handleNavClick('home')}
             className={`flex flex-col items-center justify-center flex-1 py-1 transition-colors cursor-pointer ${
               currentTab === 'home'
-                ? 'text-[#075C45] dark:text-[#78D9A6] font-bold'
-                : 'text-[#5E6963] dark:text-[#95A39B] hover:text-[#202724] dark:hover:text-[#F4F4F5]'
+                ? 'text-[#02402E] font-bold'
+                : 'text-[#5E6963] hover:text-[#202724]'
             }`}
           >
             <Home className={`w-5 h-5 ${currentTab === 'home' ? 'stroke-[2.5]' : 'stroke-2'}`} />
             <span className="text-[10px] mt-0.5 leading-tight font-medium">Início</span>
           </button>
 
-          {/* Item 2: Movimentações */}
+          {/* Item 2: Entradas */}
           <button
             type="button"
-            id="nav-mobile-movements"
-            onClick={() => handleNavClick('movements')}
+            id="nav-mobile-entries"
+            onClick={() => handleNavClick('entries')}
             className={`flex flex-col items-center justify-center flex-1 py-1 transition-colors cursor-pointer ${
-              currentTab === 'movements'
-                ? 'text-[#075C45] dark:text-[#78D9A6] font-bold'
-                : 'text-[#5E6963] dark:text-[#95A39B] hover:text-[#202724] dark:hover:text-[#F4F4F5]'
+              currentTab === 'entries'
+                ? 'text-[#02402E] font-bold'
+                : 'text-[#5E6963] hover:text-[#202724]'
             }`}
           >
-            <ArrowLeftRight className={`w-5 h-5 ${currentTab === 'movements' ? 'stroke-[2.5]' : 'stroke-2'}`} />
-            <span className="text-[10px] mt-0.5 leading-tight font-medium truncate max-w-[60px]">Movimentações</span>
+            <ArrowLeftRight
+              className={`w-5 h-5 ${currentTab === 'entries' ? 'stroke-[2.5]' : 'stroke-2'}`}
+            />
+            <span className="text-[10px] mt-0.5 leading-tight font-medium truncate max-w-[60px]">
+              Entradas
+            </span>
           </button>
 
           {/* Item 3 CENTRAL: Botão "+" Destaque */}
@@ -494,25 +455,29 @@ export function Shell({ currentTab, onSelectTab, children }: ShellProps) {
               id="nav-mobile-plus-action"
               onClick={() => setIsActionSheetOpen(true)}
               aria-label="Abrir ações rápidas"
-              className="w-12 h-12 rounded-full bg-[#16A66A] hover:bg-[#075C45] text-white flex items-center justify-center shadow-md -mt-5 border-4 border-[#F3F4F4] dark:border-[#181B1A] transition-all cursor-pointer active:scale-95"
+              className="w-12 h-12 rounded-full bg-[#F2B807] hover:bg-[#F29F05] text-[#02402E] flex items-center justify-center shadow-md -mt-5 border-4 border-[#F2EFDC] transition-all cursor-pointer active:scale-95"
             >
-              <Plus className="w-6 h-6 stroke-[2.5]" />
+              <Plus className="w-6 h-6 stroke-[3]" />
             </button>
           </div>
 
-          {/* Item 4: Planejamento */}
+          {/* Item 4: Visão Financeira */}
           <button
             type="button"
-            id="nav-mobile-planning"
-            onClick={() => handleNavClick('planning')}
+            id="nav-mobile-reports"
+            onClick={() => handleNavClick('reports')}
             className={`flex flex-col items-center justify-center flex-1 py-1 transition-colors cursor-pointer ${
-              currentTab === 'planning'
-                ? 'text-[#075C45] dark:text-[#78D9A6] font-bold'
-                : 'text-[#5E6963] dark:text-[#95A39B] hover:text-[#202724] dark:hover:text-[#F7F4EA]'
+              currentTab === 'reports'
+                ? 'text-[#02402E] font-bold'
+                : 'text-[#5E6963] hover:text-[#202724]'
             }`}
           >
-            <Target className={`w-5 h-5 ${currentTab === 'planning' ? 'stroke-[2.5]' : 'stroke-2'}`} />
-            <span className="text-[10px] mt-0.5 leading-tight font-medium truncate max-w-[60px]">Planejamento</span>
+            <BarChart3
+              className={`w-5 h-5 ${currentTab === 'reports' ? 'stroke-[2.5]' : 'stroke-2'}`}
+            />
+            <span className="text-[10px] mt-0.5 leading-tight font-medium truncate max-w-[60px]">
+              Relatórios
+            </span>
           </button>
 
           {/* Item 5: Perfil */}
@@ -522,11 +487,13 @@ export function Shell({ currentTab, onSelectTab, children }: ShellProps) {
             onClick={() => handleNavClick('profile')}
             className={`flex flex-col items-center justify-center flex-1 py-1 transition-colors cursor-pointer ${
               currentTab === 'profile'
-                ? 'text-[#075C45] dark:text-[#78D9A6] font-bold'
-                : 'text-[#5E6963] dark:text-[#95A39B] hover:text-[#202724] dark:hover:text-[#F7F4EA]'
+                ? 'text-[#02402E] font-bold'
+                : 'text-[#5E6963] hover:text-[#202724]'
             }`}
           >
-            <User className={`w-5 h-5 ${currentTab === 'profile' ? 'stroke-[2.5]' : 'stroke-2'}`} />
+            <User
+              className={`w-5 h-5 ${currentTab === 'profile' ? 'stroke-[2.5]' : 'stroke-2'}`}
+            />
             <span className="text-[10px] mt-0.5 leading-tight font-medium">Perfil</span>
           </button>
         </nav>
@@ -539,25 +506,25 @@ export function Shell({ currentTab, onSelectTab, children }: ShellProps) {
           onClick={() => setIsActionSheetOpen(false)}
         >
           <div
-            className="bg-white dark:bg-[#141C18] border-t border-[#E8E4D5] dark:border-[#24312B] rounded-t-3xl p-5 pb-[calc(1.5rem+env(safe-area-inset-bottom))] space-y-4 max-h-[85vh] overflow-y-auto shadow-2xl animate-in slide-in-from-bottom duration-200"
+            className="bg-[#FAF8EE] border-t border-[#E8E4D5] rounded-t-3xl p-5 pb-[calc(1.5rem+env(safe-area-inset-bottom))] space-y-4 max-h-[85vh] overflow-y-auto shadow-2xl animate-in slide-in-from-bottom duration-200"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Barra tátil superior */}
-            <div className="w-12 h-1.5 bg-[#E8E4D5] dark:bg-[#24312B] rounded-full mx-auto" />
+            <div className="w-12 h-1.5 bg-[#E8E4D5] rounded-full mx-auto" />
 
-            <div className="flex items-center justify-between pb-1 border-b border-[#E8E4D5] dark:border-[#24312B]">
+            <div className="flex items-center justify-between pb-1 border-b border-[#E8E4D5]">
               <div>
-                <h3 className="font-bold text-base font-display text-[#202724] dark:text-[#F7F4EA]">
+                <h3 className="font-bold text-base font-display text-[#02402E]">
                   O que você quer fazer?
                 </h3>
-                <p className="text-xs text-[#5E6963] dark:text-[#95A39B]">
+                <p className="text-xs text-[#5E6963]">
                   Selecione um módulo para registrar ou gerenciar
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setIsActionSheetOpen(false)}
-                className="p-1.5 rounded-full hover:bg-black/5 dark:hover:bg-white/5 text-[#5E6963] dark:text-[#95A39B] cursor-pointer"
+                className="p-1.5 rounded-full hover:bg-black/5 text-[#5E6963] cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -575,18 +542,16 @@ export function Shell({ currentTab, onSelectTab, children }: ShellProps) {
                       setIsActionSheetOpen(false);
                       handleNavClick(item.id);
                     }}
-                    className="flex items-center gap-3 p-3 rounded-2xl border border-[#E8E4D5] dark:border-[#24312B] bg-[#F7F4EA]/40 dark:bg-[#18211D] hover:bg-[#16A66A]/10 transition-all text-left cursor-pointer group"
+                    className="flex items-center gap-3 p-3 rounded-2xl border border-[#E8E4D5] bg-white hover:bg-[#F2B807]/20 transition-all text-left cursor-pointer group"
                   >
-                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${item.color}`}>
+                    <div
+                      className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${item.color}`}
+                    >
                       <Icon className="w-4 h-4" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-xs font-bold text-[#202724] dark:text-[#F7F4EA] group-hover:text-[#075C45] dark:group-hover:text-[#78D9A6] truncate">
-                        {item.label}
-                      </p>
-                      <p className="text-[10px] text-[#5E6963] dark:text-[#95A39B] truncate">
-                        {item.description}
-                      </p>
+                      <p className="text-xs font-bold text-[#02402E] truncate">{item.label}</p>
+                      <p className="text-[10px] text-[#5E6963] truncate">{item.description}</p>
                     </div>
                   </button>
                 );

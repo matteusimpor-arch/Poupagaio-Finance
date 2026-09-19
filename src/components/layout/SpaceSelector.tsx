@@ -89,26 +89,26 @@ export function SpaceSelector({ isCollapsed = false }: SpaceSelectorProps) {
           type="button"
           id="space-selector-btn"
           onClick={() => setIsOpen(!isOpen)}
-          className="w-full flex items-center justify-between px-3 py-2 rounded-xl border border-[#E8E4D5] bg-white hover:bg-black/5 dark:border-[#24312B] dark:bg-[#18211D] dark:hover:bg-white/5 transition-all duration-150 text-left cursor-pointer group"
+          className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl border border-[#E8E4D5] bg-white hover:bg-black/2 transition-all duration-150 text-left cursor-pointer group shadow-2xs"
         >
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-lg bg-[#16A66A]/15 text-[#075C45] dark:bg-[#16A66A]/25 dark:text-[#78D9A6] flex items-center justify-center shrink-0">
-              <ActiveIcon className="w-4 h-4" />
+            <div className="w-7 h-7 rounded-lg bg-[#02402E]/10 text-[#02402E] flex items-center justify-center shrink-0">
+              <ActiveIcon className="w-3.5 h-3.5" />
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-1.5">
-                <span className="text-[10px] text-[#5E6963] dark:text-[#95A39B] uppercase font-semibold tracking-wider">
+                <span className="text-[9px] text-[#5E6963] uppercase font-bold tracking-wider">
                   Espaço Ativo
                 </span>
-                <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#16A66A]"></span>
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#02402E]"></span>
               </div>
-              <p className="text-xs font-bold truncate text-[#202724] dark:text-[#F7F4EA]">
+              <p className="text-xs font-bold truncate text-[#02402E]">
                 {currentSpace ? currentSpace.name : 'Pessoal'}
               </p>
             </div>
           </div>
           <ChevronDown
-            className={`w-3.5 h-3.5 text-[#5E6963] dark:text-[#95A39B] transition-transform duration-200 shrink-0 ${
+            className={`w-3.5 h-3.5 text-[#5E6963] transition-transform duration-200 shrink-0 ${
               isOpen ? 'rotate-180' : ''
             }`}
           />
@@ -116,9 +116,9 @@ export function SpaceSelector({ isCollapsed = false }: SpaceSelectorProps) {
       )}
 
       {isOpen && (
-        <div className={`absolute top-full ${isCollapsed ? 'left-0' : 'left-0'} mt-2 w-64 max-w-sm rounded-2xl border border-[#E8E4D5] bg-white p-2 shadow-xl dark:border-[#24312B] dark:bg-[#18211D] z-50 animate-in fade-in zoom-in-95 duration-150`}>
-          <div className="px-3 py-2 border-b border-[#E8E4D5]/60 dark:border-[#24312B]/60 mb-1">
-            <p className="text-xs font-semibold text-[#5E6963] dark:text-[#95A39B] uppercase tracking-wider">
+        <div className="absolute top-full left-0 mt-2 w-64 max-w-sm rounded-2xl border border-[#E8E4D5] bg-white p-2 shadow-xl z-50 animate-in fade-in zoom-in-95 duration-150">
+          <div className="px-3 py-2 border-b border-[#E8E4D5]/60 mb-1">
+            <p className="text-[11px] font-bold text-[#02402E] uppercase tracking-wider">
               Seus Espaços Financeiros
             </p>
           </div>
@@ -138,28 +138,28 @@ export function SpaceSelector({ isCollapsed = false }: SpaceSelectorProps) {
                     setCurrentSpace(space);
                     setIsOpen(false);
                   }}
-                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-left transition-colors cursor-pointer ${
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-left transition-colors cursor-pointer ${
                     isSelected
-                      ? 'bg-[#16A66A]/10 text-[#075C45] dark:bg-[#16A66A]/20 dark:text-[#78D9A6] font-semibold'
-                      : 'hover:bg-black/5 text-[#202724] dark:hover:bg-white/5 dark:text-[#F7F4EA]'
+                      ? 'bg-[#F2B807]/20 text-[#02402E] font-bold'
+                      : 'hover:bg-black/5 text-[#202724]'
                   }`}
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
                     <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
                       isSelected
-                        ? 'bg-[#16A66A]/15 text-[#075C45] dark:text-[#78D9A6]'
-                        : 'bg-black/5 text-[#5E6963] dark:bg-white/5 dark:text-[#95A39B]'
+                        ? 'bg-[#F2B807] text-[#02402E]'
+                        : 'bg-black/5 text-[#5E6963]'
                     }`}>
                       <SpaceIcon className="w-3.5 h-3.5" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs font-bold truncate text-[#202724] dark:text-[#F7F4EA]">{space.name}</p>
-                      <span className="text-[10px] text-[#5E6963] dark:text-[#95A39B] block truncate capitalize">
+                      <p className="text-xs font-bold truncate text-[#02402E]">{space.name}</p>
+                      <span className="text-[10px] text-[#5E6963] block truncate capitalize">
                         {getSpaceTypeLabel(space.type)} • {getRoleLabel(spaceRole)}
                       </span>
                     </div>
                   </div>
-                  {isSelected && <Check className="w-4 h-4 text-[#16A66A] shrink-0 ml-1" />}
+                  {isSelected && <Check className="w-4 h-4 text-[#02402E] shrink-0 ml-1" />}
                 </button>
               );
             })}

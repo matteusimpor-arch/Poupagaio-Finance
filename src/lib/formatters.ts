@@ -62,7 +62,7 @@ export function getISODateToday(): string {
   return `${year}-${month}-${day}`;
 }
 
-const MONTH_NAMES = [
+export const MONTH_NAMES = [
   'Janeiro',
   'Fevereiro',
   'Março',
