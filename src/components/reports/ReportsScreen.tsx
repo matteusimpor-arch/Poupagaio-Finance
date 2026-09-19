@@ -98,6 +98,9 @@ export function ReportsScreen() {
   const [hoveredTrendIndex, setHoveredTrendIndex] = useState<number | null>(null);
   const [hoveredBreakdownSegment, setHoveredBreakdownSegment] = useState<string | null>(null);
 
+  // Estado para a competência selecionada do Previsto x Realizado
+  const [selectedPrevistoCycle, setSelectedPrevistoCycle] = useState<string>('');
+
   // Geração da lista de competências YYYY-MM do período selecionado
   const cyclesToLoad = useMemo(() => {
     const now = new Date();
@@ -316,6 +319,73 @@ export function ReportsScreen() {
       commitmentPercent,
     };
   }, [reportMonths]);
+
+  // Sincroniza e inicializa o ciclo selecionado do Previsto x Realizado
+  useEffect(() => {
+    if (reportMonths.length > 0) {
+      if (!selectedPrevistoCycle || !reportMonths.some((m) => m.cycle === selectedPrevistoCycle)) {
+        setSelectedPrevistoCycle(reportMonths[reportMonths.length - 1].cycle);
+      }
+    }
+  }, [reportMonths, selectedPrevistoCycle]);
+
+  // Cálculos de Previsto x Realizado por tipo de lançamento
+  const previstoRealizadoData = useMemo(() => {
+    if (!selectedPrevistoCycle || reportMonths.length === 0) return null;
+
+    const [year, month] = selectedPrevistoCycle.split('-').map(Number);
+    const cyclePrefix = `${year}-${String(month).padStart(2, '0')}`;
+
+    // 1. ENTRADAS
+    const monthEntries = rawEntries.filter((e: any) => e.date.startsWith(cyclePrefix));
+    const entriesPrevisto = monthEntries.reduce((acc, e) => acc + (Number(e.amount) || 0), 0);
+    const entriesRealizado = monthEntries
+      .filter((e: any) => e.status === 'received')
+      .reduce((acc, e) => acc + (Number(e.amount) || 0), 0);
+
+    // 2. GASTOS FIXOS
+    const applicableFixed = rawFixedExpenses.filter((f: any) => {
+      if (f.recurrence === 'yearly') {
+        return f.due_month === month;
+      }
+      return true;
+    });
+    const fixedPrevisto = applicableFixed.reduce((acc, f) => acc + (Number(f.amount) || 0), 0);
+    const fixedRealizado = applicableFixed.reduce((acc, f) => {
+      const isPaid = rawPayments.some((p: any) => p.fixed_expense_id === f.id && p.billing_cycle === selectedPrevistoCycle);
+      return acc + (isPaid ? (Number(f.amount) || 0) : 0);
+    }, 0);
+
+    // 3. GASTOS VARIÁVEIS
+    const monthVar = rawVarExpenses.filter((v: any) => v.date.startsWith(cyclePrefix));
+    const varPrevisto = monthVar.reduce((acc, v) => acc + (Number(v.amount) || 0), 0);
+    const varRealizado = monthVar
+      .filter((v: any) => v.status === 'paid')
+      .reduce((acc, v) => acc + (Number(v.amount) || 0), 0);
+
+    // 4. PARCELADOS
+    const monthInst = rawInstallments.filter((i: any) => i.due_date.startsWith(cyclePrefix));
+    const instPrevisto = monthInst.reduce((acc, i) => acc + (Number(i.amount) || 0), 0);
+    const instRealizado = monthInst
+      .filter((i: any) => i.status === 'paid')
+      .reduce((acc, i) => acc + (Number(i.amount) || 0), 0);
+
+    // TOTAIS
+    const expensesPrevisto = fixedPrevisto + varPrevisto + instPrevisto;
+    const expensesRealizado = fixedRealizado + varRealizado + instRealizado;
+
+    const resultPrevisto = entriesPrevisto - expensesPrevisto;
+    const resultRealizado = entriesRealizado - expensesRealizado;
+
+    return {
+      entries: { previsto: entriesPrevisto, realizado: entriesRealizado },
+      fixed: { previsto: fixedPrevisto, realizado: fixedRealizado },
+      variable: { previsto: varPrevisto, realizado: varRealizado },
+      installments: { previsto: instPrevisto, realizado: instRealizado },
+      expenses: { previsto: expensesPrevisto, realizado: expensesRealizado },
+      result: { previsto: resultPrevisto, realizado: resultRealizado },
+    };
+  }, [selectedPrevistoCycle, rawEntries, rawFixedExpenses, rawPayments, rawVarExpenses, rawInstallments, reportMonths]);
 
   // Carrega lazily os detalhes do lançamento de um mês selecionado ao abrir o modal (Read-Only)
   const loadMonthDetails = async (monthData: MonthReportData) => {
@@ -1249,6 +1319,274 @@ export function ReportsScreen() {
               </CardContent>
             </Card>
           </div>
+
+          {/* SEÇÃO COMPACTA: PREVISTO X REALIZADO — ETAPA 3.10 */}
+          {previstoRealizadoData && (
+            <Card className="border-[#E2E8E4] dark:border-[#2E3532] bg-white dark:bg-[#1E2220] shadow-2xs">
+              <CardContent className="p-4 lg:p-5 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#F3F4F4] dark:border-[#282E2B] pb-3">
+                  <div>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-[#075C45] dark:text-[#78D9A6] flex items-center gap-1.5">
+                      <TrendingUp className="w-4 h-4 text-[#16A66A]" />
+                      Análise Previsto x Realizado
+                    </h4>
+                    <p className="text-[10px] text-[#5E6963] dark:text-[#95A39B]">
+                      Acompanhe o planejado frente à efetivação de receitas e pagamentos da competência selecionada
+                    </p>
+                  </div>
+
+                  {/* Seletor de Mês específico */}
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#5E6963] dark:text-[#95A39B]">
+                      Competência:
+                    </span>
+                    <select
+                      value={selectedPrevistoCycle}
+                      onChange={(e) => setSelectedPrevistoCycle(e.target.value)}
+                      className="rounded-xl border border-[#E2E8E4] dark:border-[#2E3532] bg-white dark:bg-[#1E2220] px-3 py-1.5 text-xs font-bold shadow-2xs cursor-pointer focus:outline-none"
+                    >
+                      {reportMonths.map((m) => (
+                        <option key={m.cycle} value={m.cycle}>
+                          {m.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-1">
+                  {/* Tabela de Valores */}
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead>
+                        <tr className="border-b border-[#F3F4F4] dark:border-[#282E2B] text-[#5E6963] dark:text-[#95A39B] text-[10px] font-bold uppercase tracking-wider">
+                          <th className="py-2 pb-2.5">Categoria</th>
+                          <th className="py-2 pb-2.5 text-right">Previsto</th>
+                          <th className="py-2 pb-2.5 text-right">Realizado</th>
+                          <th className="py-2 pb-2.5 text-right">Diferença</th>
+                          <th className="py-2 pb-2.5 text-center">Progresso</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#F3F4F4] dark:divide-[#282E2B] font-medium">
+                        {/* 1. Entradas */}
+                        <tr>
+                          <td className="py-2.5 font-bold flex items-center gap-1.5 text-[#202724] dark:text-[#F4F4F5]">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                            Entradas (Receitas)
+                          </td>
+                          <td className="py-2.5 text-right text-[#5E6963] dark:text-[#95A39B]">
+                            {formatCurrency(previstoRealizadoData.entries.previsto)}
+                          </td>
+                          <td className="py-2.5 text-right text-emerald-600 dark:text-emerald-400 font-bold">
+                            {formatCurrency(previstoRealizadoData.entries.realizado)}
+                          </td>
+                          <td className={`py-2.5 text-right ${
+                            previstoRealizadoData.entries.realizado - previstoRealizadoData.entries.previsto >= 0
+                              ? 'text-emerald-600 dark:text-emerald-400'
+                              : 'text-rose-500'
+                          }`}>
+                            {formatCurrency(previstoRealizadoData.entries.realizado - previstoRealizadoData.entries.previsto)}
+                          </td>
+                          <td className="py-2.5 text-center font-bold">
+                            {previstoRealizadoData.entries.previsto > 0
+                              ? `${((previstoRealizadoData.entries.realizado / previstoRealizadoData.entries.previsto) * 100).toFixed(0)}%`
+                              : '—'}
+                          </td>
+                        </tr>
+
+                        {/* 2. Gastos Fixos */}
+                        <tr>
+                          <td className="py-2.5 font-bold flex items-center gap-1.5 text-[#202724] dark:text-[#F4F4F5]">
+                            <span className="w-2 h-2 rounded-full bg-[#D6A84B] shrink-0" />
+                            Gastos Fixos
+                          </td>
+                          <td className="py-2.5 text-right text-[#5E6963] dark:text-[#95A39B]">
+                            {formatCurrency(previstoRealizadoData.fixed.previsto)}
+                          </td>
+                          <td className="py-2.5 text-right text-rose-500 dark:text-rose-400 font-bold">
+                            {formatCurrency(previstoRealizadoData.fixed.realizado)}
+                          </td>
+                          <td className={`py-2.5 text-right ${
+                            previstoRealizadoData.fixed.previsto - previstoRealizadoData.fixed.realizado >= 0
+                              ? 'text-emerald-600 dark:text-emerald-400'
+                              : 'text-rose-500'
+                          }`}>
+                            {formatCurrency(previstoRealizadoData.fixed.previsto - previstoRealizadoData.fixed.realizado)}
+                          </td>
+                          <td className="py-2.5 text-center font-bold">
+                            {previstoRealizadoData.fixed.previsto > 0
+                              ? `${((previstoRealizadoData.fixed.realizado / previstoRealizadoData.fixed.previsto) * 100).toFixed(0)}%`
+                              : '—'}
+                          </td>
+                        </tr>
+
+                        {/* 3. Gastos Variáveis */}
+                        <tr>
+                          <td className="py-2.5 font-bold flex items-center gap-1.5 text-[#202724] dark:text-[#F4F4F5]">
+                            <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0" />
+                            Gastos Variáveis
+                          </td>
+                          <td className="py-2.5 text-right text-[#5E6963] dark:text-[#95A39B]">
+                            {formatCurrency(previstoRealizadoData.variable.previsto)}
+                          </td>
+                          <td className="py-2.5 text-right text-rose-500 dark:text-rose-400 font-bold">
+                            {formatCurrency(previstoRealizadoData.variable.realizado)}
+                          </td>
+                          <td className={`py-2.5 text-right ${
+                            previstoRealizadoData.variable.previsto - previstoRealizadoData.variable.realizado >= 0
+                              ? 'text-emerald-600 dark:text-emerald-400'
+                              : 'text-rose-500'
+                          }`}>
+                            {formatCurrency(previstoRealizadoData.variable.previsto - previstoRealizadoData.variable.realizado)}
+                          </td>
+                          <td className="py-2.5 text-center font-bold">
+                            {previstoRealizadoData.variable.previsto > 0
+                              ? `${((previstoRealizadoData.variable.realizado / previstoRealizadoData.variable.previsto) * 100).toFixed(0)}%`
+                              : '—'}
+                          </td>
+                        </tr>
+
+                        {/* 4. Parcelados */}
+                        <tr>
+                          <td className="py-2.5 font-bold flex items-center gap-1.5 text-[#202724] dark:text-[#F4F4F5]">
+                            <span className="w-2 h-2 rounded-full bg-indigo-500 shrink-0" />
+                            Parcelados
+                          </td>
+                          <td className="py-2.5 text-right text-[#5E6963] dark:text-[#95A39B]">
+                            {formatCurrency(previstoRealizadoData.installments.previsto)}
+                          </td>
+                          <td className="py-2.5 text-right text-rose-500 dark:text-rose-400 font-bold">
+                            {formatCurrency(previstoRealizadoData.installments.realizado)}
+                          </td>
+                          <td className={`py-2.5 text-right ${
+                            previstoRealizadoData.installments.previsto - previstoRealizadoData.installments.realizado >= 0
+                              ? 'text-emerald-600 dark:text-emerald-400'
+                              : 'text-rose-500'
+                          }`}>
+                            {formatCurrency(previstoRealizadoData.installments.previsto - previstoRealizadoData.installments.realizado)}
+                          </td>
+                          <td className="py-2.5 text-center font-bold">
+                            {previstoRealizadoData.installments.previsto > 0
+                              ? `${((previstoRealizadoData.installments.realizado / previstoRealizadoData.installments.previsto) * 100).toFixed(0)}%`
+                              : '—'}
+                          </td>
+                        </tr>
+
+                        {/* Total Despesas */}
+                        <tr className="border-t border-[#F3F4F4] dark:border-[#282E2B] font-bold">
+                          <td className="py-3 text-[#202724] dark:text-[#F4F4F5]">Total Geral Despesas</td>
+                          <td className="py-3 text-right text-[#5E6963] dark:text-[#95A39B]">
+                            {formatCurrency(previstoRealizadoData.expenses.previsto)}
+                          </td>
+                          <td className="py-3 text-right text-rose-500 dark:text-rose-400 font-bold">
+                            {formatCurrency(previstoRealizadoData.expenses.realizado)}
+                          </td>
+                          <td className={`py-3 text-right ${
+                            previstoRealizadoData.expenses.previsto - previstoRealizadoData.expenses.realizado >= 0
+                              ? 'text-emerald-600 dark:text-emerald-400'
+                              : 'text-rose-500'
+                          }`}>
+                            {formatCurrency(previstoRealizadoData.expenses.previsto - previstoRealizadoData.expenses.realizado)}
+                          </td>
+                          <td className="py-3 text-center font-bold">
+                            {previstoRealizadoData.expenses.previsto > 0
+                              ? `${((previstoRealizadoData.expenses.realizado / previstoRealizadoData.expenses.previsto) * 100).toFixed(0)}%`
+                              : '—'}
+                          </td>
+                        </tr>
+
+                        {/* Resultado Final */}
+                        <tr className="bg-[#16A66A]/5 dark:bg-[#16A66A]/10 font-bold border-t border-[#E2E8E4]/60">
+                          <td className="py-3 px-2 text-[#075C45] dark:text-[#78D9A6]">Resultado Líquido</td>
+                          <td className={`py-3 text-right pr-2 ${previstoRealizadoData.result.previsto >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500'}`}>
+                            {formatCurrency(previstoRealizadoData.result.previsto)}
+                          </td>
+                          <td className={`py-3 text-right pr-2 ${previstoRealizadoData.result.realizado >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500'}`}>
+                            {formatCurrency(previstoRealizadoData.result.realizado)}
+                          </td>
+                          <td className={`py-3 text-right pr-2 ${
+                            previstoRealizadoData.result.realizado - previstoRealizadoData.result.previsto >= 0
+                              ? 'text-emerald-600 dark:text-emerald-400'
+                              : 'text-rose-500'
+                          }`}>
+                            {formatCurrency(previstoRealizadoData.result.realizado - previstoRealizadoData.result.previsto)}
+                          </td>
+                          <td className="py-3 text-center font-bold">
+                            {previstoRealizadoData.result.previsto !== 0
+                              ? `${((previstoRealizadoData.result.realizado / previstoRealizadoData.result.previsto) * 100).toFixed(0)}%`
+                              : '—'}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Visualização de Barras / Progressos de Realização */}
+                  <div className="space-y-4 flex flex-col justify-center">
+                    <div>
+                      <span className="block text-[10px] font-bold uppercase tracking-wider text-[#5E6963] dark:text-[#95A39B] mb-1">
+                        Legenda do Cockpit
+                      </span>
+                      <p className="text-[10px] text-[#5E6963] dark:text-[#95A39B] leading-relaxed">
+                        • <strong>Previsto:</strong> Todo o valor de lançamentos inseridos ou previstos para a competência.<br />
+                        • <strong>Realizado:</strong> Soma dos valores efetivamente pagos (status <em>pago</em>) ou receitas recebidas (status <em>recebido</em>).
+                      </p>
+                    </div>
+
+                    <div className="space-y-3 pt-2">
+                      {/* Progresso de Entradas */}
+                      <div className="space-y-1">
+                        <div className="flex justify-between items-center text-[10px] font-bold">
+                          <span className="text-[#202724] dark:text-[#F4F4F5]">Realização de Receitas</span>
+                          <span className="text-emerald-600 dark:text-emerald-400">
+                            {previstoRealizadoData.entries.previsto > 0
+                              ? `${((previstoRealizadoData.entries.realizado / previstoRealizadoData.entries.previsto) * 100).toFixed(1)}%`
+                              : '0.0%'}
+                          </span>
+                        </div>
+                        <div className="w-full bg-[#F3F4F4] dark:bg-[#282E2B] h-2.5 rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-emerald-500 transition-all duration-500"
+                            style={{
+                              width: `${
+                                previstoRealizadoData.entries.previsto > 0
+                                  ? Math.min(100, (previstoRealizadoData.entries.realizado / previstoRealizadoData.entries.previsto) * 100)
+                                  : 0
+                              }%`,
+                            }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Progresso de Despesas */}
+                      <div className="space-y-1">
+                        <div className="flex justify-between items-center text-[10px] font-bold">
+                          <span className="text-[#202724] dark:text-[#F4F4F5]">Quitação de Despesas</span>
+                          <span className="text-rose-500">
+                            {previstoRealizadoData.expenses.previsto > 0
+                              ? `${((previstoRealizadoData.expenses.realizado / previstoRealizadoData.expenses.previsto) * 100).toFixed(1)}%`
+                              : '0.0%'}
+                          </span>
+                        </div>
+                        <div className="w-full bg-[#F3F4F4] dark:bg-[#282E2B] h-2.5 rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-rose-500 transition-all duration-500"
+                            style={{
+                              width: `${
+                                previstoRealizadoData.expenses.previsto > 0
+                                  ? Math.min(100, (previstoRealizadoData.expenses.realizado / previstoRealizadoData.expenses.previsto) * 100)
+                                  : 0
+                              }%`,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* 5. TABELA COMPARATIVA DE COMPETÊNCIAS */}
           <Card className="border-[#E2E8E4] dark:border-[#2E3532] bg-white dark:bg-[#1E2220] shadow-2xs">

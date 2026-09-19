@@ -20,7 +20,9 @@ export function notifySchemaPending(isPending: boolean, message?: string) {
 export function isTableMissingError(error: any): boolean {
   if (!error) return false;
   const code = String(error.code || '');
-  if (code === 'PGRST205' || code === 'PGRST204' || code === '42P01') {
+  // PGRST205 is a relationship query error, not a missing table.
+  // 42P01 is the PostgreSQL native code for undefined_table.
+  if (code === '42P01') {
     return true;
   }
   const msg = String(error.message || '').toLowerCase();
@@ -31,7 +33,7 @@ export function isTableMissingError(error: any): boolean {
     combined.includes('schema cache') ||
     combined.includes('does not exist') ||
     combined.includes('undefined_table') ||
-    (combined.includes('relation') && combined.includes('not exist'))
+    (combined.includes('relation') && combined.includes('not exist') && !combined.includes('relationship') && !combined.includes('could not find'))
   );
 }
 

@@ -1,10 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
-import { ChevronDown, Check, User, Users, Home, Building2, Sparkles } from 'lucide-react';
-import { Badge } from '../ui/badge';
+import { ChevronDown, Check, User, Users, Home, Building2 } from 'lucide-react';
 
 export function SpaceSelector() {
-  const { currentSpace, spaces, setCurrentSpace } = useAuth();
+  const { currentSpace, spaces, setCurrentSpace, memberships, user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -18,11 +17,52 @@ export function SpaceSelector() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const futureSpaceOptions = [
-    { type: 'couple', name: 'Nossa Casa (Casal)', icon: Home },
-    { type: 'family', name: 'Família', icon: Users },
-    { type: 'business', name: 'Empresa', icon: Building2 },
-  ];
+  const getSpaceTypeIcon = (type: string) => {
+    switch (type) {
+      case 'personal':
+        return User;
+      case 'couple':
+        return Home;
+      case 'family':
+        return Users;
+      case 'business':
+        return Building2;
+      default:
+        return User;
+    }
+  };
+
+  const getSpaceTypeLabel = (type: string) => {
+    switch (type) {
+      case 'personal':
+        return 'Pessoal';
+      case 'couple':
+        return 'Casal';
+      case 'family':
+        return 'Família';
+      case 'business':
+        return 'Empresa';
+      default:
+        return 'Outro';
+    }
+  };
+
+  const getRoleLabel = (role: string) => {
+    switch (role) {
+      case 'owner':
+        return 'Proprietário';
+      case 'admin':
+        return 'Administrador';
+      case 'member':
+        return 'Membro';
+      case 'viewer':
+        return 'Visualizador';
+      default:
+        return role;
+    }
+  };
+
+  const ActiveIcon = currentSpace ? getSpaceTypeIcon(currentSpace.type) : User;
 
   return (
     <div className="relative w-full" ref={dropdownRef}>
@@ -34,7 +74,7 @@ export function SpaceSelector() {
       >
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="w-8 h-8 rounded-lg bg-[#16A66A]/15 text-[#075C45] dark:bg-[#16A66A]/25 dark:text-[#78D9A6] flex items-center justify-center shrink-0">
-            <User className="w-4 h-4" />
+            <ActiveIcon className="w-4 h-4" />
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
@@ -66,6 +106,10 @@ export function SpaceSelector() {
           <div className="space-y-1">
             {spaces.map((space) => {
               const isSelected = currentSpace?.id === space.id;
+              const spaceRole = memberships?.find((m) => m.space_id === space.id)?.role ||
+                (space.owner_id === user?.id ? 'owner' : 'member');
+              const SpaceIcon = getSpaceTypeIcon(space.type);
+
               return (
                 <button
                   key={space.id}
@@ -74,47 +118,29 @@ export function SpaceSelector() {
                     setCurrentSpace(space);
                     setIsOpen(false);
                   }}
-                  className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-left transition-colors cursor-pointer ${
+                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-left transition-colors cursor-pointer ${
                     isSelected
-                      ? 'bg-[#16A66A]/10 text-[#075C45] dark:bg-[#16A66A]/20 dark:text-[#78D9A6]'
+                      ? 'bg-[#16A66A]/10 text-[#075C45] dark:bg-[#16A66A]/20 dark:text-[#78D9A6] font-semibold'
                       : 'hover:bg-black/5 text-[#202724] dark:hover:bg-white/5 dark:text-[#F7F4EA]'
                   }`}
                 >
-                  <div className="flex items-center gap-2.5">
-                    <User className="w-4 h-4 text-[#16A66A]" />
-                    <div>
-                      <p className="text-sm font-medium">{space.name}</p>
-                      <span className="text-[11px] text-[#5E6963] dark:text-[#95A39B] capitalize">
-                        {space.type} • Proprietário
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                      isSelected
+                        ? 'bg-[#16A66A]/15 text-[#075C45] dark:text-[#78D9A6]'
+                        : 'bg-black/5 text-[#5E6963] dark:bg-white/5 dark:text-[#95A39B]'
+                    }`}>
+                      <SpaceIcon className="w-3.5 h-3.5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-bold truncate text-[#202724] dark:text-[#F7F4EA]">{space.name}</p>
+                      <span className="text-[10px] text-[#5E6963] dark:text-[#95A39B] block truncate capitalize">
+                        {getSpaceTypeLabel(space.type)} • {getRoleLabel(spaceRole)}
                       </span>
                     </div>
                   </div>
-                  {isSelected && <Check className="w-4 h-4 text-[#16A66A]" />}
+                  {isSelected && <Check className="w-4 h-4 text-[#16A66A] shrink-0 ml-1" />}
                 </button>
-              );
-            })}
-          </div>
-
-          <div className="mt-2 pt-2 border-t border-[#E8E4D5]/60 dark:border-[#24312B]/60 space-y-1">
-            <p className="px-3 py-1 text-[11px] font-medium text-[#5E6963] dark:text-[#95A39B] flex items-center gap-1">
-              <Sparkles className="w-3 h-3 text-[#D6A84B]" />
-              Preparado para múltiplos espaços:
-            </p>
-            {futureSpaceOptions.map((opt) => {
-              const Icon = opt.icon;
-              return (
-                <div
-                  key={opt.type}
-                  className="flex items-center justify-between px-3 py-2 rounded-xl opacity-60 text-[#5E6963] dark:text-[#95A39B] bg-black/[0.02] dark:bg-white/[0.02]"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <Icon className="w-4 h-4" />
-                    <span className="text-xs font-medium">{opt.name}</span>
-                  </div>
-                  <Badge variant="muted" className="text-[10px] py-0 px-2">
-                    Em breve
-                  </Badge>
-                </div>
               );
             })}
           </div>

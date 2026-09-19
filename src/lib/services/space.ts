@@ -115,9 +115,11 @@ export const spaceService = {
   async getSpaceMembers(spaceId: string): Promise<SpaceMember[]> {
     try {
       if (!supabase) return [];
+      
+      // 1. Fetch space members without joining profiles to avoid PGRST205 relationship error
       const { data, error } = await supabase
         .from('space_members')
-        .select('*, profile:profiles(*)')
+        .select('*')
         .eq('space_id', spaceId);
 
       if (error) {
@@ -128,7 +130,31 @@ export const spaceService = {
         console.warn('Erro ao consultar membros no Supabase:', error.message || error);
         return [];
       }
-      return (data as SpaceMember[]) || [];
+
+      const members = (data as SpaceMember[]) || [];
+      if (members.length === 0) return [];
+
+      // 2. Fetch profiles for these members using .in() filter
+      const userIds = members.map(m => m.user_id);
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('*')
+        .in('id', userIds);
+
+      if (profilesError) {
+        console.warn('Erro ao carregar perfis correspondentes:', profilesError.message || profilesError);
+      }
+
+      // Map profiles back to members gracefully
+      const membersWithProfiles = members.map(member => {
+        const profile = profilesData?.find(p => p.id === member.user_id) || undefined;
+        return {
+          ...member,
+          profile
+        };
+      });
+
+      return membersWithProfiles;
     } catch (err: any) {
       if (isTableMissingError(err)) {
         notifySchemaPending(true);
@@ -138,4 +164,75 @@ export const spaceService = {
       return [];
     }
   },
+
+  async createSpace(userId: string, name: string, type: 'personal' | 'couple' | 'family' | 'business'): Promise<Space | null> {
+    try {
+      if (!supabase) return null;
+      const now = new Date().toISOString();
+      const { data, error } = await supabase
+        .from('spaces')
+        .insert({
+          name,
+          type,
+          owner_id: userId,
+          created_at: now,
+          updated_at: now
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Erro ao criar espaço:', error);
+        throw error;
+      }
+      return data as Space;
+    } catch (err) {
+      console.error('createSpace error:', err);
+      return null;
+    }
+  },
+
+  async updateSpaceName(spaceId: string, name: string): Promise<Space | null> {
+    try {
+      if (!supabase) return null;
+      const now = new Date().toISOString();
+      const { data, error } = await supabase
+        .from('spaces')
+        .update({
+          name,
+          updated_at: now
+        })
+        .eq('id', spaceId)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Erro ao atualizar nome do espaço:', error);
+        throw error;
+      }
+      return data as Space;
+    } catch (err) {
+      console.error('updateSpaceName error:', err);
+      return null;
+    }
+  },
+
+  async getUserMemberships(userId: string): Promise<{ space_id: string; role: any }[]> {
+    try {
+      if (!supabase) return [];
+      const { data, error } = await supabase
+        .from('space_members')
+        .select('space_id, role')
+        .eq('user_id', userId);
+
+      if (error) {
+        console.warn('Erro ao buscar papéis do usuário:', error);
+        return [];
+      }
+      return data || [];
+    } catch (err) {
+      console.warn('getUserMemberships error:', err);
+      return [];
+    }
+  }
 };

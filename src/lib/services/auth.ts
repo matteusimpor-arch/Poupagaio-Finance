@@ -150,4 +150,21 @@ export const authService = {
       return { error: new Error(err.message || 'Erro ao solicitar recuperação.') };
     }
   },
+
+  async updatePassword(newPassword: string): Promise<{ error: Error | null }> {
+    try {
+      if (!newPassword || newPassword.length < 6) {
+        return { error: new Error('A nova senha deve ter pelo menos 6 caracteres.') };
+      }
+      if (!supabase) {
+        return { error: new Error('Cliente Supabase não inicializado.') };
+      }
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+      return { error: error ? new Error(error.message) : null };
+    } catch (err: any) {
+      return { error: new Error(err.message || 'Erro ao atualizar senha.') };
+    }
+  },
 };

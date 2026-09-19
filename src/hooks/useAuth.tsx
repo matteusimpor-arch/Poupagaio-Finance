@@ -9,6 +9,7 @@ interface AuthContextType {
   user: AuthUser | null;
   profile: Profile | null;
   spaces: Space[];
+  memberships: { space_id: string; role: any }[];
   currentSpace: Space | null;
   isLoading: boolean;
   isInitializing: boolean;
@@ -19,7 +20,10 @@ interface AuthContextType {
   signIn: (data: { email: string; password: string }) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: Error | null }>;
+  updatePassword: (newPassword: string) => Promise<{ error: Error | null }>;
   updateProfileName: (newName: string) => Promise<{ error: Error | null }>;
+  createSpace: (name: string, type: 'personal' | 'couple' | 'family' | 'business') => Promise<{ error: Error | null; space?: Space | null }>;
+  updateSpaceName: (spaceId: string, newName: string) => Promise<{ error: Error | null; space?: Space | null }>;
   refreshData: () => Promise<void>;
 }
 
@@ -29,6 +33,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [spaces, setSpaces] = useState<Space[]>([]);
+  const [memberships, setMemberships] = useState<{ space_id: string; role: any }[]>([]);
   const [currentSpace, setCurrentSpaceState] = useState<Space | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isInitializing, setIsInitializing] = useState<boolean>(true);
@@ -60,6 +65,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // 3. Fetch all user spaces
       const userSpaces = await spaceService.getUserSpaces(authUser.id);
       setSpaces(userSpaces);
+
+      // Fetch memberships
+      const userMemberships = await spaceService.getUserMemberships(authUser.id);
+      setMemberships(userMemberships);
 
       // 4. Set current space (prioritize saved or first space)
       const savedSpaceId = localStorage.getItem(`poupagaio_active_space_${authUser.id}`);
@@ -119,6 +128,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setUser(null);
             setProfile(null);
             setSpaces([]);
+            setMemberships([]);
             setCurrentSpaceState(null);
           }
         }
@@ -148,6 +158,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setUser(null);
             setProfile(null);
             setSpaces([]);
+            setMemberships([]);
             setCurrentSpaceState(null);
           }
           setIsInitializing(false);
@@ -214,7 +225,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(null);
       setProfile(null);
       setSpaces([]);
+      setMemberships([]);
       setCurrentSpaceState(null);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const updatePassword = async (newPassword: string) => {
+    setIsLoading(true);
+    try {
+      return await authService.updatePassword(newPassword);
     } finally {
       setIsLoading(false);
     }
@@ -237,6 +258,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const createSpace = async (name: string, type: 'personal' | 'couple' | 'family' | 'business') => {
+    if (!user) return { error: new Error('Usuário não autenticado.') };
+    try {
+      setIsLoading(true);
+      const newSpace = await spaceService.createSpace(user.id, name, type);
+      if (newSpace) {
+        const userSpaces = await spaceService.getUserSpaces(user.id);
+        setSpaces(userSpaces);
+        const userMemberships = await spaceService.getUserMemberships(user.id);
+        setMemberships(userMemberships);
+        setCurrentSpace(newSpace);
+        return { error: null, space: newSpace };
+      }
+      return { error: new Error('Erro ao criar espaço.') };
+    } catch (err: any) {
+      return { error: new Error(err.message || 'Erro ao criar espaço.') };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const updateSpaceName = async (spaceId: string, newName: string) => {
+    if (!user) return { error: new Error('Usuário não autenticado.') };
+    try {
+      setIsLoading(true);
+      const updatedSpace = await spaceService.updateSpaceName(spaceId, newName);
+      if (updatedSpace) {
+        const userSpaces = await spaceService.getUserSpaces(user.id);
+        setSpaces(userSpaces);
+        const userMemberships = await spaceService.getUserMemberships(user.id);
+        setMemberships(userMemberships);
+        if (currentSpace?.id === spaceId) {
+          setCurrentSpaceState(updatedSpace);
+        }
+        return { error: null, space: updatedSpace };
+      }
+      return { error: new Error('Erro ao atualizar nome do espaço.') };
+    } catch (err: any) {
+      return { error: new Error(err.message || 'Erro ao atualizar nome do espaço.') };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const refreshData = async () => {
     if (user) {
       await loadUserData(user);
@@ -249,6 +314,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         profile,
         spaces,
+        memberships,
         currentSpace,
         isLoading,
         isInitializing,
@@ -259,7 +325,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signIn,
         signOut,
         resetPassword,
+        updatePassword,
         updateProfileName,
+        createSpace,
+        updateSpaceName,
         refreshData,
       }}
     >

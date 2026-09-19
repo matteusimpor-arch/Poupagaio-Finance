@@ -1,20 +1,56 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useTheme } from '../../hooks/useTheme';
+import { spaceService } from '../../lib/services/space';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Avatar } from '../ui/avatar';
-import { User, Mail, Sun, Moon, LogOut, Check, Save } from 'lucide-react';
+import { Badge } from '../ui/badge';
+import {
+  User,
+  Mail,
+  LogOut,
+  Users,
+  Briefcase,
+  Layers,
+  Sparkles,
+  Shield,
+  Eye,
+  EyeOff
+} from 'lucide-react';
+import { Space, SpaceType, SpaceRole, SpaceMember } from '../../types';
+
+type TabType = 'profile' | 'spaces';
 
 export function ProfileScreen() {
-  const { user, profile, updateProfileName, signOut } = useAuth();
+  const { user, profile, spaces, memberships, currentSpace, updateProfileName, updatePassword, createSpace, updateSpaceName, setCurrentSpace, signOut } = useAuth();
   const { theme, toggleTheme, setTheme } = useTheme();
 
+  const [activeTab, setActiveTab] = useState<TabType>('profile');
   const [fullName, setFullName] = useState(profile?.full_name || user?.full_name || '');
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+  
+  const [activeSpaceMembers, setActiveSpaceMembers] = useState<SpaceMember[]>([]);
+  const [isLoadingMembers, setIsLoadingMembers] = useState(false);
+  const [newSpaceName, setNewSpaceName] = useState('');
+  const [newSpaceType, setNewSpaceType] = useState<'couple' | 'family' | 'business'>('couple');
+  const [isCreatingSpace, setIsCreatingSpace] = useState(false);
+  const [spaceCreateSuccess, setSpaceCreateSuccess] = useState(false);
+  const [spaceCreateError, setSpaceCreateError] = useState('');
+  const [editSpaceName, setEditSpaceName] = useState(currentSpace?.name || '');
+  const [isUpdatingSpaceName, setIsUpdatingSpaceName] = useState(false);
+  const [spaceUpdateSuccess, setSpaceUpdateSuccess] = useState(false);
+  const [spaceUpdateError, setSpaceUpdateError] = useState('');
 
   useEffect(() => {
     if (profile?.full_name || user?.full_name) {
@@ -22,207 +58,123 @@ export function ProfileScreen() {
     }
   }, [profile?.full_name, user?.full_name]);
 
+  useEffect(() => {
+    if (currentSpace) {
+      setEditSpaceName(currentSpace.name);
+    }
+  }, [currentSpace]);
+
+  useEffect(() => {
+    const loadActiveSpaceMembers = async (spaceId: string) => {
+      setIsLoadingMembers(true);
+      try {
+        const members = await spaceService.getSpaceMembers(spaceId);
+        setActiveSpaceMembers(members);
+      } catch (err) {
+        console.warn('Erro ao carregar membros:', err);
+      } finally {
+        setIsLoadingMembers(false);
+      }
+    };
+    if (currentSpace?.id) {
+      loadActiveSpaceMembers(currentSpace.id);
+    }
+  }, [currentSpace?.id]);
+
   const handleSaveName = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!fullName.trim()) {
-      setErrorMsg('O nome não pode ficar vazio.');
-      return;
-    }
-
+    if (!fullName.trim()) { setErrorMsg('O nome não pode ficar vazio.'); return; }
     setIsSaving(true);
     setErrorMsg('');
     setSaveSuccess(false);
-
     const { error } = await updateProfileName(fullName.trim());
     setIsSaving(false);
-
-    if (error) {
-      setErrorMsg(error.message);
-    } else {
-      setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 3000);
-    }
+    if (error) { setErrorMsg(error.message); } else { setSaveSuccess(true); setTimeout(() => setSaveSuccess(false), 3000); }
   };
 
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPassword !== confirmPassword) { setPasswordError('As senhas não coincidem.'); return; }
+    if (newPassword.length < 6) { setPasswordError('A nova senha deve ter pelo menos 6 caracteres.'); return; }
+    setIsUpdatingPassword(true);
+    setPasswordError('');
+    setPasswordSuccess(false);
+    const { error } = await updatePassword(newPassword);
+    setIsUpdatingPassword(false);
+    if (error) { setPasswordError(error.message); } else { setPasswordSuccess(true); setNewPassword(''); setConfirmPassword(''); setTimeout(() => setPasswordSuccess(false), 3000); }
+  };
+
+  const handleCreateSpace = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newSpaceName.trim()) { setSpaceCreateError('O nome do espaço não pode ficar vazio.'); return; }
+    setIsCreatingSpace(true);
+    setSpaceCreateError('');
+    setSpaceCreateSuccess(false);
+    const { error } = await createSpace(newSpaceName.trim(), newSpaceType);
+    setIsCreatingSpace(false);
+    if (error) { setSpaceCreateError(error.message); } else { setSpaceCreateSuccess(true); setNewSpaceName(''); setTimeout(() => setSpaceCreateSuccess(false), 3000); }
+  };
+
+  const handleUpdateSpaceName = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentSpace) return;
+    if (!editSpaceName.trim()) { setSpaceUpdateError('O nome do espaço não pode ficar vazio.'); return; }
+    setIsUpdatingSpaceName(true);
+    setSpaceUpdateError('');
+    setSpaceUpdateSuccess(false);
+    const { error } = await updateSpaceName(currentSpace.id, editSpaceName.trim());
+    setIsUpdatingSpaceName(false);
+    if (error) { setSpaceUpdateError(error.message); } else { setSpaceUpdateSuccess(true); setTimeout(() => setSpaceUpdateSuccess(false), 3000); }
+  };
+
+  const getRoleLabel = (role?: SpaceRole) => role === 'owner' ? 'Proprietário' : role === 'admin' ? 'Administrador' : 'Membro';
+  const getRoleBadgeColor = (role?: SpaceRole) => role === 'owner' ? 'bg-amber-100 text-amber-800' : role === 'admin' ? 'bg-blue-100 text-blue-800' : 'bg-emerald-100 text-emerald-800';
+
+  const currentSpaceRole = memberships.find((m) => m.space_id === currentSpace?.id)?.role || (currentSpace?.owner_id === user?.id ? 'owner' : 'member');
+
   return (
-    <div className="w-full max-w-2xl mx-auto space-y-3.5 sm:space-y-6 pb-20 md:pb-6 animate-in fade-in duration-300">
-      <div>
-        <h1 className="text-xl sm:text-2xl font-bold font-display text-[#075C45] dark:text-[#78D9A6]">
-          Meu Perfil & Configurações
-        </h1>
-        <p className="text-xs sm:text-sm text-[#5E6963] dark:text-[#95A39B]">
-          Gerencie seus dados pessoais e preferências do Poupagaio Finance.
-        </p>
+    <div className="w-full max-w-4xl mx-auto space-y-6 pb-20 animate-in fade-in duration-300">
+      <h1 className="text-2xl font-bold text-[#075C45] dark:text-[#78D9A6]">Meu Perfil & Configurações</h1>
+      
+      <div className="flex gap-2">
+        <button onClick={() => setActiveTab('profile')} className={`px-4 py-2 rounded-lg font-bold ${activeTab === 'profile' ? 'bg-white text-[#075C45]' : 'text-gray-500'}`}>Meu Perfil</button>
+        <button onClick={() => setActiveTab('spaces')} className={`px-4 py-2 rounded-lg font-bold ${activeTab === 'spaces' ? 'bg-white text-[#075C45]' : 'text-gray-500'}`}>Espaços</button>
       </div>
 
-      {/* User Summary Card */}
-      <Card className="border-[#E2E8E4] dark:border-[#24312B] bg-white dark:bg-[#18211D]">
-        <CardContent className="p-4 pt-4 sm:p-6 flex flex-row items-center gap-3.5 sm:gap-5">
-          <Avatar
-            name={profile?.full_name || user?.full_name || user?.email || 'U'}
-            size="lg"
-            className="w-12 h-12 sm:w-16 sm:h-16 text-base sm:text-xl shadow-xs shrink-0"
-          />
-          <div className="space-y-0.5 text-left flex-1 min-w-0">
-            <h2 className="text-base sm:text-lg font-bold text-[#202724] dark:text-[#F7F4EA] truncate">
-              {profile?.full_name || user?.full_name || 'Usuário'}
-            </h2>
-            <div className="flex items-center gap-1.5 text-xs text-[#5E6963] dark:text-[#95A39B] truncate">
-              <Mail className="w-3.5 h-3.5 shrink-0" />
-              <span className="truncate">{user?.email}</span>
-            </div>
-            <p className="text-[10px] sm:text-[11px] text-[#16A66A] dark:text-[#78D9A6] font-medium pt-0.5">
-              Membro desde: {profile?.created_at ? new Date(profile.created_at).toLocaleDateString('pt-BR') : 'Hoje'}
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+      {activeTab === 'profile' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Card className="bg-white dark:bg-[#18211D]">
+            <CardHeader><CardTitle>Perfil</CardTitle></CardHeader>
+            <CardContent>
+              <form onSubmit={handleSaveName} className="space-y-4">
+                <Input value={fullName} onChange={(e) => setFullName(e.target.value)} />
+                <Button type="submit" disabled={isSaving}>Salvar</Button>
+                {saveSuccess && <p className="text-xs text-emerald-500">Salvo!</p>}
+              </form>
+            </CardContent>
+          </Card>
 
-      {/* Edit Name Form */}
-      <Card className="border-[#E2E8E4] dark:border-[#24312B] bg-white dark:bg-[#18211D]">
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <User className="w-4 h-4 text-[#16A66A]" />
-            Dados Pessoais
-          </CardTitle>
-          <CardDescription>
-            Atualize seu nome de exibição no aplicativo.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSaveName} className="space-y-3.5 sm:space-y-4">
-            <Input
-              id="profile-name-input"
-              label="Nome Completo"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              placeholder="Seu nome"
-              error={errorMsg}
-            />
+          <Card className="bg-white dark:bg-[#18211D]">
+            <CardHeader><CardTitle className="flex items-center gap-2"><Shield className="w-4 h-4" /> Segurança</CardTitle></CardHeader>
+            <CardContent>
+              <form onSubmit={handleUpdatePassword} className="space-y-4">
+                <Input type={showPassword ? 'text' : 'password'} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Nova senha" />
+                <Input type={showPassword ? 'text' : 'password'} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Confirmar nova senha" />
+                <Button type="button" variant="ghost" onClick={() => setShowPassword(!showPassword)}>{showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}</Button>
+                <Button type="submit" disabled={isUpdatingPassword}>Alterar senha</Button>
+                {passwordSuccess && <p className="text-xs text-emerald-500">Senha atualizada!</p>}
+                {passwordError && <p className="text-xs text-red-500">{passwordError}</p>}
+              </form>
+            </CardContent>
+          </Card>
 
-            <div className="w-full space-y-1.5 text-left">
-              <label className="block text-xs font-semibold uppercase tracking-wider text-[#5E6963] dark:text-[#95A39B]">
-                E-mail da Conta
-              </label>
-              <input
-                type="text"
-                value={user?.email || ''}
-                disabled
-                className="w-full h-10 sm:h-11 px-3.5 rounded-xl border border-[#E2E8E4] bg-black/[0.03] text-[#5E6963] text-xs sm:text-sm dark:bg-white/[0.03] dark:border-[#24312B] dark:text-[#95A39B] cursor-not-allowed"
-              />
-              <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B]">
-                O e-mail é gerenciado pelo Supabase Auth.
-              </p>
-            </div>
-
-            {saveSuccess && (
-              <div className="p-3 rounded-xl bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 text-xs font-medium flex items-center gap-2">
-                <Check className="w-4 h-4 text-emerald-600" />
-                Nome atualizado com sucesso no seu perfil!
-              </div>
-            )}
-
-            <div className="pt-1 flex justify-end">
-              <Button
-                type="submit"
-                id="save-profile-btn"
-                variant="primary"
-                size="sm"
-                isLoading={isSaving}
-                className="gap-2 text-xs font-semibold py-1.5 px-4 h-8 sm:h-9"
-              >
-                <Save className="w-4 h-4" />
-                Salvar Alterações
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-
-      {/* Appearance / Theme Settings */}
-      <Card className="border-[#E2E8E4] dark:border-[#24312B] bg-white dark:bg-[#18211D]">
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <Sun className="w-4 h-4 text-[#D6A84B]" />
-            Aparência
-          </CardTitle>
-          <CardDescription>
-            Escolha como prefere visualizar o Poupagaio Finance.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
-            <button
-              type="button"
-              id="theme-light-btn"
-              onClick={() => setTheme('light')}
-              className={`p-3 sm:p-4 rounded-xl border flex flex-col items-center gap-1.5 text-center transition-all cursor-pointer ${
-                theme === 'light'
-                  ? 'border-[#16A66A] bg-[#16A66A]/10 text-[#075C45] font-semibold ring-2 ring-[#16A66A]/30'
-                  : 'border-[#E2E8E4] bg-white text-[#5E6963] hover:bg-black/5 dark:bg-[#18211D] dark:border-[#24312B]'
-              }`}
-            >
-              <Sun className="w-4 h-4 sm:w-5 sm:h-5 text-[#D6A84B]" />
-              <span className="text-xs sm:text-sm">Tema Claro</span>
-              <span className="text-[10px] sm:text-[11px] text-[#5E6963] dark:text-[#95A39B]">
-                Cores Claras & Verde
-              </span>
-            </button>
-
-            <button
-              type="button"
-              id="theme-dark-btn"
-              onClick={() => setTheme('dark')}
-              className={`p-3 sm:p-4 rounded-xl border flex flex-col items-center gap-1.5 text-center transition-all cursor-pointer ${
-                theme === 'dark'
-                  ? 'border-[#16A66A] bg-[#16A66A]/20 text-[#78D9A6] font-semibold ring-2 ring-[#16A66A]/30'
-                  : 'border-[#E2E8E4] bg-white text-[#5E6963] hover:bg-black/5 dark:bg-[#18211D] dark:border-[#24312B] dark:text-[#95A39B]'
-              }`}
-            >
-              <Moon className="w-4 h-4 sm:w-5 sm:h-5 text-[#78D9A6]" />
-              <span className="text-xs sm:text-sm">Tema Escuro</span>
-              <span className="text-[10px] sm:text-[11px] text-[#5E6963] dark:text-[#95A39B]">
-                Grafite Profundo
-              </span>
-            </button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Session Management / Logout */}
-      <Card className="border-red-200 dark:border-red-950/50">
-        <CardHeader>
-          <CardTitle className="text-base text-red-600 dark:text-red-400 flex items-center gap-2">
-            <LogOut className="w-4 h-4" />
-            Sessão
-          </CardTitle>
-          <CardDescription>
-            Encerre sua sessão com segurança neste dispositivo.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-[#202724] dark:text-[#F7F4EA]">
-                Sair da sua conta
-              </p>
-              <p className="text-xs text-[#5E6963] dark:text-[#95A39B]">
-                Você poderá entrar novamente a qualquer momento com sua senha.
-              </p>
-            </div>
-            <Button
-              id="profile-logout-btn"
-              variant="danger"
-              size="sm"
-              onClick={() => signOut()}
-              className="gap-2 shrink-0"
-            >
-              <LogOut className="w-4 h-4" />
-              Sair da Conta
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+          <Card className="bg-white dark:bg-[#18211D]">
+            <CardContent className="p-5">
+              <Button variant="danger" onClick={() => signOut()} className="w-full gap-2"><LogOut className="w-4 h-4" /> Sair da Conta</Button>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
