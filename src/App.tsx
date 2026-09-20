@@ -21,6 +21,7 @@ import { SupportScreen } from './components/support/SupportScreen';
 import { Skeleton } from './components/ui/skeleton';
 import { ActiveTab } from './types';
 import { POUPAGAIO_MASCOT_URL } from './assets/mascot';
+import { PoupagaioLogo } from './components/branding/PoupagaioLogo';
 
 function AppContent() {
   const { user, isInitializing } = useAuth();
@@ -37,13 +38,8 @@ function AppContent() {
     return (
       <div className="min-h-screen w-full flex flex-col items-center justify-center p-6 bg-[#F7F9F7] dark:bg-[#101614] text-[#202724] dark:text-[#F7F4EA]">
         <div className="w-full max-w-md space-y-6 text-center flex flex-col items-center">
-          <div className="w-20 h-20 rounded-3xl overflow-hidden border-2 border-[#16A66A]/30 bg-white dark:bg-[#18211D] p-1.5 shadow-md animate-pulse">
-            <img
-              src={POUPAGAIO_MASCOT_URL}
-              alt="Poupagaio"
-              referrerPolicy="no-referrer"
-              className="w-full h-full object-contain rounded-2xl"
-            />
+          <div className="animate-pulse flex items-center justify-center">
+            <PoupagaioLogo className="h-16 sm:h-20" />
           </div>
           <div className="space-y-2 w-full">
             <h2 className="text-xl font-bold font-display text-[#075C45] dark:text-[#78D9A6]">

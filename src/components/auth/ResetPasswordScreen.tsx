@@ -6,6 +6,7 @@ import { Sun, Moon, Lock, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { useTheme } from '../../hooks/useTheme';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { POUPAGAIO_MASCOT_URL } from '../../assets/mascot';
+import { PoupagaioLogo } from '../branding/PoupagaioLogo';
 
 export function ResetPasswordScreen() {
   const { theme, toggleTheme } = useTheme();
@@ -88,14 +89,7 @@ export function ResetPasswordScreen() {
       {/* Top Bar with Theme Toggle */}
       <div className="w-full max-w-5xl mx-auto flex items-center justify-between py-2">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-xl overflow-hidden border border-[#16A66A]/30 bg-white dark:bg-[#1A1A1A] p-0.5">
-            <img
-              src={POUPAGAIO_MASCOT_URL}
-              alt="Poupagaio"
-              referrerPolicy="no-referrer"
-              className="w-full h-full object-contain rounded-lg"
-            />
-          </div>
+          <PoupagaioLogo className="h-10 sm:h-11" />
           <span className="font-bold text-sm tracking-tight font-display text-[#075C45] dark:text-[#34D399]">
             Poupagaio Finance
           </span>
@@ -114,14 +108,7 @@ export function ResetPasswordScreen() {
       <div className="w-full max-w-md mx-auto my-auto py-8">
         <Card className="border-[#E8E4D5] dark:border-white/12 bg-white dark:bg-[#1A1A1A] shadow-xl overflow-hidden">
           <div className="p-6 pb-2 text-center flex flex-col items-center space-y-3">
-            <div className="w-20 h-20 rounded-2xl overflow-hidden shadow-md border-2 border-[#16A66A]/30 bg-[#F7F4EA] dark:bg-[#222226] p-1">
-              <img
-                src={POUPAGAIO_MASCOT_URL}
-                alt="Poupagaio Mascot"
-                referrerPolicy="no-referrer"
-                className="w-full h-full object-contain rounded-xl"
-              />
-            </div>
+            <PoupagaioLogo className="h-20 sm:h-24 md:h-28" />
             <div>
               <h1 className="text-xl font-bold font-display text-[#075C45] dark:text-[#34D399]">
                 Redefinir Senha
