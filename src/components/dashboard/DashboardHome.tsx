@@ -228,9 +228,9 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
 
   if (checklistResult?.items) {
     checklistResult.items.forEach((item) => {
-      if (item.type === 'fixed') fixedSum += item.amount;
-      else if (item.type === 'variable') variableSum += item.amount;
-      else if (item.type === 'installment') installmentSum += item.amount;
+      if (item.sourceType === 'fixed') fixedSum += item.amount;
+      else if (item.sourceType === 'variable') variableSum += item.amount;
+      else if (item.sourceType === 'installment') installmentSum += item.amount;
     });
   }
 
@@ -265,7 +265,7 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
   const miniSelectedDayItems = itemsByDate[selectedMiniDateStr] || [];
 
   return (
-    <div className="w-full space-y-8 pb-12 animate-in fade-in duration-300">
+    <div className="w-full max-w-[1480px] mx-auto space-y-6 sm:space-y-8 pb-28 sm:pb-16 px-3 sm:px-6 animate-in fade-in duration-300">
       {/* Action error banner */}
       {actionError && (
         <div className="p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 rounded-xl text-xs text-red-700 dark:text-red-300 flex items-center justify-between">
@@ -639,12 +639,12 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
         {/* Checklist List Container */}
         <div className="bg-white/90 dark:bg-[#1C211E]/90 backdrop-blur-md border border-[#D2DDD6] dark:border-[#28322C] rounded-2xl p-5 shadow-2xs divide-y divide-[#E2ECE6] dark:divide-[#28322C]">
           {filteredChecklistItems.length === 0 ? (
-            <div className="py-8 text-center space-y-2">
-              <CheckCircle2 className="w-8 h-8 text-[#16A66A] mx-auto opacity-60" />
-              <p className="text-sm font-bold text-[#02402E] dark:text-[#78D9A6]">
+            <div className="py-5 text-center space-y-1">
+              <CheckCircle2 className="w-6 h-6 text-[#16A66A] mx-auto opacity-75" />
+              <p className="text-xs font-bold text-[#02402E] dark:text-[#78D9A6]">
                 Nenhum lançamento nesta lista.
               </p>
-              <p className="text-xs text-[#5E6963] dark:text-[#95A39B]">
+              <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B]">
                 Alterne os filtros acima ou cadastre novos gastos fixos, variáveis ou parcelamentos.
               </p>
             </div>

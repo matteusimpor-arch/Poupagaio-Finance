@@ -103,7 +103,7 @@ export function FloatingPoupagaio({ onSelectTab }: FloatingPoupagaioProps) {
   ];
 
   return (
-    <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 select-none pb-[env(safe-area-inset-bottom)]">
+    <div className="fixed bottom-3 right-3 sm:bottom-6 sm:right-6 z-40 select-none pb-[env(safe-area-inset-bottom)]">
       
       {/* ==================================================
           QUICK ACCESS PANEL (Desktop Floating + Mobile Bottom Sheet)
@@ -222,7 +222,7 @@ export function FloatingPoupagaio({ onSelectTab }: FloatingPoupagaioProps) {
         title="Poupagaio - Acesso rápido"
         className="relative group cursor-pointer focus:outline-none focus-visible:ring-4 focus-visible:ring-[#F2B807] rounded-full transition-transform active:scale-95 duration-200"
       >
-        <div className="w-[60px] h-[60px] sm:w-[78px] sm:h-[78px] relative flex items-center justify-center filter drop-shadow-md group-hover:drop-shadow-xl group-hover:scale-105 transition-all duration-200">
+        <div className="w-[52px] h-[52px] sm:w-[72px] sm:h-[72px] relative flex items-center justify-center filter drop-shadow-md group-hover:drop-shadow-xl group-hover:scale-105 transition-all duration-200">
           <img
             src={POUPAGAIO_ASSISTANTE_URL}
             alt="Poupagaio Assistente - Acesso Rápido"

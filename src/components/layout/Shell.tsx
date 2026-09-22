@@ -106,36 +106,36 @@ export function Shell({ currentTab, onSelectTab, children }: ShellProps) {
       <header
         className={`sticky top-0 z-40 w-full border-b backdrop-blur-md transition-all duration-300 select-none ${
           isScrolled
-            ? 'bg-[#EBF0EC]/90 dark:bg-[#161B18]/90 border-[#D2DDD6] dark:border-[#28322C] shadow-sm opacity-100'
-            : 'bg-[#EBF0EC]/70 dark:bg-[#161B18]/70 border-[#D2DDD6]/50 dark:border-[#28322C]/50 opacity-90 hover:opacity-100 hover:bg-[#EBF0EC]/95 dark:hover:bg-[#161B18]/95'
+            ? 'bg-[#EBF0EC]/95 dark:bg-[#161B18]/95 border-[#D2DDD6] dark:border-[#28322C] shadow-2xs opacity-100'
+            : 'bg-[#EBF0EC]/80 dark:bg-[#161B18]/80 border-[#D2DDD6]/50 dark:border-[#28322C]/50 opacity-95 hover:opacity-100'
         }`}
       >
         {/* Top line: Brand, Space Selector & User Controls */}
-        <div className="flex items-center justify-between px-4 sm:px-6 py-2.5 gap-3 max-w-7xl mx-auto">
+        <div className="flex items-center justify-between px-3 sm:px-6 py-2.5 gap-2 sm:gap-4 max-w-[1480px] mx-auto">
           {/* Left: Brand & Space */}
-          <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+          <div className="flex items-center gap-2.5 sm:gap-4 min-w-0">
             <div className="flex items-center gap-2 sm:gap-2.5 cursor-pointer shrink-0" onClick={() => handleNavClick('home')}>
-              <PoupagaioLogo className="h-11 sm:h-12 md:h-14" />
+              <PoupagaioLogo className="h-10 sm:h-12 md:h-14" />
               <div className="min-w-0 flex flex-col justify-center">
                 <div className="font-bold text-sm sm:text-base md:text-lg tracking-tight font-display text-[#02402E] dark:text-[#78D9A6] leading-tight flex items-center gap-1">
                   <span>Poupagaio</span>
                   <span className="text-[#16A66A] dark:text-[#34D399] font-medium text-xs sm:text-sm">Finance</span>
                 </div>
                 <p className="text-[10px] text-[#5E6963] dark:text-[#95A39B] leading-none hidden lg:block">
-                  Organize hoje, conquiste amanhã.
+                  Organize hoje, conquiste amamanhã.
                 </p>
               </div>
             </div>
 
             <div className="h-5 w-px bg-[#DCE2DE] dark:bg-[#2B322F] hidden sm:block shrink-0" />
 
-            <div className="min-w-[140px] sm:min-w-[180px]">
+            <div className="hidden sm:block min-w-[150px] md:min-w-[180px]">
               <SpaceSelector />
             </div>
           </div>
 
           {/* Right: Notifications, Theme & Profile */}
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             {/* Sino de Notificações */}
             <div className="relative">
               <button
@@ -241,7 +241,7 @@ export function Shell({ currentTab, onSelectTab, children }: ShellProps) {
               type="button"
               id="topbar-profile-btn"
               onClick={() => handleNavClick('profile')}
-              className={`flex items-center gap-2 px-2.5 py-1 rounded-xl border transition-colors cursor-pointer text-left ${
+              className={`flex items-center gap-2 px-2 py-1 sm:px-2.5 sm:py-1 rounded-xl border transition-colors cursor-pointer text-left ${
                 currentTab === 'profile'
                   ? 'bg-[#16A66A]/15 border-[#16A66A]/40 text-[#02402E] dark:bg-[#16A66A]/25 dark:text-[#78D9A6]'
                   : 'border-[#DCE2DE] dark:border-[#2B322F] hover:bg-black/5 text-[#202724] dark:hover:bg-white/5 dark:text-[#F4F4F5]'
@@ -279,8 +279,13 @@ export function Shell({ currentTab, onSelectTab, children }: ShellProps) {
           </div>
         </div>
 
-        {/* Desktop Horizontal Navigation Bar (Matches IMAGEM 1) */}
-        <nav className="hidden md:flex items-center px-6 py-1.5 overflow-x-auto gap-1 no-scrollbar border-t border-[#D2DDD6]/60 dark:border-[#28322C]/60 max-w-7xl mx-auto">
+        {/* Mobile Space Selector Bar (Prevents congestion on mobile header) */}
+        <div className="sm:hidden px-3 py-1.5 border-t border-[#D2DDD6]/60 dark:border-[#28322C]/60 bg-[#EBF0EC]/90 dark:bg-[#161B18]/90">
+          <SpaceSelector />
+        </div>
+
+        {/* Desktop Horizontal Navigation Bar */}
+        <nav className="hidden md:flex items-center px-6 py-1.5 overflow-x-auto gap-1.5 no-scrollbar border-t border-[#D2DDD6]/60 dark:border-[#28322C]/60 max-w-[1480px] mx-auto">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = currentTab === item.id;
@@ -356,13 +361,13 @@ export function Shell({ currentTab, onSelectTab, children }: ShellProps) {
       <SupabaseSchemaNotice />
 
       {/* NATURAL VERTICAL SCROLL MAIN CONTENT AREA */}
-      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 relative z-10">
+      <main className="flex-1 w-full max-w-[1480px] mx-auto px-2 sm:px-6 py-4 sm:py-6 relative z-10">
         {children}
       </main>
 
-      {/* FOOTER (MATCHES IMAGEM 1) */}
+      {/* FOOTER */}
       <footer className="w-full border-t border-[#D2DDD6] dark:border-[#28322C] bg-white/80 dark:bg-[#161B18]/80 backdrop-blur-md py-8 px-4 sm:px-8 mt-12 transition-colors relative z-10">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 text-center md:text-left">
+        <div className="max-w-[1480px] mx-auto flex flex-col md:flex-row items-center justify-between gap-6 text-center md:text-left">
           <div className="space-y-1.5">
             <div className="flex items-center justify-center md:justify-start gap-2.5">
               <PoupagaioLogo className="h-9 sm:h-10" />
