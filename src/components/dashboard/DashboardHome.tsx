@@ -103,6 +103,12 @@ export function DashboardHome({
   const [currentYear, setCurrentYear] = useState(initialYear || now.getFullYear());
   const [currentMonth, setCurrentMonth] = useState(initialMonth || (now.getMonth() + 1));
 
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   useEffect(() => {
     if (initialYear && initialMonth) {
       setCurrentYear(initialYear);
@@ -1303,9 +1309,9 @@ export function DashboardHome({
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 min-w-0">
           {/* Chart 1: Composição das Despesas (Donut) */}
-          <div className="lg:col-span-5 bg-white/90 dark:bg-[#1C211E]/90 backdrop-blur-md border border-[#D2DDD6] dark:border-[#28322C] rounded-2xl p-5 shadow-2xs space-y-4 flex flex-col justify-between">
+          <div className="lg:col-span-5 bg-white/90 dark:bg-[#1C211E]/90 backdrop-blur-md border border-[#D2DDD6] dark:border-[#28322C] rounded-2xl p-5 shadow-2xs space-y-4 flex flex-col justify-between min-w-0">
             <div className="flex items-center justify-between pb-2 border-b border-[#E2ECE6] dark:border-[#28322C]">
               <div>
                 <h3 className="text-sm font-bold text-[#02402E] dark:text-[#78D9A6] font-display">
@@ -1323,34 +1329,36 @@ export function DashboardHome({
                 Nenhuma despesa cadastrada para exibir o gráfico.
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 items-center gap-4 my-2">
-                <div className="h-44 relative flex items-center justify-center">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={donutData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={48}
-                        outerRadius={70}
-                        paddingAngle={3}
-                        dataKey="value"
-                      >
-                        {donutData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <RechartsTooltip
-                        formatter={(val: number) => formatCurrency(val)}
-                        contentStyle={{
-                          backgroundColor: theme === 'dark' ? '#1C211E' : '#FFFFFF',
-                          borderColor: theme === 'dark' ? '#28322C' : '#D2DDD6',
-                          borderRadius: '12px',
-                          fontSize: '12px',
-                        }}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 items-center gap-4 my-2 min-w-0">
+                <div className="w-full min-w-0 h-44 relative flex items-center justify-center">
+                  {isMounted && (
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+                      <PieChart>
+                        <Pie
+                          data={donutData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={48}
+                          outerRadius={70}
+                          paddingAngle={3}
+                          dataKey="value"
+                        >
+                          {donutData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <RechartsTooltip
+                          formatter={(val: number) => formatCurrency(val)}
+                          contentStyle={{
+                            backgroundColor: theme === 'dark' ? '#1C211E' : '#FFFFFF',
+                            borderColor: theme === 'dark' ? '#28322C' : '#D2DDD6',
+                            borderRadius: '12px',
+                            fontSize: '12px',
+                          }}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  )}
                   
                   {/* Donut Center Label */}
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center">
@@ -1386,7 +1394,7 @@ export function DashboardHome({
           </div>
 
           {/* Chart 2: Evolução Financeira (Composed Chart) */}
-          <div className="lg:col-span-7 bg-white/90 dark:bg-[#1C211E]/90 backdrop-blur-md border border-[#D2DDD6] dark:border-[#28322C] rounded-2xl p-5 shadow-2xs space-y-4 flex flex-col justify-between">
+          <div className="lg:col-span-7 bg-white/90 dark:bg-[#1C211E]/90 backdrop-blur-md border border-[#D2DDD6] dark:border-[#28322C] rounded-2xl p-5 shadow-2xs space-y-4 flex flex-col justify-between min-w-0">
             <div className="flex items-center justify-between pb-2 border-b border-[#E2ECE6] dark:border-[#28322C]">
               <div>
                 <h3 className="text-sm font-bold text-[#02402E] dark:text-[#78D9A6] font-display">
@@ -1405,26 +1413,28 @@ export function DashboardHome({
               </button>
             </div>
 
-            <div className="h-56 w-full pt-2">
-              <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={evolutionData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={theme === 'dark' ? '#28322C' : '#E2ECE6'} />
-                  <XAxis dataKey="monthLabel" tick={{ fontSize: 11, fill: theme === 'dark' ? '#95A39B' : '#5E6963' }} />
-                  <YAxis tick={{ fontSize: 10, fill: theme === 'dark' ? '#95A39B' : '#5E6963' }} tickFormatter={(v) => `R$${v >= 1000 ? (v/1000).toFixed(0) + 'k' : v}`} />
-                  <RechartsTooltip
-                    formatter={(val: number) => formatCurrency(val)}
-                    contentStyle={{
-                      backgroundColor: theme === 'dark' ? '#1C211E' : '#FFFFFF',
-                      borderColor: theme === 'dark' ? '#28322C' : '#D2DDD6',
-                      borderRadius: '12px',
-                      fontSize: '12px',
-                    }}
-                  />
-                  <Bar dataKey="Entradas" fill="#16A66A" radius={[4, 4, 0, 0]} maxBarSize={28} />
-                  <Bar dataKey="Despesas" fill="#E11D48" radius={[4, 4, 0, 0]} maxBarSize={28} />
-                  <Line type="monotone" dataKey="Saldo" stroke="#F2B807" strokeWidth={3} dot={{ r: 4, fill: '#F2B807' }} />
-                </ComposedChart>
-              </ResponsiveContainer>
+            <div className="w-full min-w-0 h-56 pt-2">
+              {isMounted && (
+                <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+                  <ComposedChart data={evolutionData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={theme === 'dark' ? '#28322C' : '#E2ECE6'} />
+                    <XAxis dataKey="monthLabel" tick={{ fontSize: 11, fill: theme === 'dark' ? '#95A39B' : '#5E6963' }} />
+                    <YAxis tick={{ fontSize: 10, fill: theme === 'dark' ? '#95A39B' : '#5E6963' }} tickFormatter={(v) => `R$${v >= 1000 ? (v/1000).toFixed(0) + 'k' : v}`} />
+                    <RechartsTooltip
+                      formatter={(val: number) => formatCurrency(val)}
+                      contentStyle={{
+                        backgroundColor: theme === 'dark' ? '#1C211E' : '#FFFFFF',
+                        borderColor: theme === 'dark' ? '#28322C' : '#D2DDD6',
+                        borderRadius: '12px',
+                        fontSize: '12px',
+                      }}
+                    />
+                    <Bar dataKey="Entradas" fill="#16A66A" radius={[4, 4, 0, 0]} maxBarSize={28} />
+                    <Bar dataKey="Despesas" fill="#E11D48" radius={[4, 4, 0, 0]} maxBarSize={28} />
+                    <Line type="monotone" dataKey="Saldo" stroke="#F2B807" strokeWidth={3} dot={{ r: 4, fill: '#F2B807' }} />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              )}
             </div>
 
             {/* Legend Footer */}
