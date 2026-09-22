@@ -16,6 +16,8 @@ interface FixedExpenseModalProps {
   onSave: (data: CreateFixedExpenseInput | UpdateFixedExpenseInput) => Promise<boolean>;
   editingExpense?: FixedExpenseWithStatus | null;
   spaceId: string;
+  selectedYear?: number;
+  selectedMonth?: number;
 }
 
 export const FIXED_EXPENSE_CATEGORIES = [
@@ -43,10 +45,15 @@ export function FixedExpenseModal({
   onSave,
   editingExpense,
   spaceId,
+  selectedYear,
+  selectedMonth,
 }: FixedExpenseModalProps) {
   const currentNow = new Date();
   const currentYear = currentNow.getFullYear();
   const currentMonth = currentNow.getMonth() + 1;
+
+  const targetYear = selectedYear || currentYear;
+  const targetMonth = selectedMonth || currentMonth;
 
   const [description, setDescription] = useState('');
   const [rawAmount, setRawAmount] = useState('');
@@ -55,8 +62,8 @@ export function FixedExpenseModal({
   const [category, setCategory] = useState('Aluguel');
   const [customCategory, setCustomCategory] = useState('');
   const [recurrence, setRecurrence] = useState<ExpenseRecurrence>('monthly');
-  const [startYear, setStartYear] = useState<number>(currentYear);
-  const [startMonth, setStartMonth] = useState<number>(currentMonth);
+  const [startYear, setStartYear] = useState<number>(targetYear);
+  const [startMonth, setStartMonth] = useState<number>(targetMonth);
   const [notes, setNotes] = useState('');
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -98,17 +105,17 @@ export function FixedExpenseModal({
       setDescription('');
       setRawAmount('');
       setDueDay('10');
-      setDueMonth(String(currentMonth));
+      setDueMonth(String(targetMonth));
       setCategory('Aluguel');
       setCustomCategory('');
       setRecurrence('monthly');
-      setStartYear(currentYear);
-      setStartMonth(currentMonth);
+      setStartYear(targetYear);
+      setStartMonth(targetMonth);
       setNotes('');
     }
     setErrors({});
     setGeneralError(null);
-  }, [editingExpense, isOpen, currentYear, currentMonth]);
+  }, [editingExpense, isOpen, targetYear, targetMonth, currentYear, currentMonth]);
 
   if (!isOpen) return null;
 

@@ -27,6 +27,15 @@ function AppContent() {
   const { user, isInitializing } = useAuth();
   const [currentTab, setCurrentTab] = useState<ActiveTab>('home');
 
+  const now = new Date();
+  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
+
+  const handleMonthChange = (year: number, month: number) => {
+    setSelectedYear(year);
+    setSelectedMonth(month);
+  };
+
   const isResetPasswordPath = window.location.pathname === '/reset-password' || window.location.hash.includes('type=recovery');
 
   if (isResetPasswordPath) {
@@ -66,19 +75,50 @@ function AppContent() {
   // Render view based on currentTab
   const renderContent = () => {
     if (currentTab === 'home') {
-      return <DashboardHome onSelectTab={setCurrentTab} />;
+      return (
+        <DashboardHome
+          onSelectTab={setCurrentTab}
+          selectedYear={selectedYear}
+          selectedMonth={selectedMonth}
+          onMonthChange={handleMonthChange}
+        />
+      );
     }
     if (currentTab === 'entries') {
-      return <EntriesScreen />;
+      return (
+        <EntriesScreen
+          selectedYear={selectedYear}
+          selectedMonth={selectedMonth}
+          onMonthChange={handleMonthChange}
+        />
+      );
     }
     if (currentTab === 'fixed_expenses') {
-      return <FixedExpensesScreen />;
+      return (
+        <FixedExpensesScreen
+          selectedYear={selectedYear}
+          selectedMonth={selectedMonth}
+          onMonthChange={handleMonthChange}
+        />
+      );
     }
     if (currentTab === 'variable_expenses') {
-      return <VariableExpensesScreen />;
+      return (
+        <VariableExpensesScreen
+          selectedYear={selectedYear}
+          selectedMonth={selectedMonth}
+          onMonthChange={handleMonthChange}
+        />
+      );
     }
     if (currentTab === 'installments') {
-      return <InstallmentsScreen />;
+      return (
+        <InstallmentsScreen
+          selectedYear={selectedYear}
+          selectedMonth={selectedMonth}
+          onMonthChange={handleMonthChange}
+        />
+      );
     }
     if (currentTab === 'goals') {
       return <GoalsScreen />;

@@ -50,13 +50,36 @@ const MONTH_NAMES = [
   'Dezembro',
 ];
 
-export function InstallmentsScreen() {
+interface InstallmentsScreenProps {
+  selectedYear?: number;
+  selectedMonth?: number;
+  onMonthChange?: (year: number, month: number) => void;
+}
+
+export function InstallmentsScreen({
+  selectedYear: initialYear,
+  selectedMonth: initialMonth,
+  onMonthChange,
+}: InstallmentsScreenProps = {}) {
   const { currentSpace } = useAuth();
 
   // Competência selecionada (Mês / Ano)
   const now = new Date();
-  const [selectedYear, setSelectedYear] = useState<number>(now.getFullYear());
-  const [selectedMonth, setSelectedMonth] = useState<number>(now.getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState<number>(initialYear || now.getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState<number>(initialMonth || (now.getMonth() + 1));
+
+  useEffect(() => {
+    if (initialYear && initialMonth) {
+      setSelectedYear(initialYear);
+      setSelectedMonth(initialMonth);
+    }
+  }, [initialYear, initialMonth]);
+
+  const handleMonthChange = (newYear: number, newMonth: number) => {
+    setSelectedYear(newYear);
+    setSelectedMonth(newMonth);
+    onMonthChange?.(newYear, newMonth);
+  };
 
   // Filtro de listagem: Todas / Em andamento / Finalizadas
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'completed'>('all');
@@ -112,19 +135,17 @@ export function InstallmentsScreen() {
   // Navegação de mês
   const handlePrevMonth = () => {
     if (selectedMonth === 1) {
-      setSelectedMonth(12);
-      setSelectedYear((prev) => prev - 1);
+      handleMonthChange(selectedYear - 1, 12);
     } else {
-      setSelectedMonth((prev) => prev - 1);
+      handleMonthChange(selectedYear, selectedMonth - 1);
     }
   };
 
   const handleNextMonth = () => {
     if (selectedMonth === 12) {
-      setSelectedMonth(1);
-      setSelectedYear((prev) => prev + 1);
+      handleMonthChange(selectedYear + 1, 1);
     } else {
-      setSelectedMonth((prev) => prev + 1);
+      handleMonthChange(selectedYear, selectedMonth + 1);
     }
   };
 
@@ -481,6 +502,8 @@ export function InstallmentsScreen() {
           spaceId={currentSpace.id}
           purchaseToEdit={purchaseToEdit}
           onSave={handleSavePurchase}
+          selectedYear={selectedYear}
+          selectedMonth={selectedMonth}
         />
       )}
 

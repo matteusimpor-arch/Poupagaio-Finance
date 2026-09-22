@@ -62,6 +62,30 @@ export function getISODateToday(): string {
   return `${year}-${month}-${day}`;
 }
 
+/**
+ * Retorna a data padrão para um novo lançamento considerando a competência (mês/ano) selecionada.
+ * - Se a competência selecionada for o mês/ano atual do sistema -> usa a data de hoje ('YYYY-MM-DD').
+ * - Se for qualquer outro mês/ano -> usa o primeiro dia do mês ('YYYY-MM-01') de forma estritamente local,
+ *   evitando qualquer distorção por fuso horário/timezone.
+ */
+export function getDefaultDateForBillingCycle(selectedYear?: number, selectedMonth?: number): string {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1;
+
+  if (!selectedYear || !selectedMonth) {
+    return getISODateToday();
+  }
+
+  if (selectedYear === currentYear && selectedMonth === currentMonth) {
+    return getISODateToday();
+  }
+
+  const y = selectedYear;
+  const m = String(selectedMonth).padStart(2, '0');
+  return `${y}-${m}-01`;
+}
+
 const MONTH_NAMES = [
   'Janeiro',
   'Fevereiro',

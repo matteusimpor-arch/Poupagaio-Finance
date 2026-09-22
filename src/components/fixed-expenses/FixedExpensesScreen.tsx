@@ -33,13 +33,36 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 
-export function FixedExpensesScreen() {
+interface FixedExpensesScreenProps {
+  selectedYear?: number;
+  selectedMonth?: number;
+  onMonthChange?: (year: number, month: number) => void;
+}
+
+export function FixedExpensesScreen({
+  selectedYear: initialYear,
+  selectedMonth: initialMonth,
+  onMonthChange,
+}: FixedExpensesScreenProps = {}) {
   const { currentSpace, user } = useAuth();
 
   // Competência selecionada (mês / ano)
   const now = new Date();
-  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
-  const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(initialYear || now.getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState(initialMonth || (now.getMonth() + 1));
+
+  useEffect(() => {
+    if (initialYear && initialMonth) {
+      setSelectedYear(initialYear);
+      setSelectedMonth(initialMonth);
+    }
+  }, [initialYear, initialMonth]);
+
+  const handleMonthChange = (year: number, month: number) => {
+    setSelectedYear(year);
+    setSelectedMonth(month);
+    onMonthChange?.(year, month);
+  };
 
   // Estados de dados
   const [expenses, setExpenses] = useState<FixedExpenseWithStatus[]>([]);
@@ -249,10 +272,7 @@ export function FixedExpensesScreen() {
           <MonthPicker
             year={selectedYear}
             month={selectedMonth}
-            onChange={(y, m) => {
-              setSelectedYear(y);
-              setSelectedMonth(m);
-            }}
+            onChange={(y, m) => handleMonthChange(y, m)}
           />
 
           <Button
@@ -636,6 +656,8 @@ export function FixedExpensesScreen() {
         onSave={handleSaveExpense}
         editingExpense={editingExpense}
         spaceId={currentSpace?.id || ''}
+        selectedYear={selectedYear}
+        selectedMonth={selectedMonth}
       />
 
       {/* MODAL DE EXCLUSÃO */}

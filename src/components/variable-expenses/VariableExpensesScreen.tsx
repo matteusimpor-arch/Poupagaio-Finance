@@ -33,13 +33,36 @@ import {
   Receipt,
 } from 'lucide-react';
 
-export function VariableExpensesScreen() {
+interface VariableExpensesScreenProps {
+  selectedYear?: number;
+  selectedMonth?: number;
+  onMonthChange?: (year: number, month: number) => void;
+}
+
+export function VariableExpensesScreen({
+  selectedYear: initialYear,
+  selectedMonth: initialMonth,
+  onMonthChange,
+}: VariableExpensesScreenProps = {}) {
   const { currentSpace, user } = useAuth();
 
   // Mês e Ano selecionados
   const now = new Date();
-  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
-  const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(initialYear || now.getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState(initialMonth || (now.getMonth() + 1));
+
+  useEffect(() => {
+    if (initialYear && initialMonth) {
+      setSelectedYear(initialYear);
+      setSelectedMonth(initialMonth);
+    }
+  }, [initialYear, initialMonth]);
+
+  const handleMonthChange = (year: number, month: number) => {
+    setSelectedYear(year);
+    setSelectedMonth(month);
+    onMonthChange?.(year, month);
+  };
 
   // Estados de dados
   const [expenses, setExpenses] = useState<VariableExpense[]>([]);
@@ -215,10 +238,7 @@ export function VariableExpensesScreen() {
           <MonthPicker
             year={selectedYear}
             month={selectedMonth}
-            onChange={(y, m) => {
-              setSelectedYear(y);
-              setSelectedMonth(m);
-            }}
+            onChange={(y, m) => handleMonthChange(y, m)}
           />
 
           <Button
@@ -576,6 +596,8 @@ export function VariableExpensesScreen() {
         onSave={handleSaveExpense}
         editingExpense={editingExpense}
         spaceId={currentSpace?.id || ''}
+        selectedYear={selectedYear}
+        selectedMonth={selectedMonth}
       />
 
       {/* MODAL DE EXCLUSÃO */}

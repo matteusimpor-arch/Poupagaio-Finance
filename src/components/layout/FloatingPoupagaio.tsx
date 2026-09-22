@@ -103,7 +103,7 @@ export function FloatingPoupagaio({ onSelectTab }: FloatingPoupagaioProps) {
   ];
 
   return (
-    <div className="fixed bottom-3 right-3 sm:bottom-6 sm:right-6 z-40 select-none pb-[env(safe-area-inset-bottom)]">
+    <div className="fixed bottom-3 right-3 sm:bottom-6 sm:right-6 z-30 select-none pb-[env(safe-area-inset-bottom)] pr-[env(safe-area-inset-right)]">
       
       {/* ==================================================
           QUICK ACCESS PANEL (Desktop Floating + Mobile Bottom Sheet)

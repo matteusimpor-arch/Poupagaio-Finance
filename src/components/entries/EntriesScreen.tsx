@@ -26,13 +26,36 @@ import {
   HelpCircle,
 } from 'lucide-react';
 
-export function EntriesScreen() {
+interface EntriesScreenProps {
+  selectedYear?: number;
+  selectedMonth?: number;
+  onMonthChange?: (year: number, month: number) => void;
+}
+
+export function EntriesScreen({
+  selectedYear: initialYear,
+  selectedMonth: initialMonth,
+  onMonthChange,
+}: EntriesScreenProps = {}) {
   const { currentSpace, user } = useAuth();
 
-  // Estado do mês selecionado (por padrão o mês atual)
+  // Estado do mês selecionado
   const now = new Date();
-  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
-  const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(initialYear || now.getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState(initialMonth || (now.getMonth() + 1));
+
+  useEffect(() => {
+    if (initialYear && initialMonth) {
+      setSelectedYear(initialYear);
+      setSelectedMonth(initialMonth);
+    }
+  }, [initialYear, initialMonth]);
+
+  const handleMonthChange = (year: number, month: number) => {
+    setSelectedYear(year);
+    setSelectedMonth(month);
+    onMonthChange?.(year, month);
+  };
 
   // Estados de dados
   const [entries, setEntries] = useState<Entry[]>([]);
@@ -226,10 +249,7 @@ export function EntriesScreen() {
           <MonthPicker
             year={selectedYear}
             month={selectedMonth}
-            onChange={(y, m) => {
-              setSelectedYear(y);
-              setSelectedMonth(m);
-            }}
+            onChange={(y, m) => handleMonthChange(y, m)}
           />
 
           <Button
@@ -556,6 +576,8 @@ export function EntriesScreen() {
           onSave={handleSaveEntry}
           editingEntry={editingEntry}
           spaceId={currentSpace.id}
+          selectedYear={selectedYear}
+          selectedMonth={selectedMonth}
         />
       )}
 

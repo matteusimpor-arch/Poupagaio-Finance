@@ -5,7 +5,7 @@ import {
   UpdateInstallmentPurchaseInput,
 } from '../../types';
 import { INSTALLMENT_CATEGORIES, calculateInstallmentsSchedule } from '../../lib/services/installments';
-import { formatCurrency } from '../../lib/formatters';
+import { formatCurrency, getDefaultDateForBillingCycle } from '../../lib/formatters';
 import { Button } from '../ui/button';
 import { X, Calendar, AlertCircle, Info, Calculator, CheckCircle2 } from 'lucide-react';
 
@@ -17,6 +17,8 @@ interface InstallmentPurchaseModalProps {
   onSave: (
     input: CreateInstallmentPurchaseInput | UpdateInstallmentPurchaseInput
   ) => Promise<{ success: boolean; error?: string }>;
+  selectedYear?: number;
+  selectedMonth?: number;
 }
 
 export function InstallmentPurchaseModal({
@@ -25,6 +27,8 @@ export function InstallmentPurchaseModal({
   spaceId,
   purchaseToEdit,
   onSave,
+  selectedYear,
+  selectedMonth,
 }: InstallmentPurchaseModalProps) {
   const [description, setDescription] = useState('');
   const [rawAmount, setRawAmount] = useState('');
@@ -48,11 +52,8 @@ export function InstallmentPurchaseModal({
       setCategory(purchaseToEdit.category || 'Outros');
       setNotes(purchaseToEdit.notes || '');
     } else {
-      // Criação: data de hoje ou próximo mês
-      const now = new Date();
-      const defaultDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(
-        now.getDate()
-      ).padStart(2, '0')}`;
+      // Criação: herda a competência selecionada
+      const defaultDate = getDefaultDateForBillingCycle(selectedYear, selectedMonth);
       setDescription('');
       setRawAmount('');
       setInstallmentCount(12);
@@ -61,7 +62,7 @@ export function InstallmentPurchaseModal({
       setNotes('');
     }
     setErrorMessage(null);
-  }, [purchaseToEdit, isOpen]);
+  }, [purchaseToEdit, isOpen, selectedYear, selectedMonth]);
 
   // Cálculo da simulação de parcelas em tempo real
   const schedulePreview = useMemo(() => {

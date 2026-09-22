@@ -1,15 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useTheme } from '../../hooks/useTheme';
-import { POUPAGAIO_MASCOT_URL } from '../../assets/mascot';
 import { entriesService } from '../../lib/services/entries';
 import { checklistService, NormalizedChecklistExpense, MonthlyChecklistResult } from '../../lib/services/checklist';
 import { calendarNotesService, CalendarNote } from '../../lib/services/calendarNotes';
 import { goalsService } from '../../lib/services/goals';
 import { installmentsService } from '../../lib/services/installments';
-import { marketService } from '../../lib/services/market';
+import { marketService, calculateListTotals } from '../../lib/services/market';
 import { formatCurrency } from '../../lib/formatters';
-import { ActiveTab, EntriesSummary, GoalWithProgress, InstallmentPurchaseWithInstallments, ShoppingListItem } from '../../types';
+import {
+  ActiveTab,
+  EntriesSummary,
+  GoalWithProgress,
+  InstallmentPurchaseWithInstallments,
+  ShoppingListItem,
+  ShoppingListWithItems,
+  ShoppingListTotals,
+} from '../../types';
 import {
   PieChart,
   Pie,
@@ -28,13 +35,9 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   CreditCard,
-  FileText,
   Calendar,
   CheckCircle2,
   Clock,
-  AlertCircle,
-  Plus,
-  ArrowRight,
   X,
   Check,
   ChevronLeft,
@@ -46,12 +49,13 @@ import {
   Sparkles,
   PieChart as PieIcon,
   TrendingUp,
-  Leaf,
-  Filter,
 } from 'lucide-react';
 
 interface DashboardHomeProps {
   onSelectTab: (tab: ActiveTab) => void;
+  selectedYear?: number;
+  selectedMonth?: number;
+  onMonthChange?: (year: number, month: number) => void;
 }
 
 const MONTH_NAMES = [
@@ -70,13 +74,31 @@ const DONUT_COLORS = {
   installments: '#F2B807',
 };
 
-export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
+export function DashboardHome({
+  onSelectTab,
+  selectedYear: initialYear,
+  selectedMonth: initialMonth,
+  onMonthChange,
+}: DashboardHomeProps) {
   const { profile, user, currentSpace } = useAuth();
   const { theme } = useTheme();
 
   const now = new Date();
-  const [currentYear, setCurrentYear] = useState(now.getFullYear());
-  const [currentMonth, setCurrentMonth] = useState(now.getMonth() + 1);
+  const [currentYear, setCurrentYear] = useState(initialYear || now.getFullYear());
+  const [currentMonth, setCurrentMonth] = useState(initialMonth || (now.getMonth() + 1));
+
+  useEffect(() => {
+    if (initialYear && initialMonth) {
+      setCurrentYear(initialYear);
+      setCurrentMonth(initialMonth);
+    }
+  }, [initialYear, initialMonth]);
+
+  const handleMonthChange = (newYear: number, newMonth: number) => {
+    setCurrentYear(newYear);
+    setCurrentMonth(newMonth);
+    onMonthChange?.(newYear, newMonth);
+  };
 
   // Core Operational Data States
   const [checklistResult, setChecklistResult] = useState<MonthlyChecklistResult | null>(null);
@@ -89,8 +111,13 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
   const [calendarNotes, setCalendarNotes] = useState<CalendarNote[]>([]);
   const [activeGoals, setActiveGoals] = useState<GoalWithProgress[]>([]);
   const [activeInstallments, setActiveInstallments] = useState<InstallmentPurchaseWithInstallments[]>([]);
-  const [pendingMarketItems, setPendingMarketItems] = useState<ShoppingListItem[]>([]);
+  const [activeMarketList, setActiveMarketList] = useState<ShoppingListWithItems | null>(null);
+  const [activeMarketTotals, setActiveMarketTotals] = useState<ShoppingListTotals | null>(null);
   
+  // Interactive Modal & View States
+  const [confirmPaymentItem, setConfirmPaymentItem] = useState<NormalizedChecklistExpense | null>(null);
+  const [showAllChecklistMobile, setShowAllChecklistMobile] = useState<boolean>(false);
+
   // Historical evolution chart state
   const [evolutionData, setEvolutionData] = useState<Array<{
     monthLabel: string;
@@ -133,8 +160,14 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
       setActiveGoals((goalsRes.goals || []).slice(0, 3));
       setActiveInstallments((installmentsRes.purchases || []).slice(0, 3));
       
-      const allItems = (marketListsRes.lists || []).flatMap(l => l.items || []).filter(i => !i.is_checked);
-      setPendingMarketItems(allItems.slice(0, 4));
+      // Store primary active market list and compute arithmetic totals
+      const activeList = marketListsRes.lists?.[0] || null;
+      setActiveMarketList(activeList);
+      if (activeList && activeList.items) {
+        setActiveMarketTotals(calculateListTotals(activeList.items));
+      } else {
+        setActiveMarketTotals(null);
+      }
 
       // Build 6-month financial evolution data
       const monthOffsets = [-3, -2, -1, 0, 1, 2];
@@ -174,24 +207,22 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
   const handlePrevMonth = () => {
     setSelectedMiniDay(1);
     if (currentMonth === 1) {
-      setCurrentMonth(12);
-      setCurrentYear(currentYear - 1);
+      handleMonthChange(currentYear - 1, 12);
     } else {
-      setCurrentMonth(currentMonth - 1);
+      handleMonthChange(currentYear, currentMonth - 1);
     }
   };
 
   const handleNextMonth = () => {
     setSelectedMiniDay(1);
     if (currentMonth === 12) {
-      setCurrentMonth(1);
-      setCurrentYear(currentYear + 1);
+      handleMonthChange(currentYear + 1, 1);
     } else {
-      setCurrentMonth(currentMonth + 1);
+      handleMonthChange(currentYear, currentMonth + 1);
     }
   };
 
-  // Toggle item payment status
+  // Toggle item payment status using existing category services
   const handleToggleItemStatus = async (item: NormalizedChecklistExpense) => {
     if (!currentSpace?.id) return;
     const res = await checklistService.toggleItemPaymentStatus(item, currentSpace.id, currentYear, currentMonth);
@@ -221,7 +252,7 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
   const fullName = profile?.full_name || user?.full_name || user?.email?.split('@')[0] || '';
   const firstName = fullName.trim().split(' ')[0] || 'Usuário';
 
-  // Category breakdown for Donut Chart (Gastos Fixos, Gastos Variáveis, Parcelados)
+  // Category breakdown for Donut Chart using correct sourceType
   let fixedSum = 0;
   let variableSum = 0;
   let installmentSum = 0;
@@ -251,7 +282,6 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
 
   // Helper calculations for mini calendar
   const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
-  const firstDayWeekday = new Date(currentYear, currentMonth - 1, 1).getDay();
 
   const itemsByDate: Record<string, NormalizedChecklistExpense[]> = {};
   if (checklistResult) {
@@ -266,6 +296,7 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
 
   return (
     <div className="w-full max-w-[1480px] mx-auto space-y-6 sm:space-y-8 pb-28 sm:pb-16 px-3 sm:px-6 animate-in fade-in duration-300">
+      
       {/* Action error banner */}
       {actionError && (
         <div className="p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 rounded-xl text-xs text-red-700 dark:text-red-300 flex items-center justify-between">
@@ -276,12 +307,497 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
         </div>
       )}
 
+      {/* CONFIRMATION MODAL BEFORE MARKING AS PAID */}
+      {confirmPaymentItem && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-[#1C211E] border border-[#D2DDD6] dark:border-[#28322C] rounded-2xl p-5 max-w-md w-full shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-[#E2ECE6] dark:border-[#28322C]">
+              <div className="flex items-center gap-2 text-[#02402E] dark:text-[#78D9A6]">
+                <CheckCircle2 className="w-5 h-5 text-[#16A66A]" />
+                <h3 className="text-base font-bold font-display">Confirmar Pagamento</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setConfirmPaymentItem(null)}
+                className="p-1 rounded-lg text-[#5E6963] dark:text-[#95A39B] hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div className="p-3.5 rounded-xl bg-[#F4F8F5] dark:bg-[#222825] border border-[#E2ECE6] dark:border-[#2C3630] space-y-1">
+                <p className="text-xs text-[#5E6963] dark:text-[#95A39B] font-medium">Conta / Compromisso:</p>
+                <p className="text-sm font-bold text-[#202724] dark:text-[#F4F4F5]">{confirmPaymentItem.title}</p>
+                <div className="flex items-center justify-between pt-2 text-xs">
+                  <span className="px-2 py-0.5 rounded-md bg-[#E8F2EC] dark:bg-[#25322A] text-[#02402E] dark:text-[#78D9A6] font-semibold">
+                    {confirmPaymentItem.sourceType === 'fixed' ? 'Gasto Fixo' : confirmPaymentItem.sourceType === 'variable' ? 'Gasto Variável' : 'Parcelamento'} • {confirmPaymentItem.category}
+                  </span>
+                  <span className="text-base font-extrabold text-[#02402E] dark:text-[#78D9A6] font-display">
+                    {formatCurrency(confirmPaymentItem.amount)}
+                  </span>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 text-[11px] text-amber-800 dark:text-amber-300 leading-tight">
+                💡 <strong>Nota financeira:</strong> Marcar como paga atualiza o status de prevista para realizada. O valor continua sendo uma <strong>Despesa</strong> e não altera suas Entradas.
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setConfirmPaymentItem(null)}
+                className="px-4 py-2 rounded-xl border border-[#D2DDD6] dark:border-[#28322C] text-xs font-semibold text-[#5E6963] dark:text-[#95A39B] hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  const item = confirmPaymentItem;
+                  setConfirmPaymentItem(null);
+                  await handleToggleItemStatus(item);
+                }}
+                className="px-4 py-2 rounded-xl bg-[#02402E] text-white dark:bg-[#16A66A] dark:text-[#101614] text-xs font-bold hover:opacity-90 transition-opacity cursor-pointer flex items-center gap-1.5"
+              >
+                <Check className="w-4 h-4 stroke-[3]" />
+                Confirmar Pagamento
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ==================================================
+          A. MOBILE LAYOUT ONLY (< 768px) - REORGANIZED OPERATIONAL FLOW
+          ================================================== */}
+      <div className="block md:hidden space-y-4">
+        {/* 1. Competência Compacta no Mobile */}
+        <div className="flex items-center justify-between gap-2 bg-white/80 dark:bg-[#1C211E]/80 backdrop-blur-md border border-[#D2DDD6] dark:border-[#28322C] rounded-2xl p-2.5 px-3.5 shadow-2xs">
+          <span className="text-xs font-bold text-[#02402E] dark:text-[#78D9A6] font-display">
+            Competência
+          </span>
+          <div className="flex items-center gap-1 bg-[#EAF3EE] dark:bg-[#181B1A] p-1 rounded-xl border border-[#CDE0D5] dark:border-[#2B322F]">
+            <button
+              type="button"
+              onClick={handlePrevMonth}
+              className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-[#5E6963] dark:text-[#95A39B] cursor-pointer"
+              aria-label="Mês anterior"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <span className="text-xs font-bold min-w-[90px] text-center font-display text-[#02402E] dark:text-[#78D9A6]">
+              {MONTH_NAMES[currentMonth - 1]} {currentYear}
+            </span>
+            <button
+              type="button"
+              onClick={handleNextMonth}
+              className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-[#5E6963] dark:text-[#95A39B] cursor-pointer"
+              aria-label="Próximo mês"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* 2. Resumo Financeiro COMPACTO (Entradas & Despesas) */}
+        <div className="grid grid-cols-2 gap-2">
+          {/* Entradas */}
+          <div className="bg-white/90 dark:bg-[#1C211E]/90 border border-[#D2DDD6] dark:border-[#28322C] rounded-2xl p-3 shadow-2xs space-y-1 min-w-0">
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#5E6963] dark:text-[#95A39B] font-display truncate">
+                ENTRADAS
+              </span>
+              <div className="w-5 h-5 rounded-md bg-[#E6F6EF] dark:bg-[#16A66A]/20 flex items-center justify-center text-[#16A66A] shrink-0">
+                <ArrowUpRight className="w-3 h-3" />
+              </div>
+            </div>
+            <div className="text-sm sm:text-base font-extrabold tracking-tight text-[#02402E] dark:text-[#78D9A6] font-display truncate">
+              {formatCurrency(totalReceitas)}
+            </div>
+          </div>
+
+          {/* Despesas */}
+          <div className="bg-white/90 dark:bg-[#1C211E]/90 border border-[#D2DDD6] dark:border-[#28322C] rounded-2xl p-3 shadow-2xs space-y-1 min-w-0">
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#5E6963] dark:text-[#95A39B] font-display truncate">
+                DESPESAS
+              </span>
+              <div className="w-5 h-5 rounded-md bg-[#FEE2E2] dark:bg-rose-950/40 flex items-center justify-center text-rose-600 dark:text-rose-400 shrink-0">
+                <ArrowDownRight className="w-3 h-3" />
+              </div>
+            </div>
+            <div className="text-sm sm:text-base font-extrabold tracking-tight text-rose-600 dark:text-rose-400 font-display truncate">
+              {formatCurrency(totalDespesas)}
+            </div>
+          </div>
+        </div>
+
+        {/* 3. CONTAS PREVISTAS PARA PAGAR (Prioritário no mobile) */}
+        <div className="bg-white/90 dark:bg-[#1C211E]/90 border border-[#D2DDD6] dark:border-[#28322C] rounded-2xl p-4 shadow-2xs space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-base font-bold font-display text-[#02402E] dark:text-[#78D9A6] flex items-center gap-1.5">
+              <CalendarCheck className="w-4 h-4 text-[#16A66A]" />
+              Contas Previstas
+            </h2>
+
+            {/* Filtros simples e compactos */}
+            <div className="flex items-center gap-0.5 bg-[#EAF3EE] dark:bg-[#181B1A] p-0.5 rounded-xl border border-[#CDE0D5] dark:border-[#2B322F]">
+              <button
+                type="button"
+                onClick={() => setChecklistFilter('pending')}
+                className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                  checklistFilter === 'pending'
+                    ? 'bg-[#02402E] text-white dark:bg-[#16A66A] dark:text-[#101614]'
+                    : 'text-[#5E6963] dark:text-[#95A39B]'
+                }`}
+              >
+                Pendentes
+              </button>
+              <button
+                type="button"
+                onClick={() => setChecklistFilter('paid')}
+                className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                  checklistFilter === 'paid'
+                    ? 'bg-[#02402E] text-white dark:bg-[#16A66A] dark:text-[#101614]'
+                    : 'text-[#5E6963] dark:text-[#95A39B]'
+                }`}
+              >
+                Pagas
+              </button>
+              <button
+                type="button"
+                onClick={() => setChecklistFilter('all')}
+                className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                  checklistFilter === 'all'
+                    ? 'bg-[#02402E] text-white dark:bg-[#16A66A] dark:text-[#101614]'
+                    : 'text-[#5E6963] dark:text-[#95A39B]'
+                }`}
+              >
+                Todas
+              </button>
+            </div>
+          </div>
+
+          {/* Cards individuais de contas */}
+          <div className="space-y-2">
+            {filteredChecklistItems.length === 0 ? (
+              <div className="py-4 text-center space-y-1">
+                <CheckCircle2 className="w-5 h-5 text-[#16A66A] mx-auto opacity-75" />
+                <p className="text-xs font-bold text-[#02402E] dark:text-[#78D9A6]">
+                  Nenhuma conta nesta categoria.
+                </p>
+              </div>
+            ) : (
+              (showAllChecklistMobile ? filteredChecklistItems : filteredChecklistItems.slice(0, 4)).map((item) => {
+                const isPaid = item.status === 'paid';
+                const typeLabel =
+                  item.sourceType === 'fixed'
+                    ? 'Gasto Fixo'
+                    : item.sourceType === 'variable'
+                    ? 'Gasto Variável'
+                    : item.sourceType === 'installment'
+                    ? `Parcela ${item.installmentNumber}/${item.totalInstallments}`
+                    : 'Conta';
+
+                let statusBadgeBg = 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-400';
+                let statusText = 'Vence hoje';
+
+                if (isPaid) {
+                  statusBadgeBg = 'bg-[#E6F6EF] text-[#16A66A] dark:bg-[#16A66A]/20 dark:text-[#78D9A6]';
+                  statusText = 'Paga ✓';
+                } else if (item.visualStatus === 'overdue') {
+                  statusBadgeBg = 'bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-400';
+                  statusText = 'Atrasada';
+                } else if (item.visualStatus === 'today') {
+                  statusBadgeBg = 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-400';
+                  statusText = 'Vence hoje';
+                } else {
+                  statusBadgeBg = 'bg-[#E2ECE6] text-[#5E6963] dark:bg-[#28322C] dark:text-[#95A39B]';
+                  statusText = `${item.dueDate.split('-').reverse().slice(0, 2).join('/')}`;
+                }
+
+                return (
+                  <div
+                    key={`m-chk-${item.id}`}
+                    className="p-3 rounded-xl border border-[#E2ECE6] dark:border-[#28322C] bg-[#F9FBF9] dark:bg-[#222825] space-y-2"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <h3 className={`text-xs font-bold truncate ${isPaid ? 'line-through text-[#8A9690] dark:text-[#6A7870]' : 'text-[#202724] dark:text-[#F4F4F5]'}`}>
+                          {item.title}
+                        </h3>
+                        <div className="flex items-center gap-1.5 text-[10px] text-[#5E6963] dark:text-[#95A39B] mt-0.5">
+                          <span className="font-semibold">{typeLabel}</span>
+                          <span>•</span>
+                          <span>{item.category}</span>
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <span className={`text-xs sm:text-sm font-extrabold font-display ${isPaid ? 'text-[#8A9690]' : 'text-[#02402E] dark:text-[#78D9A6]'}`}>
+                          {formatCurrency(item.amount)}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2 border-t border-[#E2ECE6]/80 dark:border-[#28322C]/80">
+                      <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold ${statusBadgeBg}`}>
+                        {statusText}
+                      </span>
+
+                      <button
+                        type="button"
+                        onClick={() => isPaid ? handleToggleItemStatus(item) : setConfirmPaymentItem(item)}
+                        className={`px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1 shrink-0 ${
+                          isPaid
+                            ? 'bg-[#E2ECE6] dark:bg-[#28322C] text-[#16A66A] dark:text-[#78D9A6]'
+                            : 'bg-[#02402E] text-white dark:bg-[#78D9A6] dark:text-[#101614] shadow-2xs'
+                        }`}
+                      >
+                        <Check className="w-3.5 h-3.5 stroke-[3]" />
+                        <span>{isPaid ? 'Pago ✓' : 'Marcar como pago'}</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+
+            {filteredChecklistItems.length > 4 && (
+              <button
+                type="button"
+                onClick={() => setShowAllChecklistMobile(!showAllChecklistMobile)}
+                className="w-full pt-1.5 text-center text-xs font-bold text-[#16A66A] hover:underline cursor-pointer"
+              >
+                {showAllChecklistMobile
+                  ? 'Mostrar apenas 4 contas'
+                  : `Ver todas as ${filteredChecklistItems.length} contas →`}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* 4. MERCADO (Logo abaixo de Contas Previstas) */}
+        <div className="bg-white/90 dark:bg-[#1C211E]/90 border border-[#D2DDD6] dark:border-[#28322C] rounded-2xl p-4 shadow-2xs space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-base font-bold font-display text-[#02402E] dark:text-[#78D9A6] flex items-center gap-1.5">
+              <ShoppingBag className="w-4 h-4 text-[#16A66A]" />
+              Mercado
+            </h2>
+          </div>
+
+          {!activeMarketList ? (
+            <div className="py-3 text-center space-y-2">
+              <p className="text-xs font-bold text-[#02402E] dark:text-[#78D9A6]">
+                Nenhuma lista ativa
+              </p>
+              <button
+                type="button"
+                onClick={() => onSelectTab('market')}
+                className="px-4 py-2 rounded-xl bg-[#02402E] text-white dark:bg-[#78D9A6] dark:text-[#101614] text-xs font-bold cursor-pointer hover:bg-[#16A66A]"
+              >
+                + Criar lista
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="text-xs font-bold text-[#02402E] dark:text-[#78D9A6] truncate font-display">
+                  {activeMarketList.name}
+                </h3>
+                <span className="text-[10px] text-[#5E6963] dark:text-[#95A39B] font-semibold">
+                  {activeMarketTotals?.checkedItems || 0} de {activeMarketTotals?.totalItems || 0} itens
+                </span>
+              </div>
+
+              {/* Progress bar */}
+              {activeMarketTotals && activeMarketTotals.totalItems > 0 && (
+                <div className="w-full h-1.5 rounded-full bg-[#E2ECE6] dark:bg-[#28322C] overflow-hidden">
+                  <div
+                    className="h-full bg-[#16A66A] rounded-full transition-all duration-300"
+                    style={{
+                      width: `${Math.min(
+                        100,
+                        Math.round((activeMarketTotals.checkedItems / activeMarketTotals.totalItems) * 100)
+                      )}%`,
+                    }}
+                  />
+                </div>
+              )}
+
+              <div className="flex justify-between items-center text-[11px] text-[#5E6963] dark:text-[#95A39B]">
+                {activeMarketList.budget_amount ? (
+                  <span>Orçamento: <strong className="text-[#02402E] dark:text-[#78D9A6]">{formatCurrency(activeMarketList.budget_amount)}</strong></span>
+                ) : <span />}
+
+                {activeMarketTotals?.totalActual ? (
+                  <span>Gasto atual: <strong className="text-[#16A66A]">{formatCurrency(activeMarketTotals.totalActual)}</strong></span>
+                ) : activeMarketTotals?.totalEstimated ? (
+                  <span>Estimado: <strong className="text-[#02402E] dark:text-[#78D9A6]">{formatCurrency(activeMarketTotals.totalEstimated)}</strong></span>
+                ) : null}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => onSelectTab('market')}
+                className="w-full py-2 rounded-xl bg-[#02402E] text-white hover:bg-[#16A66A] dark:bg-[#78D9A6] dark:text-[#101614] text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-2xs"
+              >
+                <ShoppingBag className="w-3.5 h-3.5" />
+                <span>Continuar compras →</span>
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* 5. Situação do Mês (Card Compacto) */}
+        <div className="bg-white/90 dark:bg-[#1C211E]/90 border border-[#D2DDD6] dark:border-[#28322C] rounded-2xl p-4 shadow-2xs space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-[#5E6963] dark:text-[#95A39B] font-display flex items-center gap-1.5">
+              <Clock className="w-4 h-4 text-amber-500" />
+              Situação do Mês
+            </span>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2 text-[11px] pt-1">
+            <div className="p-2 rounded-xl bg-[#E6F6EF] dark:bg-[#16A66A]/15 text-center">
+              <span className="text-[#5E6963] dark:text-[#95A39B] block text-[9px]">Quitado</span>
+              <strong className="text-[#16A66A] text-xs">{formatCurrency(totalPago)}</strong>
+            </div>
+
+            <div className="p-2 rounded-xl bg-amber-50 dark:bg-amber-950/30 text-center">
+              <span className="text-[#5E6963] dark:text-[#95A39B] block text-[9px]">Próximos</span>
+              <strong className="text-amber-600 dark:text-amber-400 text-xs">{formatCurrency(totalProximo)}</strong>
+            </div>
+
+            <div className="p-2 rounded-xl bg-rose-50 dark:bg-rose-950/30 text-center">
+              <span className="text-[#5E6963] dark:text-[#95A39B] block text-[9px]">Atrasados</span>
+              <strong className="text-rose-600 dark:text-rose-400 text-xs">{formatCurrency(totalAtrasado)}</strong>
+            </div>
+          </div>
+        </div>
+
+        {/* 6. Análises e Gráficos */}
+        <div className="space-y-3 pt-1">
+          <h2 className="text-base font-bold font-display text-[#02402E] dark:text-[#78D9A6] flex items-center gap-1.5">
+            <BarChart3 className="w-4 h-4 text-[#16A66A]" />
+            Análise Financeira
+          </h2>
+
+          {/* Gráfico 1: Composição das Despesas */}
+          <div className="bg-white/90 dark:bg-[#1C211E]/90 border border-[#D2DDD6] dark:border-[#28322C] rounded-2xl p-4 shadow-2xs space-y-3">
+            <h3 className="text-xs font-bold text-[#02402E] dark:text-[#78D9A6] font-display">
+              Composição das Despesas
+            </h3>
+
+            {donutData.length === 0 ? (
+              <p className="text-xs text-center text-[#5E6963] py-4">Sem dados no mês.</p>
+            ) : (
+              <div className="space-y-3">
+                <div className="h-36 relative flex items-center justify-center">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={donutData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={36}
+                        outerRadius={54}
+                        paddingAngle={3}
+                        dataKey="value"
+                      >
+                        {donutData.map((entry, index) => (
+                          <Cell key={`m-cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <RechartsTooltip formatter={(val: number) => formatCurrency(val)} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+
+                <div className="space-y-1 text-[11px]">
+                  {donutData.map((d) => (
+                    <div key={`m-d-${d.name}`} className="flex justify-between items-center p-1.5 rounded-lg bg-[#F4F8F5] dark:bg-[#222825]">
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: d.color }} />
+                        {d.name}
+                      </span>
+                      <strong>{formatCurrency(d.value)}</strong>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Gráfico 2: Evolução Financeira */}
+          <div className="bg-white/90 dark:bg-[#1C211E]/90 border border-[#D2DDD6] dark:border-[#28322C] rounded-2xl p-4 shadow-2xs space-y-3">
+            <h3 className="text-xs font-bold text-[#02402E] dark:text-[#78D9A6] font-display">
+              Evolução Mensal
+            </h3>
+            <div className="h-44 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart data={evolutionData} margin={{ top: 10, right: 5, left: -25, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="monthLabel" tick={{ fontSize: 9 }} />
+                  <YAxis tick={{ fontSize: 9 }} tickFormatter={(v) => `R$${v >= 1000 ? (v/1000).toFixed(0) + 'k' : v}`} />
+                  <Bar dataKey="Entradas" fill="#16A66A" radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="Despesas" fill="#E11D48" radius={[3, 3, 0, 0]} />
+                  <Line type="monotone" dataKey="Saldo" stroke="#F2B807" strokeWidth={2} dot={{ r: 3 }} />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+
+        {/* 7. Calendário & Metas */}
+        <div className="space-y-3 pt-1">
+          {/* Metas */}
+          <div className="bg-white/90 dark:bg-[#1C211E]/90 border border-[#D2DDD6] dark:border-[#28322C] rounded-2xl p-4 shadow-2xs space-y-3">
+            <div className="flex justify-between items-center">
+              <h3 className="text-xs font-bold text-[#02402E] dark:text-[#78D9A6] font-display flex items-center gap-1.5">
+                <Target className="w-4 h-4 text-[#16A66A]" />
+                Metas
+              </h3>
+              <button type="button" onClick={() => onSelectTab('goals')} className="text-xs text-[#16A66A] font-bold">
+                Ver todas →
+              </button>
+            </div>
+
+            {activeGoals.length === 0 ? (
+              <p className="text-xs text-[#5E6963] text-center py-2">Nenhuma meta ativa.</p>
+            ) : (
+              <div className="space-y-2">
+                {activeGoals.map((goal) => {
+                  const percent = Math.min(Math.round(goal.progress_percentage || 0), 100);
+                  return (
+                    <div key={`m-goal-${goal.id}`} className="space-y-1">
+                      <div className="flex justify-between text-xs font-bold">
+                        <span className="truncate">{goal.title}</span>
+                        <span className="text-[#16A66A]">{percent}%</span>
+                      </div>
+                      <div className="w-full h-1.5 rounded-full bg-[#E2ECE6] overflow-hidden">
+                        <div className="h-full bg-[#16A66A]" style={{ width: `${percent}%` }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ==================================================
+          B. DESKTOP LAYOUT ONLY (>= 768px)
+          ================================================== */}
+      <div className="hidden md:block space-y-6 sm:space-y-8">
       {/* ==================================================
           SEÇÃO 1: CABEÇALHO & 4 CARDS DE RESUMO FINANCEIRO
           ================================================== */}
       <section className="space-y-4">
         {/* Welcome Banner & Month Control */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/80 dark:bg-[#1C211E]/80 backdrop-blur-md border border-[#D2DDD6] dark:border-[#28322C] rounded-2xl p-5 shadow-2xs">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/80 dark:bg-[#1C211E]/80 backdrop-blur-md border border-[#D2DDD6] dark:border-[#28322C] rounded-2xl p-4 sm:p-5 shadow-2xs">
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-xl sm:text-2xl font-bold font-display text-[#02402E] dark:text-[#78D9A6]">
@@ -433,7 +949,284 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
       </section>
 
       {/* ==================================================
-          SEÇÃO 2: ANÁLISE E EVOLUÇÃO FINANCEIRA (CHARTS)
+          SEÇÃO 2: CONTAS A PAGAR (CHECKLIST COMPACTO)
+          ================================================== */}
+      <section className="space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-bold font-display text-[#02402E] dark:text-[#78D9A6] flex items-center gap-2">
+              <CalendarCheck className="w-5 h-5 text-[#16A66A]" />
+              Contas a Pagar
+            </h2>
+            <p className="text-xs text-[#5E6963] dark:text-[#95A39B]">
+              Compromissos financeiros do mês (gastos fixos, variáveis e parcelamentos).
+            </p>
+          </div>
+
+          {/* Filter Pills */}
+          <div className="flex items-center gap-1 bg-white/80 dark:bg-[#1C211E]/80 border border-[#D2DDD6] dark:border-[#28322C] p-1 rounded-xl shrink-0 self-start sm:self-auto">
+            <button
+              type="button"
+              onClick={() => setChecklistFilter('pending')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                checklistFilter === 'pending'
+                  ? 'bg-[#02402E] text-white dark:bg-[#16A66A] dark:text-[#101614]'
+                  : 'text-[#5E6963] dark:text-[#95A39B] hover:text-[#02402E]'
+              }`}
+            >
+              Pendentes ({checklistResult?.stats.pendingCount || 0})
+            </button>
+            <button
+              type="button"
+              onClick={() => setChecklistFilter('paid')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                checklistFilter === 'paid'
+                  ? 'bg-[#02402E] text-white dark:bg-[#16A66A] dark:text-[#101614]'
+                  : 'text-[#5E6963] dark:text-[#95A39B] hover:text-[#02402E]'
+              }`}
+            >
+              Pagas ({checklistResult?.stats.paidCount || 0})
+            </button>
+            <button
+              type="button"
+              onClick={() => setChecklistFilter('all')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                checklistFilter === 'all'
+                  ? 'bg-[#02402E] text-white dark:bg-[#16A66A] dark:text-[#101614]'
+                  : 'text-[#5E6963] dark:text-[#95A39B] hover:text-[#02402E]'
+              }`}
+            >
+              Todas ({checklistResult?.stats.totalCount || 0})
+            </button>
+          </div>
+        </div>
+
+        {/* List items */}
+        <div className="bg-white/90 dark:bg-[#1C211E]/90 backdrop-blur-md border border-[#D2DDD6] dark:border-[#28322C] rounded-2xl p-4 sm:p-5 shadow-2xs divide-y divide-[#E2ECE6] dark:divide-[#28322C]">
+          {filteredChecklistItems.length === 0 ? (
+            <div className="py-5 text-center space-y-1">
+              <CheckCircle2 className="w-6 h-6 text-[#16A66A] mx-auto opacity-75" />
+              <p className="text-xs font-bold text-[#02402E] dark:text-[#78D9A6]">
+                Nenhuma conta nesta categoria.
+              </p>
+              <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B]">
+                Suas despesas fixas, variáveis e parceladas para {MONTH_NAMES[currentMonth - 1]} aparecerão aqui.
+              </p>
+            </div>
+          ) : (
+            (showAllChecklistMobile ? filteredChecklistItems : filteredChecklistItems.slice(0, 5)).map((item) => {
+              const isPaid = item.status === 'paid';
+              
+              const typeLabel =
+                item.sourceType === 'fixed'
+                  ? 'Gasto Fixo'
+                  : item.sourceType === 'variable'
+                  ? 'Gasto Variável'
+                  : item.sourceType === 'installment'
+                  ? `Parcelado ${item.installmentNumber && item.totalInstallments ? `(${item.installmentNumber}/${item.totalInstallments})` : ''}`
+                  : 'Conta';
+
+              // Visual Status badge
+              let statusBadgeBg = 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-400';
+              let statusText = 'Vence hoje';
+              
+              if (isPaid) {
+                statusBadgeBg = 'bg-[#E6F6EF] text-[#16A66A] dark:bg-[#16A66A]/20 dark:text-[#78D9A6]';
+                statusText = 'Paga ✓';
+              } else if (item.visualStatus === 'overdue') {
+                statusBadgeBg = 'bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-400';
+                statusText = 'Atrasada';
+              } else if (item.visualStatus === 'today') {
+                statusBadgeBg = 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-400';
+                statusText = 'Vence hoje';
+              } else if (item.visualStatus === 'upcoming') {
+                statusBadgeBg = 'bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300';
+                statusText = `Vence ${item.dueDate.split('-').reverse().join('/')}`;
+              } else {
+                statusBadgeBg = 'bg-[#E2ECE6] text-[#5E6963] dark:bg-[#28322C] dark:text-[#95A39B]';
+                statusText = `Vence ${item.dueDate.split('-').reverse().join('/')}`;
+              }
+
+              return (
+                <div
+                  key={item.id}
+                  className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 group hover:bg-[#F6FAF7] dark:hover:bg-[#222825] px-2 rounded-xl transition-colors"
+                >
+                  <div className="flex items-start sm:items-center gap-3 min-w-0">
+                    <div className="min-w-0 space-y-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className={`text-xs sm:text-sm font-bold truncate ${isPaid ? 'line-through text-[#8A9690] dark:text-[#6A7870]' : 'text-[#202724] dark:text-[#F4F4F5]'}`}>
+                          {item.title}
+                        </span>
+                        
+                        {/* Type badge */}
+                        <span className="text-[10px] px-2 py-0.5 rounded-md bg-[#E8F2EC] dark:bg-[#25322A] text-[#02402E] dark:text-[#78D9A6] font-bold shrink-0">
+                          {typeLabel}
+                        </span>
+
+                        {/* Visual Status badge */}
+                        <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold shrink-0 ${statusBadgeBg}`}>
+                          {statusText}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2 text-[11px] text-[#5E6963] dark:text-[#95A39B]">
+                        <span>Categoria: <strong className="text-[#202724] dark:text-[#E2ECE6]">{item.category}</strong></span>
+                        <span>•</span>
+                        <span>Vencimento: {item.dueDate.split('-').reverse().join('/')}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between sm:justify-end gap-3 pt-1 sm:pt-0 border-t sm:border-0 border-[#E2ECE6] dark:border-[#28322C] shrink-0">
+                    <span className={`text-sm sm:text-base font-extrabold font-display ${isPaid ? 'text-[#8A9690] dark:text-[#6A7870]' : 'text-[#02402E] dark:text-[#78D9A6]'}`}>
+                      {formatCurrency(item.amount)}
+                    </span>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (isPaid) {
+                          handleToggleItemStatus(item);
+                        } else {
+                          setConfirmPaymentItem(item);
+                        }
+                      }}
+                      className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer min-h-[38px] flex items-center gap-1.5 shrink-0 ${
+                        isPaid
+                          ? 'bg-[#E2ECE6] dark:bg-[#28322C] text-[#16A66A] dark:text-[#78D9A6] hover:bg-rose-100 hover:text-rose-700'
+                          : 'bg-[#02402E] text-white hover:bg-[#16A66A] dark:bg-[#78D9A6] dark:text-[#101614] shadow-2xs'
+                      }`}
+                    >
+                      <Check className="w-3.5 h-3.5 stroke-[3]" />
+                      <span>{isPaid ? 'Pago ✓' : 'Marcar como pago'}</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          )}
+
+          {filteredChecklistItems.length > 5 && (
+            <div className="pt-3 flex flex-wrap items-center justify-between gap-2">
+              <button
+                type="button"
+                onClick={() => setShowAllChecklistMobile(!showAllChecklistMobile)}
+                className="text-xs font-bold text-[#16A66A] hover:underline cursor-pointer"
+              >
+                {showAllChecklistMobile
+                  ? 'Mostrar apenas as próximas 5 contas'
+                  : `Ver todas as ${filteredChecklistItems.length} contas (${checklistResult?.stats.pendingCount || 0} pendentes)`}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => onSelectTab('closing')}
+                className="text-xs text-[#5E6963] dark:text-[#95A39B] hover:text-[#02402E] dark:hover:text-[#78D9A6] font-semibold cursor-pointer"
+              >
+                Abrir Fechamento do Mês →
+              </button>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* ==================================================
+          SEÇÃO 3: MERCADO (RESUMO + CONTINUAR COMPRAS)
+          ================================================== */}
+      <section className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-bold font-display text-[#02402E] dark:text-[#78D9A6] flex items-center gap-2">
+            <ShoppingBag className="w-5 h-5 text-[#16A66A]" />
+            Mercado
+          </h2>
+          <button
+            type="button"
+            onClick={() => onSelectTab('market')}
+            className="text-xs text-[#16A66A] hover:underline font-bold cursor-pointer"
+          >
+            Ir para Mercado →
+          </button>
+        </div>
+
+        <div className="bg-white/90 dark:bg-[#1C211E]/90 backdrop-blur-md border border-[#D2DDD6] dark:border-[#28322C] rounded-2xl p-5 shadow-2xs space-y-4">
+          {!activeMarketList ? (
+            <div className="py-4 text-center space-y-2">
+              <ShoppingBag className="w-7 h-7 text-[#16A66A] mx-auto opacity-60" />
+              <p className="text-xs font-bold text-[#02402E] dark:text-[#78D9A6]">
+                Nenhuma lista de mercado ativa no momento.
+              </p>
+              <button
+                type="button"
+                onClick={() => onSelectTab('market')}
+                className="px-4 py-2 rounded-xl bg-[#02402E] text-white text-xs font-bold cursor-pointer hover:bg-[#16A66A] transition-colors"
+              >
+                + Criar Lista de Mercado
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="space-y-2 min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm sm:text-base font-bold text-[#02402E] dark:text-[#78D9A6] truncate font-display">
+                    {activeMarketList.name}
+                  </h3>
+                  <span className="text-[10px] px-2 py-0.5 rounded-md bg-[#E8F2EC] dark:bg-[#25322A] text-[#02402E] dark:text-[#78D9A6] font-bold shrink-0">
+                    Lista Atual
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[#5E6963] dark:text-[#95A39B]">
+                  <span>
+                    <strong>{activeMarketTotals?.totalItems || 0}</strong> itens • <strong>{activeMarketTotals?.checkedItems || 0}</strong> comprados
+                  </span>
+                  
+                  {activeMarketList.budget_amount ? (
+                    <span>Orçamento: <strong className="text-[#02402E] dark:text-[#78D9A6]">{formatCurrency(activeMarketList.budget_amount)}</strong></span>
+                  ) : null}
+
+                  {activeMarketTotals?.totalActual ? (
+                    <span>Gasto: <strong className="text-[#16A66A]">{formatCurrency(activeMarketTotals.totalActual)}</strong></span>
+                  ) : activeMarketTotals?.totalEstimated ? (
+                    <span>Estimado: <strong className="text-[#02402E] dark:text-[#78D9A6]">{formatCurrency(activeMarketTotals.totalEstimated)}</strong></span>
+                  ) : null}
+                </div>
+
+                {/* Progress bar */}
+                {activeMarketTotals && activeMarketTotals.totalItems > 0 && (
+                  <div className="w-full max-w-md space-y-1 pt-1">
+                    <div className="w-full h-2 rounded-full bg-[#E2ECE6] dark:bg-[#28322C] overflow-hidden">
+                      <div
+                        className="h-full bg-[#16A66A] rounded-full transition-all duration-300"
+                        style={{
+                          width: `${Math.min(
+                            100,
+                            Math.round((activeMarketTotals.checkedItems / activeMarketTotals.totalItems) * 100)
+                          )}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="shrink-0 pt-1 md:pt-0">
+                <button
+                  type="button"
+                  onClick={() => onSelectTab('market')}
+                  className="w-full md:w-auto px-4 py-2.5 rounded-xl bg-[#02402E] text-white hover:bg-[#16A66A] dark:bg-[#78D9A6] dark:text-[#101614] text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 shadow-2xs"
+                >
+                  <ShoppingBag className="w-4 h-4" />
+                  <span>Continuar compras →</span>
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* ==================================================
+          SEÇÃO 4: ANÁLISE E EVOLUÇÃO FINANCEIRA (CHARTS)
           ================================================== */}
       <section className="space-y-4">
         <div>
@@ -584,145 +1377,7 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
       </section>
 
       {/* ==================================================
-          SEÇÃO 3: CHECKLIST E VENCIMENTOS DO MÊS
-          ================================================== */}
-      <section className="space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-bold font-display text-[#02402E] dark:text-[#78D9A6] flex items-center gap-2">
-              <CalendarCheck className="w-5 h-5 text-[#16A66A]" />
-              Checklist e Vencimentos do Mês
-            </h2>
-            <p className="text-xs text-[#5E6963] dark:text-[#95A39B]">
-              Marque como pago diretamente aqui para atualizar seus relatórios.
-            </p>
-          </div>
-
-          {/* Filter Tabs */}
-          <div className="flex items-center gap-1 bg-white/80 dark:bg-[#1C211E]/80 border border-[#D2DDD6] dark:border-[#28322C] p-1 rounded-xl shrink-0 self-start sm:self-auto">
-            <button
-              type="button"
-              onClick={() => setChecklistFilter('pending')}
-              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                checklistFilter === 'pending'
-                  ? 'bg-[#02402E] text-white dark:bg-[#16A66A] dark:text-[#101614]'
-                  : 'text-[#5E6963] dark:text-[#95A39B] hover:text-[#02402E]'
-              }`}
-            >
-              Pendentes ({checklistResult?.stats.pendingCount || 0})
-            </button>
-            <button
-              type="button"
-              onClick={() => setChecklistFilter('paid')}
-              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                checklistFilter === 'paid'
-                  ? 'bg-[#02402E] text-white dark:bg-[#16A66A] dark:text-[#101614]'
-                  : 'text-[#5E6963] dark:text-[#95A39B] hover:text-[#02402E]'
-              }`}
-            >
-              Pagas ({checklistResult?.stats.paidCount || 0})
-            </button>
-            <button
-              type="button"
-              onClick={() => setChecklistFilter('all')}
-              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                checklistFilter === 'all'
-                  ? 'bg-[#02402E] text-white dark:bg-[#16A66A] dark:text-[#101614]'
-                  : 'text-[#5E6963] dark:text-[#95A39B] hover:text-[#02402E]'
-              }`}
-            >
-              Todas ({checklistResult?.stats.totalCount || 0})
-            </button>
-          </div>
-        </div>
-
-        {/* Checklist List Container */}
-        <div className="bg-white/90 dark:bg-[#1C211E]/90 backdrop-blur-md border border-[#D2DDD6] dark:border-[#28322C] rounded-2xl p-5 shadow-2xs divide-y divide-[#E2ECE6] dark:divide-[#28322C]">
-          {filteredChecklistItems.length === 0 ? (
-            <div className="py-5 text-center space-y-1">
-              <CheckCircle2 className="w-6 h-6 text-[#16A66A] mx-auto opacity-75" />
-              <p className="text-xs font-bold text-[#02402E] dark:text-[#78D9A6]">
-                Nenhum lançamento nesta lista.
-              </p>
-              <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B]">
-                Alterne os filtros acima ou cadastre novos gastos fixos, variáveis ou parcelamentos.
-              </p>
-            </div>
-          ) : (
-            filteredChecklistItems.slice(0, 8).map((item) => {
-              const isPaid = item.status === 'paid';
-              return (
-                <div
-                  key={item.id}
-                  className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 group hover:bg-[#F6FAF7] dark:hover:bg-[#222825] px-2 rounded-xl transition-colors"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <button
-                      type="button"
-                      onClick={() => handleToggleItemStatus(item)}
-                      className={`w-6 h-6 rounded-lg border flex items-center justify-center shrink-0 cursor-pointer transition-all ${
-                        isPaid
-                          ? 'bg-[#16A66A] border-[#16A66A] text-white'
-                          : 'border-[#BDC9C1] dark:border-[#38443D] hover:border-[#16A66A] bg-white dark:bg-[#181B1A]'
-                      }`}
-                      title={isPaid ? 'Marcar como não pago' : 'Marcar como pago'}
-                    >
-                      {isPaid && <Check className="w-4 h-4 stroke-[3]" />}
-                    </button>
-
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className={`text-xs font-bold truncate ${isPaid ? 'line-through text-[#8A9690] dark:text-[#6A7870]' : 'text-[#202724] dark:text-[#F4F4F5]'}`}>
-                          {item.title}
-                        </span>
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-[#E8F2EC] dark:bg-[#25322A] text-[#02402E] dark:text-[#78D9A6] font-semibold shrink-0">
-                          {item.category}
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B]">
-                        Vencimento: {item.dueDate.split('-').reverse().join('/')}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between sm:justify-end gap-4 shrink-0">
-                    <span className={`text-sm font-bold font-display ${isPaid ? 'text-[#8A9690] dark:text-[#6A7870]' : 'text-[#02402E] dark:text-[#78D9A6]'}`}>
-                      {formatCurrency(item.amount)}
-                    </span>
-
-                    <button
-                      type="button"
-                      onClick={() => handleToggleItemStatus(item)}
-                      className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                        isPaid
-                          ? 'bg-[#E2ECE6] dark:bg-[#28322C] text-[#5E6963] dark:text-[#95A39B] hover:bg-rose-100 hover:text-rose-700'
-                          : 'bg-[#02402E] text-white hover:bg-[#16A66A] dark:bg-[#78D9A6] dark:text-[#101614]'
-                      }`}
-                    >
-                      {isPaid ? 'Pago ✓' : 'Marcar Pago'}
-                    </button>
-                  </div>
-                </div>
-              );
-            })
-          )}
-
-          {filteredChecklistItems.length > 8 && (
-            <div className="pt-3 text-center">
-              <button
-                type="button"
-                onClick={() => onSelectTab('closing')}
-                className="text-xs font-bold text-[#16A66A] hover:underline cursor-pointer"
-              >
-                Ver todos os {filteredChecklistItems.length} lançamentos na Fechamento do Mês →
-              </button>
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* ==================================================
-          SEÇÃO 4: ORGANIZAÇÃO E DESTAQUES (3 CARDS GRID)
+          SEÇÃO 5: ORGANIZAÇÃO E DESTAQUES (METAS & CALENDÁRIO)
           ================================================== */}
       <section className="space-y-4">
         <div>
@@ -731,13 +1386,62 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
             Organização e Destaques
           </h2>
           <p className="text-xs text-[#5E6963] dark:text-[#95A39B]">
-            Seu calendário, metas de economia e lista de compras em um único lugar.
+            Seu calendário de vencimentos e metas de economia em um único lugar.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           
-          {/* Card 1: Calendário */}
+          {/* Card 1: Metas de Economia */}
+          <div className="bg-white/90 dark:bg-[#1C211E]/90 backdrop-blur-md border border-[#D2DDD6] dark:border-[#28322C] rounded-2xl p-5 shadow-2xs space-y-3 flex flex-col justify-between">
+            <div className="flex items-center justify-between pb-2 border-b border-[#E2ECE6] dark:border-[#28322C]">
+              <div className="flex items-center gap-2">
+                <Target className="w-4 h-4 text-[#16A66A]" />
+                <h3 className="text-sm font-bold text-[#02402E] dark:text-[#78D9A6] font-display">
+                  Metas de Economia
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => onSelectTab('goals')}
+                className="text-xs text-[#16A66A] hover:underline font-bold cursor-pointer"
+              >
+                Gerenciar →
+              </button>
+            </div>
+
+            {activeGoals.length === 0 ? (
+              <div className="py-6 text-center space-y-2">
+                <p className="text-xs text-[#5E6963] dark:text-[#95A39B]">Nenhuma meta ativa cadastrada.</p>
+                <button
+                  type="button"
+                  onClick={() => onSelectTab('goals')}
+                  className="px-3 py-1.5 rounded-xl bg-[#02402E] text-white text-xs font-bold cursor-pointer hover:bg-[#16A66A]"
+                >
+                  + Criar Meta
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {activeGoals.map((goal) => {
+                  const percent = Math.min(Math.round(goal.progress_percentage || 0), 100);
+                  return (
+                    <div key={goal.id} className="space-y-1">
+                      <div className="flex justify-between items-center text-xs font-bold">
+                        <span className="text-[#202724] dark:text-[#F4F4F5] truncate">{goal.title}</span>
+                        <span className="text-[#16A66A]">{percent}%</span>
+                      </div>
+                      <div className="w-full h-2 rounded-full bg-[#E2ECE6] dark:bg-[#28322C] overflow-hidden">
+                        <div className="h-full bg-[#16A66A] rounded-full transition-all duration-300" style={{ width: `${percent}%` }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Card 2: Calendário */}
           <div className="bg-white/90 dark:bg-[#1C211E]/90 backdrop-blur-md border border-[#D2DDD6] dark:border-[#28322C] rounded-2xl p-5 shadow-2xs space-y-3 flex flex-col justify-between">
             <div className="flex items-center justify-between pb-2 border-b border-[#E2ECE6] dark:border-[#28322C]">
               <div className="flex items-center gap-2">
@@ -795,98 +1499,9 @@ export function DashboardHome({ onSelectTab }: DashboardHomeProps) {
             </div>
           </div>
 
-          {/* Card 2: Metas de Economia */}
-          <div className="bg-white/90 dark:bg-[#1C211E]/90 backdrop-blur-md border border-[#D2DDD6] dark:border-[#28322C] rounded-2xl p-5 shadow-2xs space-y-3 flex flex-col justify-between">
-            <div className="flex items-center justify-between pb-2 border-b border-[#E2ECE6] dark:border-[#28322C]">
-              <div className="flex items-center gap-2">
-                <Target className="w-4 h-4 text-[#16A66A]" />
-                <h3 className="text-sm font-bold text-[#02402E] dark:text-[#78D9A6] font-display">
-                  Metas de Economia
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => onSelectTab('goals')}
-                className="text-xs text-[#16A66A] hover:underline font-bold cursor-pointer"
-              >
-                Gerenciar →
-              </button>
-            </div>
-
-            {activeGoals.length === 0 ? (
-              <div className="py-6 text-center space-y-2">
-                <p className="text-xs text-[#5E6963] dark:text-[#95A39B]">Nenhuma meta ativa cadastrada.</p>
-                <button
-                  type="button"
-                  onClick={() => onSelectTab('goals')}
-                  className="px-3 py-1.5 rounded-xl bg-[#02402E] text-white text-xs font-bold cursor-pointer hover:bg-[#16A66A]"
-                >
-                  + Criar Meta
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {activeGoals.map((goal) => {
-                  const percent = Math.min(Math.round(goal.progress_percentage || 0), 100);
-                  return (
-                    <div key={goal.id} className="space-y-1">
-                      <div className="flex justify-between items-center text-xs font-bold">
-                        <span className="text-[#202724] dark:text-[#F4F4F5] truncate">{goal.title}</span>
-                        <span className="text-[#16A66A]">{percent}%</span>
-                      </div>
-                      <div className="w-full h-2 rounded-full bg-[#E2ECE6] dark:bg-[#28322C] overflow-hidden">
-                        <div className="h-full bg-[#16A66A] rounded-full transition-all duration-300" style={{ width: `${percent}%` }} />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* Card 3: Lista de Mercado */}
-          <div className="bg-white/90 dark:bg-[#1C211E]/90 backdrop-blur-md border border-[#D2DDD6] dark:border-[#28322C] rounded-2xl p-5 shadow-2xs space-y-3 flex flex-col justify-between">
-            <div className="flex items-center justify-between pb-2 border-b border-[#E2ECE6] dark:border-[#28322C]">
-              <div className="flex items-center gap-2">
-                <ShoppingBag className="w-4 h-4 text-[#16A66A]" />
-                <h3 className="text-sm font-bold text-[#02402E] dark:text-[#78D9A6] font-display">
-                  Lista de Mercado
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => onSelectTab('market')}
-                className="text-xs text-[#16A66A] hover:underline font-bold cursor-pointer"
-              >
-                Ver lista →
-              </button>
-            </div>
-
-            {pendingMarketItems.length === 0 ? (
-              <div className="py-6 text-center space-y-2">
-                <p className="text-xs text-[#5E6963] dark:text-[#95A39B]">Nenhum item pendente na lista.</p>
-                <button
-                  type="button"
-                  onClick={() => onSelectTab('market')}
-                  className="px-3 py-1.5 rounded-xl bg-[#02402E] text-white text-xs font-bold cursor-pointer hover:bg-[#16A66A]"
-                >
-                  + Ir para Mercado
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {pendingMarketItems.map((item) => (
-                  <div key={item.id} className="flex items-center justify-between p-2 rounded-xl bg-[#F4F8F5] dark:bg-[#222825] text-xs">
-                    <span className="font-semibold text-[#202724] dark:text-[#F4F4F5] truncate">{item.name}</span>
-                    <span className="text-[11px] text-[#5E6963] dark:text-[#95A39B]">{item.quantity} {item.unit || 'un'}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
         </div>
       </section>
+      </div>
     </div>
   );
 }

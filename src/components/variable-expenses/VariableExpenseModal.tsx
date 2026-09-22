@@ -8,7 +8,7 @@ import {
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { X, DollarSign, Calendar, Tag, FileText, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
-import { parseCurrencyInput, getISODateToday } from '../../lib/formatters';
+import { parseCurrencyInput, getISODateToday, getDefaultDateForBillingCycle } from '../../lib/formatters';
 
 interface VariableExpenseModalProps {
   isOpen: boolean;
@@ -16,6 +16,8 @@ interface VariableExpenseModalProps {
   onSave: (data: CreateVariableExpenseInput | UpdateVariableExpenseInput) => Promise<boolean>;
   editingExpense?: VariableExpense | null;
   spaceId: string;
+  selectedYear?: number;
+  selectedMonth?: number;
 }
 
 export const VARIABLE_EXPENSE_CATEGORIES = [
@@ -38,10 +40,12 @@ export function VariableExpenseModal({
   onSave,
   editingExpense,
   spaceId,
+  selectedYear,
+  selectedMonth,
 }: VariableExpenseModalProps) {
   const [description, setDescription] = useState('');
   const [rawAmount, setRawAmount] = useState('');
-  const [date, setDate] = useState(getISODateToday());
+  const [date, setDate] = useState(() => getDefaultDateForBillingCycle(selectedYear, selectedMonth));
   const [category, setCategory] = useState('Mercado');
   const [customCategory, setCustomCategory] = useState('');
   const [status, setStatus] = useState<VariableExpenseStatus>('paid');
@@ -70,7 +74,7 @@ export function VariableExpenseModal({
     } else {
       setDescription('');
       setRawAmount('');
-      setDate(getISODateToday());
+      setDate(getDefaultDateForBillingCycle(selectedYear, selectedMonth));
       setCategory('Mercado');
       setCustomCategory('');
       setStatus('paid');
@@ -78,7 +82,7 @@ export function VariableExpenseModal({
     }
     setErrors({});
     setGeneralError(null);
-  }, [editingExpense, isOpen]);
+  }, [editingExpense, isOpen, selectedYear, selectedMonth]);
 
   if (!isOpen) return null;
 

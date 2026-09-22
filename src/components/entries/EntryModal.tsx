@@ -3,7 +3,7 @@ import { Entry, EntryStatus, CreateEntryInput, UpdateEntryInput } from '../../ty
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { X, DollarSign, Calendar, Tag, FileText, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
-import { getISODateToday, parseCurrencyInput, formatCurrency } from '../../lib/formatters';
+import { getISODateToday, parseCurrencyInput, formatCurrency, getDefaultDateForBillingCycle } from '../../lib/formatters';
 
 interface EntryModalProps {
   isOpen: boolean;
@@ -11,6 +11,8 @@ interface EntryModalProps {
   onSave: (data: CreateEntryInput | UpdateEntryInput) => Promise<boolean>;
   editingEntry?: Entry | null;
   spaceId: string;
+  selectedYear?: number;
+  selectedMonth?: number;
 }
 
 const CATEGORY_SUGGESTIONS = [
@@ -30,10 +32,12 @@ export function EntryModal({
   onSave,
   editingEntry,
   spaceId,
+  selectedYear,
+  selectedMonth,
 }: EntryModalProps) {
   const [description, setDescription] = useState('');
   const [rawAmount, setRawAmount] = useState('');
-  const [date, setDate] = useState(getISODateToday());
+  const [date, setDate] = useState(() => getDefaultDateForBillingCycle(selectedYear, selectedMonth));
   const [category, setCategory] = useState('Salário');
   const [customCategory, setCustomCategory] = useState('');
   const [status, setStatus] = useState<EntryStatus>('received');
@@ -63,7 +67,7 @@ export function EntryModal({
     } else {
       setDescription('');
       setRawAmount('');
-      setDate(getISODateToday());
+      setDate(getDefaultDateForBillingCycle(selectedYear, selectedMonth));
       setCategory('Salário');
       setCustomCategory('');
       setStatus('received');
@@ -71,7 +75,7 @@ export function EntryModal({
     }
     setErrors({});
     setGeneralError(null);
-  }, [editingEntry, isOpen]);
+  }, [editingEntry, isOpen, selectedYear, selectedMonth]);
 
   if (!isOpen) return null;
 
