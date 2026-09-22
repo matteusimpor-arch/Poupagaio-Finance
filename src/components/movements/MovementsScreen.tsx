@@ -286,37 +286,35 @@ export function MovementsScreen({
   };
 
   return (
-    <div className="space-y-6 pb-12 max-w-[1280px] mx-auto px-4 sm:px-6">
+    <div className="space-y-4 pb-24 sm:pb-12 max-w-[1280px] mx-auto px-3 sm:px-6">
       {/* HEADER & MONTH NAVIGATION */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-[#D2DDD6] dark:border-[#28322C]">
-        <div>
-          <div className="flex items-center gap-2">
-            <div className="p-2 rounded-xl bg-[#02402E] dark:bg-[#16A66A] text-white dark:text-[#101614]">
-              <ArrowLeftRight className="w-5 h-5" />
-            </div>
-            <div>
-              <h1 className="text-xl sm:text-2xl font-bold font-display text-[#02402E] dark:text-[#78D9A6]">
-                Movimentações Financeiras
-              </h1>
-              <p className="text-xs text-[#5E6963] dark:text-[#95A39B]">
-                Central de controle e histórico de entradas e saídas.
-              </p>
-            </div>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-[#D2DDD6] dark:border-[#28322C]">
+        <div className="flex items-center gap-2">
+          <div className="p-1.5 rounded-xl bg-[#02402E] dark:bg-[#16A66A] text-white dark:text-[#101614] shrink-0">
+            <ArrowLeftRight className="w-4 h-4" />
+          </div>
+          <div>
+            <h1 className="text-lg sm:text-xl font-bold font-display text-[#02402E] dark:text-[#78D9A6]">
+              Movimentações Financeiras
+            </h1>
+            <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B]">
+              Entradas e saídas da sua competência.
+            </p>
           </div>
         </div>
 
         {/* Competência Selector */}
-        <div className="flex items-center justify-between sm:justify-end gap-2 bg-white/90 dark:bg-[#1C211E]/90 p-1.5 rounded-2xl border border-[#D2DDD6] dark:border-[#28322C] shadow-2xs">
+        <div className="flex items-center justify-between sm:justify-end gap-2 bg-white/90 dark:bg-[#1C211E]/90 p-1 rounded-2xl border border-[#D2DDD6] dark:border-[#28322C] shadow-2xs w-full sm:w-auto">
           <button
             type="button"
             onClick={handlePrevMonth}
             className="p-1.5 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 text-[#5E6963] dark:text-[#95A39B] transition-colors cursor-pointer"
             aria-label="Mês anterior"
           >
-            <ChevronLeft className="w-5 h-5" />
+            <ChevronLeft className="w-4 h-4" />
           </button>
 
-          <div className="px-3 text-center min-w-[140px]">
+          <div className="px-3 text-center flex-1 sm:flex-none sm:min-w-[140px]">
             <span className="text-xs font-bold uppercase tracking-wider text-[#02402E] dark:text-[#78D9A6] font-display">
               {getMonthYearLabel(selectedYear, selectedMonth)}
             </span>
@@ -328,56 +326,22 @@ export function MovementsScreen({
             className="p-1.5 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 text-[#5E6963] dark:text-[#95A39B] transition-colors cursor-pointer"
             aria-label="Próximo mês"
           >
-            <ChevronRight className="w-5 h-5" />
+            <ChevronRight className="w-4 h-4" />
           </button>
         </div>
       </div>
 
       {/* RESUMO SUPERIOR COMPACTO */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {/* Entradas */}
-        <Card className="border-[#D2DDD6] dark:border-[#28322C] bg-white/90 dark:bg-[#1C211E]/90 backdrop-blur-md shadow-2xs">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-xs font-bold text-[#5E6963] dark:text-[#95A39B] uppercase tracking-wider">
-                Entradas
-              </p>
-              <h3 className="text-lg sm:text-xl font-extrabold text-[#16A66A] mt-0.5">
-                {formatCurrency(summary.totalEntradas)}
-              </h3>
-            </div>
-            <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-950/50 flex items-center justify-center text-[#16A66A]">
-              <ArrowUpRight className="w-5 h-5 stroke-[2.5]" />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Despesas */}
-        <Card className="border-[#D2DDD6] dark:border-[#28322C] bg-white/90 dark:bg-[#1C211E]/90 backdrop-blur-md shadow-2xs">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-xs font-bold text-[#5E6963] dark:text-[#95A39B] uppercase tracking-wider">
-                Despesas
-              </p>
-              <h3 className="text-lg sm:text-xl font-extrabold text-[#E11D48] dark:text-rose-400 mt-0.5">
-                {formatCurrency(summary.totalDespesas)}
-              </h3>
-            </div>
-            <div className="w-10 h-10 rounded-xl bg-rose-100 dark:bg-rose-950/50 flex items-center justify-center text-[#E11D48] dark:text-rose-400">
-              <ArrowDownRight className="w-5 h-5 stroke-[2.5]" />
-            </div>
-          </CardContent>
-        </Card>
-
+      <div className="space-y-2 sm:space-y-0 sm:grid sm:grid-cols-3 sm:gap-4">
         {/* Saldo Consolidado */}
-        <Card className="border-[#D2DDD6] dark:border-[#28322C] bg-white/90 dark:bg-[#1C211E]/90 backdrop-blur-md shadow-2xs">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-xs font-bold text-[#5E6963] dark:text-[#95A39B] uppercase tracking-wider">
+        <Card className="sm:order-3 border-[#D2DDD6] dark:border-[#28322C] bg-white/90 dark:bg-[#1C211E]/90 backdrop-blur-md shadow-2xs">
+          <CardContent className="p-3 sm:p-4 flex items-center justify-between">
+            <div className="min-w-0">
+              <p className="text-[10px] sm:text-xs font-bold text-[#5E6963] dark:text-[#95A39B] uppercase tracking-wider truncate">
                 Saldo da Competência
               </p>
               <h3
-                className={`text-lg sm:text-xl font-extrabold mt-0.5 ${
+                className={`text-base sm:text-xl font-extrabold mt-0.5 truncate ${
                   summary.saldo >= 0
                     ? 'text-[#02402E] dark:text-[#78D9A6]'
                     : 'text-rose-600 dark:text-rose-400'
@@ -386,16 +350,53 @@ export function MovementsScreen({
                 {formatCurrency(summary.saldo)}
               </h3>
             </div>
-            <div className="w-10 h-10 rounded-xl bg-[#F2B807]/20 flex items-center justify-center text-[#02402E] dark:text-[#78D9A6]">
-              <DollarSign className="w-5 h-5 stroke-[2.5]" />
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-[#F2B807]/20 flex items-center justify-center text-[#02402E] dark:text-[#78D9A6] shrink-0 ml-1">
+              <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.5]" />
             </div>
           </CardContent>
         </Card>
+
+        {/* Entradas & Despesas side-by-side on Mobile */}
+        <div className="grid grid-cols-2 gap-2 sm:contents sm:order-1">
+          {/* Entradas */}
+          <Card className="border-[#D2DDD6] dark:border-[#28322C] bg-white/90 dark:bg-[#1C211E]/90 backdrop-blur-md shadow-2xs">
+            <CardContent className="p-3 sm:p-4 flex items-center justify-between">
+              <div className="min-w-0">
+                <p className="text-[10px] sm:text-xs font-bold text-[#5E6963] dark:text-[#95A39B] uppercase tracking-wider truncate">
+                  Entradas
+                </p>
+                <h3 className="text-sm sm:text-xl font-extrabold text-[#16A66A] mt-0.5 truncate">
+                  {formatCurrency(summary.totalEntradas)}
+                </h3>
+              </div>
+              <div className="w-7 h-7 sm:w-10 sm:h-10 rounded-xl bg-emerald-100 dark:bg-emerald-950/50 flex items-center justify-center text-[#16A66A] shrink-0 ml-1">
+                <ArrowUpRight className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.5]" />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Despesas */}
+          <Card className="border-[#D2DDD6] dark:border-[#28322C] bg-white/90 dark:bg-[#1C211E]/90 backdrop-blur-md shadow-2xs">
+            <CardContent className="p-3 sm:p-4 flex items-center justify-between">
+              <div className="min-w-0">
+                <p className="text-[10px] sm:text-xs font-bold text-[#5E6963] dark:text-[#95A39B] uppercase tracking-wider truncate">
+                  Despesas
+                </p>
+                <h3 className="text-sm sm:text-xl font-extrabold text-[#E11D48] dark:text-rose-400 mt-0.5 truncate">
+                  {formatCurrency(summary.totalDespesas)}
+                </h3>
+              </div>
+              <div className="w-7 h-7 sm:w-10 sm:h-10 rounded-xl bg-rose-100 dark:bg-rose-950/50 flex items-center justify-center text-[#E11D48] dark:text-rose-400 shrink-0 ml-1">
+                <ArrowDownRight className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.5]" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       {/* FILTROS, BUSCA E BOTAO NOVO LANÇAMENTO */}
-      <div className="bg-white/90 dark:bg-[#1C211E]/90 backdrop-blur-md border border-[#D2DDD6] dark:border-[#28322C] rounded-2xl p-4 shadow-2xs space-y-4">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+      <div className="bg-white/90 dark:bg-[#1C211E]/90 backdrop-blur-md border border-[#D2DDD6] dark:border-[#28322C] rounded-2xl p-3 sm:p-4 shadow-2xs space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
           {/* Busca por Descrição */}
           <div className="relative flex-1">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#5E6963] dark:text-[#95A39B]" />
@@ -483,13 +484,13 @@ export function MovementsScreen({
         </div>
 
         {/* Tab Filters */}
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-[#E2ECE6] dark:border-[#28322C]">
-          {/* Type filters */}
-          <div className="flex flex-wrap items-center gap-1 overflow-x-auto no-scrollbar">
+        <div className="pt-2 border-t border-[#E2ECE6] dark:border-[#28322C] space-y-2">
+          {/* Type filters (Scroll Horizontal on Mobile) */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar -mx-1 px-1">
             <button
               type="button"
               onClick={() => setTypeFilter('all')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
                 typeFilter === 'all'
                   ? 'bg-[#02402E] text-white dark:bg-[#78D9A6] dark:text-[#101614]'
                   : 'bg-[#F4F7F5] dark:bg-[#161B18] text-[#5E6963] dark:text-[#95A39B] hover:text-[#02402E]'
@@ -500,7 +501,7 @@ export function MovementsScreen({
             <button
               type="button"
               onClick={() => setTypeFilter('entries')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
                 typeFilter === 'entries'
                   ? 'bg-[#16A66A] text-white'
                   : 'bg-[#F4F7F5] dark:bg-[#161B18] text-[#5E6963] dark:text-[#95A39B] hover:text-[#16A66A]'
@@ -511,7 +512,7 @@ export function MovementsScreen({
             <button
               type="button"
               onClick={() => setTypeFilter('expenses')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
                 typeFilter === 'expenses'
                   ? 'bg-rose-600 text-white'
                   : 'bg-[#F4F7F5] dark:bg-[#161B18] text-[#5E6963] dark:text-[#95A39B] hover:text-rose-600'
@@ -519,14 +520,13 @@ export function MovementsScreen({
             >
               Despesas
             </button>
-            <span className="h-4 w-px bg-[#D2DDD6] dark:bg-[#28322C] mx-1 hidden sm:inline" />
             <button
               type="button"
               onClick={() => setTypeFilter('fixed')}
-              className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
                 typeFilter === 'fixed'
                   ? 'bg-[#02402E]/20 text-[#02402E] dark:text-[#78D9A6]'
-                  : 'text-[#5E6963] dark:text-[#95A39B] hover:text-[#02402E]'
+                  : 'bg-[#F4F7F5] dark:bg-[#161B18] text-[#5E6963] dark:text-[#95A39B]'
               }`}
             >
               Fixos
@@ -534,10 +534,10 @@ export function MovementsScreen({
             <button
               type="button"
               onClick={() => setTypeFilter('variable')}
-              className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
                 typeFilter === 'variable'
                   ? 'bg-[#02402E]/20 text-[#02402E] dark:text-[#78D9A6]'
-                  : 'text-[#5E6963] dark:text-[#95A39B] hover:text-[#02402E]'
+                  : 'bg-[#F4F7F5] dark:bg-[#161B18] text-[#5E6963] dark:text-[#95A39B]'
               }`}
             >
               Variáveis
@@ -545,25 +545,25 @@ export function MovementsScreen({
             <button
               type="button"
               onClick={() => setTypeFilter('installment')}
-              className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
                 typeFilter === 'installment'
                   ? 'bg-[#02402E]/20 text-[#02402E] dark:text-[#78D9A6]'
-                  : 'text-[#5E6963] dark:text-[#95A39B] hover:text-[#02402E]'
+                  : 'bg-[#F4F7F5] dark:bg-[#161B18] text-[#5E6963] dark:text-[#95A39B]'
               }`}
             >
               Parcelados
             </button>
           </div>
 
-          {/* Status filters */}
-          <div className="flex items-center gap-1">
+          {/* Status Filters */}
+          <div className="flex items-center gap-1.5 pt-1">
             <button
               type="button"
               onClick={() => setStatusFilter('all')}
               className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${
                 statusFilter === 'all'
                   ? 'bg-[#02402E] text-white dark:bg-[#78D9A6] dark:text-[#101614]'
-                  : 'text-[#5E6963] dark:text-[#95A39B]'
+                  : 'bg-[#F4F7F5] dark:bg-[#161B18] text-[#5E6963] dark:text-[#95A39B]'
               }`}
             >
               Todos Status
@@ -574,7 +574,7 @@ export function MovementsScreen({
               className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${
                 statusFilter === 'pending'
                   ? 'bg-amber-600 text-white'
-                  : 'text-[#5E6963] dark:text-[#95A39B]'
+                  : 'bg-[#F4F7F5] dark:bg-[#161B18] text-[#5E6963] dark:text-[#95A39B]'
               }`}
             >
               Pendentes
@@ -585,7 +585,7 @@ export function MovementsScreen({
               className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${
                 statusFilter === 'completed'
                   ? 'bg-[#16A66A] text-white'
-                  : 'text-[#5E6963] dark:text-[#95A39B]'
+                  : 'bg-[#F4F7F5] dark:bg-[#161B18] text-[#5E6963] dark:text-[#95A39B]'
               }`}
             >
               Pagas / Recebidas

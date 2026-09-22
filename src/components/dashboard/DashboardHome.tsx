@@ -49,7 +49,23 @@ import {
   Sparkles,
   PieChart as PieIcon,
   TrendingUp,
+  Plus,
+  FileText,
 } from 'lucide-react';
+
+import { FixedExpenseModal } from '../fixed-expenses/FixedExpenseModal';
+import { VariableExpenseModal } from '../variable-expenses/VariableExpenseModal';
+import { InstallmentPurchaseModal } from '../installments/InstallmentPurchaseModal';
+import { fixedExpensesService } from '../../lib/services/fixedExpenses';
+import { variableExpensesService } from '../../lib/services/variableExpenses';
+import {
+  CreateFixedExpenseInput,
+  UpdateFixedExpenseInput,
+  CreateVariableExpenseInput,
+  UpdateVariableExpenseInput,
+  CreateInstallmentPurchaseInput,
+  UpdateInstallmentPurchaseInput,
+} from '../../types';
 
 interface DashboardHomeProps {
   onSelectTab: (tab: ActiveTab) => void;
@@ -117,6 +133,10 @@ export function DashboardHome({
   // Interactive Modal & View States
   const [confirmPaymentItem, setConfirmPaymentItem] = useState<NormalizedChecklistExpense | null>(null);
   const [showAllChecklistMobile, setShowAllChecklistMobile] = useState<boolean>(false);
+  const [isQuickAddMenuOpen, setIsQuickAddMenuOpen] = useState<boolean>(false);
+  const [quickAddModalType, setQuickAddModalType] = useState<
+    'fixed_expenses' | 'variable_expenses' | 'installments' | null
+  >(null);
 
   // Historical evolution chart state
   const [evolutionData, setEvolutionData] = useState<Array<{
@@ -202,6 +222,38 @@ export function DashboardHome({
   useEffect(() => {
     loadDashboardData();
   }, [currentSpace?.id, currentYear, currentMonth]);
+
+  const handleSaveFixedExpense = async (data: CreateFixedExpenseInput | UpdateFixedExpenseInput): Promise<boolean> => {
+    if (!user) return false;
+    const res = await fixedExpensesService.createFixedExpense(user.id, data as CreateFixedExpenseInput);
+    if (res.error) throw new Error(res.error);
+    setQuickAddModalType(null);
+    loadDashboardData();
+    return true;
+  };
+
+  const handleSaveVariableExpense = async (data: CreateVariableExpenseInput | UpdateVariableExpenseInput): Promise<boolean> => {
+    if (!user) return false;
+    const res = await variableExpensesService.createVariableExpense(user.id, data as CreateVariableExpenseInput);
+    if (res.error) throw new Error(res.error);
+    setQuickAddModalType(null);
+    loadDashboardData();
+    return true;
+  };
+
+  const handleSaveInstallment = async (input: CreateInstallmentPurchaseInput | UpdateInstallmentPurchaseInput): Promise<{ success: boolean; error?: string }> => {
+    if (!user || !currentSpace?.id) return { success: false, error: 'Espaço indisponível' };
+    const res = await installmentsService.createPurchase({
+      ...input,
+      space_id: currentSpace.id,
+    } as CreateInstallmentPurchaseInput);
+    if (!res.error) {
+      setQuickAddModalType(null);
+      loadDashboardData();
+      return { success: true };
+    }
+    return { success: false, error: res.error };
+  };
 
   // Navigate months
   const handlePrevMonth = () => {
@@ -949,18 +1001,30 @@ export function DashboardHome({
       </section>
 
       {/* ==================================================
-          SEÇÃO 2: CONTAS A PAGAR (CHECKLIST COMPACTO)
+          SEÇÃO 2: CONTAS PREVISTAS (CHECKLIST COMPACTO)
           ================================================== */}
       <section className="space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-bold font-display text-[#02402E] dark:text-[#78D9A6] flex items-center gap-2">
-              <CalendarCheck className="w-5 h-5 text-[#16A66A]" />
-              Contas a Pagar
-            </h2>
-            <p className="text-xs text-[#5E6963] dark:text-[#95A39B]">
-              Compromissos financeiros do mês (gastos fixos, variáveis e parcelamentos).
-            </p>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div className="flex items-center justify-between w-full md:w-auto">
+            <div>
+              <h2 className="text-lg font-bold font-display text-[#02402E] dark:text-[#78D9A6] flex items-center gap-2">
+                <CalendarCheck className="w-5 h-5 text-[#16A66A]" />
+                Contas Previstas
+              </h2>
+              <p className="text-xs text-[#5E6963] dark:text-[#95A39B]">
+                Compromissos financeiros do mês (gastos fixos, variáveis e parcelamentos).
+              </p>
+            </div>
+
+            {/* Mobile-only + button */}
+            <button
+              type="button"
+              onClick={() => setIsQuickAddMenuOpen(true)}
+              aria-label="Adicionar conta"
+              className="md:hidden w-10 h-10 rounded-full bg-[#02402E] dark:bg-[#16A66A] text-white dark:text-[#101614] flex items-center justify-center shadow-md hover:scale-105 active:scale-95 transition-all shrink-0 cursor-pointer ml-2"
+            >
+              <Plus className="w-5 h-5 stroke-[2.5]" />
+            </button>
           </div>
 
           {/* Filter Pills */}
@@ -1508,6 +1572,126 @@ export function DashboardHome({
         </div>
       </section>
       </div>
+
+      {/* MOBILE BOTTOM SHEET MENU FOR QUICK ADD */}
+      {isQuickAddMenuOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-xs md:hidden animate-in fade-in duration-200"
+          onClick={() => setIsQuickAddMenuOpen(false)}
+        >
+          <div
+            className="w-full max-w-lg bg-white dark:bg-[#1C211E] rounded-t-3xl p-5 border-t border-[#D2DDD6] dark:border-[#28322C] shadow-2xl space-y-4 animate-in slide-in-from-bottom duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-[#E2ECE6] dark:border-[#28322C] pb-3">
+              <h3 className="text-base font-bold text-[#02402E] dark:text-[#78D9A6] font-display">
+                Adicionar conta
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsQuickAddMenuOpen(false)}
+                className="p-1 rounded-full text-[#5E6963] hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-2 py-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsQuickAddMenuOpen(false);
+                  setQuickAddModalType('fixed_expenses');
+                }}
+                className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-[#F4F7F5] dark:bg-[#222825] hover:bg-[#E8F2EC] dark:hover:bg-[#28322C] text-left transition-colors cursor-pointer group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-purple-100 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+                    <FileText className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-[#02402E] dark:text-[#78D9A6]">Gasto Fixo</p>
+                    <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B]">Recorrente (Ex: Luz, Aluguel, Internet)</p>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-[#5E6963] group-hover:translate-x-0.5 transition-transform" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setIsQuickAddMenuOpen(false);
+                  setQuickAddModalType('variable_expenses');
+                }}
+                className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-[#F4F7F5] dark:bg-[#222825] hover:bg-[#E8F2EC] dark:hover:bg-[#28322C] text-left transition-colors cursor-pointer group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-rose-100 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 flex items-center justify-center">
+                    <CreditCard className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-[#02402E] dark:text-[#78D9A6]">Gasto Variável</p>
+                    <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B]">Eventual (Ex: Restaurante, Farmácia)</p>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-[#5E6963] group-hover:translate-x-0.5 transition-transform" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setIsQuickAddMenuOpen(false);
+                  setQuickAddModalType('installments');
+                }}
+                className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-[#F4F7F5] dark:bg-[#222825] hover:bg-[#E8F2EC] dark:hover:bg-[#28322C] text-left transition-colors cursor-pointer group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+                    <Calendar className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-[#02402E] dark:text-[#78D9A6]">Parcelamento</p>
+                    <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B]">Compra parcelada no cartão</p>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-[#5E6963] group-hover:translate-x-0.5 transition-transform" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAIS REUTILIZADOS COM CONTEXTO DA COMPETÊNCIA ATUAL */}
+      {currentSpace?.id && (
+        <>
+          <FixedExpenseModal
+            isOpen={quickAddModalType === 'fixed_expenses'}
+            onClose={() => setQuickAddModalType(null)}
+            onSave={handleSaveFixedExpense}
+            spaceId={currentSpace.id}
+            selectedYear={currentYear}
+            selectedMonth={currentMonth}
+          />
+
+          <VariableExpenseModal
+            isOpen={quickAddModalType === 'variable_expenses'}
+            onClose={() => setQuickAddModalType(null)}
+            onSave={handleSaveVariableExpense}
+            spaceId={currentSpace.id}
+            selectedYear={currentYear}
+            selectedMonth={currentMonth}
+          />
+
+          <InstallmentPurchaseModal
+            isOpen={quickAddModalType === 'installments'}
+            onClose={() => setQuickAddModalType(null)}
+            onSave={handleSaveInstallment}
+            spaceId={currentSpace.id}
+            selectedYear={currentYear}
+            selectedMonth={currentMonth}
+          />
+        </>
+      )}
     </div>
   );
 }

@@ -34,6 +34,8 @@ import {
   Youtube,
   Instagram,
   Linkedin,
+  MoreHorizontal,
+  ChevronDown,
 } from 'lucide-react';
 import { ActiveTab } from '../../types';
 import { EntryModal } from '../entries/EntryModal';
@@ -76,6 +78,7 @@ export function Shell({
   const { theme, toggleTheme } = useTheme();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const [alerts, setAlerts] = useState<FinancialAlert[]>([]);
   const [isScrolled, setIsScrolled] = useState(false);
 
@@ -172,10 +175,22 @@ export function Shell({
     { id: 'support', label: 'Suporte', icon: HelpCircle },
   ];
 
+  const mainNavItems = navItems.filter((item) =>
+    ['home', 'movements', 'planning', 'reports', 'closing'].includes(item.id)
+  );
+
+  const secondaryNavItems = navItems.filter(
+    (item) => !['home', 'movements', 'planning', 'reports', 'closing'].includes(item.id)
+  );
+
+  const isSecondaryActive = secondaryNavItems.some((item) => item.id === currentTab);
+  const activeSecondaryItem = secondaryNavItems.find((item) => item.id === currentTab);
+
   const handleNavClick = (tab: ActiveTab) => {
     onSelectTab(tab);
     setIsMobileMenuOpen(false);
     setIsNotificationsOpen(false);
+    setIsMoreMenuOpen(false);
   };
 
   return (
@@ -366,25 +381,100 @@ export function Shell({
         </div>
 
         {/* Desktop Horizontal Navigation Bar */}
-        <nav className="hidden md:flex items-center px-6 py-1.5 overflow-x-auto gap-1.5 no-scrollbar border-t border-[#D2DDD6]/60 dark:border-[#28322C]/60 max-w-[1480px] mx-auto">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = currentTab === item.id;
-            return (
-              <button
-                key={item.id}
-                onClick={() => handleNavClick(item.id)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap cursor-pointer shrink-0 ${
-                  isActive
-                    ? 'bg-[#02402E] text-white dark:bg-[#16A66A] dark:text-[#101614] shadow-2xs font-bold'
-                    : 'text-[#5E6963] dark:text-[#95A39B] hover:text-[#02402E] dark:hover:text-[#F4F4F5] hover:bg-black/5 dark:hover:bg-white/5'
+        <nav className="hidden md:flex items-center justify-between px-6 py-1.5 gap-1.5 border-t border-[#D2DDD6]/60 dark:border-[#28322C]/60 max-w-[1480px] mx-auto relative select-none">
+          {/* Main Navigation Items */}
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+            {mainNavItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = currentTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => handleNavClick(item.id)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap cursor-pointer shrink-0 ${
+                    isActive
+                      ? 'bg-[#02402E] text-white dark:bg-[#16A66A] dark:text-[#101614] shadow-2xs font-bold'
+                      : 'text-[#5E6963] dark:text-[#95A39B] hover:text-[#02402E] dark:hover:text-[#F4F4F5] hover:bg-black/5 dark:hover:bg-white/5'
+                  }`}
+                >
+                  <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-white dark:text-[#101614]' : 'text-[#16A66A]'}`} />
+                  <span>{item.label}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* 3 Pontinhos no canto para selecionar mais opções */}
+          <div className="relative shrink-0 ml-auto">
+            <button
+              type="button"
+              id="nav-more-options-btn"
+              onClick={() => setIsMoreMenuOpen(!isMoreMenuOpen)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                isSecondaryActive
+                  ? 'bg-[#02402E] text-white dark:bg-[#16A66A] dark:text-[#101614] shadow-2xs'
+                  : 'bg-black/5 dark:bg-white/5 text-[#5E6963] dark:text-[#95A39B] hover:text-[#02402E] dark:hover:text-[#F4F4F5]'
+              }`}
+              title="Mais opções de navegação"
+              aria-label="Mais opções"
+            >
+              {isSecondaryActive && activeSecondaryItem ? (
+                <>
+                  {React.createElement(activeSecondaryItem.icon, {
+                    className: 'w-3.5 h-3.5 text-white dark:text-[#101614]',
+                  })}
+                  <span>{activeSecondaryItem.label}</span>
+                </>
+              ) : (
+                <span>Mais</span>
+              )}
+              <MoreHorizontal className="w-4 h-4 ml-0.5" />
+              <ChevronDown
+                className={`w-3 h-3 transition-transform duration-200 ${
+                  isMoreMenuOpen ? 'rotate-180' : ''
                 }`}
-              >
-                <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-white dark:text-[#101614]' : 'text-[#16A66A]'}`} />
-                <span>{item.label}</span>
-              </button>
-            );
-          })}
+              />
+            </button>
+
+            {/* Dropdown Menu dos 3 pontinhos */}
+            {isMoreMenuOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setIsMoreMenuOpen(false)}
+                />
+                <div className="absolute right-0 mt-2 w-56 rounded-2xl border border-[#D2DDD6] dark:border-[#28322C] bg-white dark:bg-[#1C211E] p-2 shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-150 grid grid-cols-1 gap-1">
+                  <div className="px-2.5 py-1.5 border-b border-[#E2ECE6] dark:border-[#28322C] mb-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#5E6963] dark:text-[#95A39B]">
+                      Outros Módulos
+                    </span>
+                  </div>
+                  {secondaryNavItems.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = currentTab === item.id;
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => handleNavClick(item.id)}
+                        className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-left transition-all cursor-pointer ${
+                          isActive
+                            ? 'bg-[#02402E] text-white dark:bg-[#16A66A] dark:text-[#101614] font-bold'
+                            : 'text-[#202724] dark:text-[#F4F4F5] hover:bg-[#F4F7F5] dark:hover:bg-white/5'
+                        }`}
+                      >
+                        <Icon
+                          className={`w-4 h-4 ${
+                            isActive ? 'text-white dark:text-[#101614]' : 'text-[#16A66A]'
+                          }`}
+                        />
+                        <span className="truncate">{item.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </div>
         </nav>
       </header>
 
