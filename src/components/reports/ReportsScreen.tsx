@@ -66,6 +66,7 @@ export function ReportsScreen() {
 
   // Filtros de período
   const [preset, setPreset] = useState<PeriodPreset>('last_6_months');
+  const [selectedReportYear, setSelectedReportYear] = useState<number>(new Date().getFullYear());
   const [customStartYear, setCustomStartYear] = useState<number>(new Date().getFullYear());
   const [customStartMonth, setCustomStartMonth] = useState<number>(1);
   const [customEndYear, setCustomEndYear] = useState<number>(new Date().getFullYear());
@@ -130,7 +131,7 @@ export function ReportsScreen() {
       }
     } else if (preset === 'current_year') {
       for (let m = 1; m <= 12; m++) {
-        list.push({ year: currentYear, month: m, cycle: `${currentYear}-${String(m).padStart(2, '0')}` });
+        list.push({ year: selectedReportYear, month: m, cycle: `${selectedReportYear}-${String(m).padStart(2, '0')}` });
       }
     } else if (preset === 'custom') {
       const startDate = new Date(customStartYear, customStartMonth - 1, 1);
@@ -149,7 +150,7 @@ export function ReportsScreen() {
     }
 
     return list;
-  }, [preset, customStartYear, customStartMonth, customEndYear, customEndMonth]);
+  }, [preset, selectedReportYear, customStartYear, customStartMonth, customEndYear, customEndMonth]);
 
   // Carrega todos os dados de forma paralela e otimizada (sem N+1 de requisições sequenciais de rede)
   const loadReportsData = useCallback(async () => {
@@ -725,6 +726,58 @@ export function ReportsScreen() {
           </Button>
         </div>
       </div>
+
+      {/* Controles de Ano (exibido quando preset for current_year) */}
+      <AnimatePresence>
+        {preset === 'current_year' && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="bg-[#EBECEE]/40 dark:bg-[#161817]/40 p-3 rounded-2xl border border-[#E2E8E4] dark:border-[#2E3532] flex items-center justify-between gap-3">
+              <span className="text-xs font-bold text-[#075C45] dark:text-[#78D9A6]">
+                Filtrar por Ano:
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedReportYear(selectedReportYear - 1)}
+                  className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-[#5E6963] dark:text-[#95A39B]"
+                  aria-label="Ano anterior"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <div className="flex items-center gap-1">
+                  {[selectedReportYear - 1, selectedReportYear, selectedReportYear + 1].map((year) => (
+                    <button
+                      key={year}
+                      type="button"
+                      onClick={() => setSelectedReportYear(year)}
+                      className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                        selectedReportYear === year
+                          ? 'bg-[#075C45] text-white dark:bg-[#16A66A] dark:text-[#101614]'
+                          : 'bg-white/80 dark:bg-[#1E2220] text-[#5E6963] dark:text-[#95A39B] hover:text-[#202724]'
+                      }`}
+                    >
+                      {year}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedReportYear(selectedReportYear + 1)}
+                  className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-[#5E6963] dark:text-[#95A39B]"
+                  aria-label="Próximo ano"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Controles de Intervalo Personalizado (exibido somente quando preset for custom) */}
       <AnimatePresence>

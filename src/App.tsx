@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { ThemeProvider } from './hooks/useTheme';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { AuthScreen } from './components/auth/AuthScreen';
 import { ResetPasswordScreen } from './components/auth/ResetPasswordScreen';
 import { Shell } from './components/layout/Shell';
 import { DashboardHome } from './components/dashboard/DashboardHome';
+import { MovementsScreen } from './components/movements/MovementsScreen';
+import { PlanningScreen } from './components/planning/PlanningScreen';
 import { EntriesScreen } from './components/entries/EntriesScreen';
 import { FixedExpensesScreen } from './components/fixed-expenses/FixedExpensesScreen';
 import { VariableExpensesScreen } from './components/variable-expenses/VariableExpensesScreen';
@@ -30,10 +32,15 @@ function AppContent() {
   const now = new Date();
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const handleMonthChange = (year: number, month: number) => {
     setSelectedYear(year);
     setSelectedMonth(month);
+  };
+
+  const handleRefreshData = () => {
+    setRefreshKey((prev) => prev + 1);
   };
 
   const isResetPasswordPath = window.location.pathname === '/reset-password' || window.location.hash.includes('type=recovery');
@@ -76,80 +83,146 @@ function AppContent() {
   const renderContent = () => {
     if (currentTab === 'home') {
       return (
-        <DashboardHome
-          onSelectTab={setCurrentTab}
-          selectedYear={selectedYear}
-          selectedMonth={selectedMonth}
-          onMonthChange={handleMonthChange}
-        />
+        <React.Fragment key={refreshKey}>
+          <DashboardHome
+            onSelectTab={setCurrentTab}
+            selectedYear={selectedYear}
+            selectedMonth={selectedMonth}
+            onMonthChange={handleMonthChange}
+          />
+        </React.Fragment>
+      );
+    }
+    if (currentTab === 'movements') {
+      return (
+        <React.Fragment key={refreshKey}>
+          <MovementsScreen
+            selectedYear={selectedYear}
+            selectedMonth={selectedMonth}
+            onMonthChange={handleMonthChange}
+          />
+        </React.Fragment>
+      );
+    }
+    if (currentTab === 'planning') {
+      return (
+        <React.Fragment key={refreshKey}>
+          <PlanningScreen onSelectTab={setCurrentTab} />
+        </React.Fragment>
       );
     }
     if (currentTab === 'entries') {
       return (
-        <EntriesScreen
-          selectedYear={selectedYear}
-          selectedMonth={selectedMonth}
-          onMonthChange={handleMonthChange}
-        />
+        <React.Fragment key={refreshKey}>
+          <EntriesScreen
+            selectedYear={selectedYear}
+            selectedMonth={selectedMonth}
+            onMonthChange={handleMonthChange}
+          />
+        </React.Fragment>
       );
     }
     if (currentTab === 'fixed_expenses') {
       return (
-        <FixedExpensesScreen
-          selectedYear={selectedYear}
-          selectedMonth={selectedMonth}
-          onMonthChange={handleMonthChange}
-        />
+        <React.Fragment key={refreshKey}>
+          <FixedExpensesScreen
+            selectedYear={selectedYear}
+            selectedMonth={selectedMonth}
+            onMonthChange={handleMonthChange}
+          />
+        </React.Fragment>
       );
     }
     if (currentTab === 'variable_expenses') {
       return (
-        <VariableExpensesScreen
-          selectedYear={selectedYear}
-          selectedMonth={selectedMonth}
-          onMonthChange={handleMonthChange}
-        />
+        <React.Fragment key={refreshKey}>
+          <VariableExpensesScreen
+            selectedYear={selectedYear}
+            selectedMonth={selectedMonth}
+            onMonthChange={handleMonthChange}
+          />
+        </React.Fragment>
       );
     }
     if (currentTab === 'installments') {
       return (
-        <InstallmentsScreen
-          selectedYear={selectedYear}
-          selectedMonth={selectedMonth}
-          onMonthChange={handleMonthChange}
-        />
+        <React.Fragment key={refreshKey}>
+          <InstallmentsScreen
+            selectedYear={selectedYear}
+            selectedMonth={selectedMonth}
+            onMonthChange={handleMonthChange}
+          />
+        </React.Fragment>
       );
     }
     if (currentTab === 'goals') {
-      return <GoalsScreen />;
+      return (
+        <React.Fragment key={refreshKey}>
+          <GoalsScreen />
+        </React.Fragment>
+      );
     }
     if (currentTab === 'wishlist') {
-      return <WishlistScreen />;
+      return (
+        <React.Fragment key={refreshKey}>
+          <WishlistScreen />
+        </React.Fragment>
+      );
     }
     if (currentTab === 'market') {
-      return <MarketScreen />;
+      return (
+        <React.Fragment key={refreshKey}>
+          <MarketScreen />
+        </React.Fragment>
+      );
     }
     if (currentTab === 'closing') {
-      return <ClosingScreen />;
+      return (
+        <React.Fragment key={refreshKey}>
+          <ClosingScreen />
+        </React.Fragment>
+      );
     }
     if (currentTab === 'reports') {
-      return <ReportsScreen />;
+      return (
+        <React.Fragment key={refreshKey}>
+          <ReportsScreen />
+        </React.Fragment>
+      );
     }
     if (currentTab === 'calendar') {
-      return <CalendarScreen onSelectTab={setCurrentTab} />;
+      return (
+        <React.Fragment key={refreshKey}>
+          <CalendarScreen onSelectTab={setCurrentTab} />
+        </React.Fragment>
+      );
     }
     if (currentTab === 'profile') {
-      return <ProfileScreen />;
+      return (
+        <React.Fragment key={refreshKey}>
+          <ProfileScreen />
+        </React.Fragment>
+      );
     }
     if (currentTab === 'support') {
-      return <SupportScreen />;
+      return (
+        <React.Fragment key={refreshKey}>
+          <SupportScreen />
+        </React.Fragment>
+      );
     }
     return <ModulePlaceholder tab={currentTab} onSelectTab={setCurrentTab} />;
   };
 
   // Authenticated -> Show Authenticated Layout Shell
   return (
-    <Shell currentTab={currentTab} onSelectTab={setCurrentTab}>
+    <Shell
+      currentTab={currentTab}
+      onSelectTab={setCurrentTab}
+      selectedYear={selectedYear}
+      selectedMonth={selectedMonth}
+      onRefreshData={handleRefreshData}
+    >
       {renderContent()}
     </Shell>
   );

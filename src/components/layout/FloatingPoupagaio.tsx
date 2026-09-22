@@ -19,6 +19,7 @@ import {
 interface FloatingPoupagaioProps {
   onSelectTab: (tab: ActiveTab) => void;
   currentTab?: ActiveTab;
+  onOpenCreateModal?: (modalType: 'entries' | 'variable_expenses' | 'fixed_expenses' | 'installments') => void;
 }
 
 interface QuickActionItem {
@@ -30,7 +31,7 @@ interface QuickActionItem {
   category: 'CADASTRAR' | 'ORGANIZAR' | 'ANALISAR' | 'AJUDA';
 }
 
-export function FloatingPoupagaio({ onSelectTab }: FloatingPoupagaioProps) {
+export function FloatingPoupagaio({ onSelectTab, onOpenCreateModal }: FloatingPoupagaioProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -64,9 +65,20 @@ export function FloatingPoupagaio({ onSelectTab }: FloatingPoupagaioProps) {
     };
   }, [isOpen]);
 
-  const handleItemClick = (tab: ActiveTab) => {
-    onSelectTab(tab);
+  const handleItemClick = (tab: ActiveTab, categoryName: string) => {
     setIsOpen(false);
+    if (categoryName === 'CADASTRAR' && onOpenCreateModal) {
+      if (
+        tab === 'entries' ||
+        tab === 'variable_expenses' ||
+        tab === 'fixed_expenses' ||
+        tab === 'installments'
+      ) {
+        onOpenCreateModal(tab);
+        return;
+      }
+    }
+    onSelectTab(tab);
   };
 
   const categories = [
@@ -177,7 +189,7 @@ export function FloatingPoupagaio({ onSelectTab }: FloatingPoupagaioProps) {
                         <button
                           key={item.id}
                           type="button"
-                          onClick={() => handleItemClick(item.id)}
+                          onClick={() => handleItemClick(item.id, cat.name)}
                           className="w-full flex items-center justify-between px-3 py-2 rounded-xl border border-[#E2DCBE] dark:border-[#252E28] bg-white/90 dark:bg-[#1E2320] hover:bg-white dark:hover:bg-[#252C28] hover:border-[#F2B807] transition-all text-left cursor-pointer group shadow-2xs"
                         >
                           <div className="flex items-center gap-2.5 min-w-0">

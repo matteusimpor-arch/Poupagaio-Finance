@@ -36,20 +36,101 @@ import {
   Linkedin,
 } from 'lucide-react';
 import { ActiveTab } from '../../types';
+import { EntryModal } from '../entries/EntryModal';
+import { VariableExpenseModal } from '../variable-expenses/VariableExpenseModal';
+import { FixedExpenseModal } from '../fixed-expenses/FixedExpenseModal';
+import { InstallmentPurchaseModal } from '../installments/InstallmentPurchaseModal';
+import { entriesService } from '../../lib/services/entries';
+import { variableExpensesService } from '../../lib/services/variableExpenses';
+import { fixedExpensesService } from '../../lib/services/fixedExpenses';
+import { installmentsService } from '../../lib/services/installments';
+import {
+  CreateEntryInput,
+  UpdateEntryInput,
+  CreateVariableExpenseInput,
+  UpdateVariableExpenseInput,
+  CreateFixedExpenseInput,
+  UpdateFixedExpenseInput,
+  CreateInstallmentPurchaseInput,
+  UpdateInstallmentPurchaseInput,
+} from '../../types';
 
 interface ShellProps {
   currentTab: ActiveTab;
   onSelectTab: (tab: ActiveTab) => void;
   children: React.ReactNode;
+  selectedYear?: number;
+  selectedMonth?: number;
+  onRefreshData?: () => void;
 }
 
-export function Shell({ currentTab, onSelectTab, children }: ShellProps) {
+export function Shell({
+  currentTab,
+  onSelectTab,
+  children,
+  selectedYear,
+  selectedMonth,
+  onRefreshData,
+}: ShellProps) {
   const { user, profile, currentSpace, signOut } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [alerts, setAlerts] = useState<FinancialAlert[]>([]);
   const [isScrolled, setIsScrolled] = useState(false);
+
+  // State for direct creation modals opened via Poupagaio
+  const [poupagaioModal, setPoupagaioModal] = useState<
+    'entries' | 'variable_expenses' | 'fixed_expenses' | 'installments' | null
+  >(null);
+
+  // Save handlers for Poupagaio direct modals
+  const handleSaveEntryPoupagaio = async (data: CreateEntryInput | UpdateEntryInput): Promise<boolean> => {
+    if (!user || !currentSpace?.id) return false;
+    const res = await entriesService.createEntry(user.id, data as CreateEntryInput);
+    if (res.error) {
+      throw new Error(res.error);
+    }
+    setPoupagaioModal(null);
+    if (onRefreshData) onRefreshData();
+    return true;
+  };
+
+  const handleSaveVariableExpensePoupagaio = async (data: CreateVariableExpenseInput | UpdateVariableExpenseInput): Promise<boolean> => {
+    if (!user || !currentSpace?.id) return false;
+    const res = await variableExpensesService.createVariableExpense(user.id, data as CreateVariableExpenseInput);
+    if (res.error) {
+      throw new Error(res.error);
+    }
+    setPoupagaioModal(null);
+    if (onRefreshData) onRefreshData();
+    return true;
+  };
+
+  const handleSaveFixedExpensePoupagaio = async (data: CreateFixedExpenseInput | UpdateFixedExpenseInput): Promise<boolean> => {
+    if (!user || !currentSpace?.id) return false;
+    const res = await fixedExpensesService.createFixedExpense(user.id, data as CreateFixedExpenseInput);
+    if (res.error) {
+      throw new Error(res.error);
+    }
+    setPoupagaioModal(null);
+    if (onRefreshData) onRefreshData();
+    return true;
+  };
+
+  const handleSaveInstallmentPoupagaio = async (input: CreateInstallmentPurchaseInput | UpdateInstallmentPurchaseInput): Promise<{ success: boolean; error?: string }> => {
+    if (!user || !currentSpace?.id) return { success: false, error: 'Espaço indisponível' };
+    const res = await installmentsService.createPurchase({
+      ...input,
+      space_id: currentSpace.id,
+    } as CreateInstallmentPurchaseInput);
+    if (!res.error) {
+      setPoupagaioModal(null);
+      if (onRefreshData) onRefreshData();
+      return { success: true };
+    }
+    return { success: false, error: res.error };
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -407,7 +488,52 @@ export function Shell({ currentTab, onSelectTab, children }: ShellProps) {
       </footer>
 
       {/* FLOATING POUPAGAIO QUICK ACCESS ASSISTANT */}
-      <FloatingPoupagaio onSelectTab={handleNavClick} currentTab={currentTab} />
+      <FloatingPoupagaio
+        onSelectTab={handleNavClick}
+        currentTab={currentTab}
+        onOpenCreateModal={(modalType) => setPoupagaioModal(modalType)}
+      />
+
+      {/* POUPAGAIO DIRECT CREATION MODALS */}
+      {currentSpace?.id && (
+        <>
+          <EntryModal
+            isOpen={poupagaioModal === 'entries'}
+            onClose={() => setPoupagaioModal(null)}
+            onSave={handleSaveEntryPoupagaio}
+            spaceId={currentSpace.id}
+            selectedYear={selectedYear}
+            selectedMonth={selectedMonth}
+          />
+
+          <VariableExpenseModal
+            isOpen={poupagaioModal === 'variable_expenses'}
+            onClose={() => setPoupagaioModal(null)}
+            onSave={handleSaveVariableExpensePoupagaio}
+            spaceId={currentSpace.id}
+            selectedYear={selectedYear}
+            selectedMonth={selectedMonth}
+          />
+
+          <FixedExpenseModal
+            isOpen={poupagaioModal === 'fixed_expenses'}
+            onClose={() => setPoupagaioModal(null)}
+            onSave={handleSaveFixedExpensePoupagaio}
+            spaceId={currentSpace.id}
+            selectedYear={selectedYear}
+            selectedMonth={selectedMonth}
+          />
+
+          <InstallmentPurchaseModal
+            isOpen={poupagaioModal === 'installments'}
+            onClose={() => setPoupagaioModal(null)}
+            onSave={handleSaveInstallmentPoupagaio}
+            spaceId={currentSpace.id}
+            selectedYear={selectedYear}
+            selectedMonth={selectedMonth}
+          />
+        </>
+      )}
     </div>
   );
 }

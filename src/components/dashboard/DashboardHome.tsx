@@ -1332,7 +1332,13 @@ export function DashboardHome({
                   Entradas vs Despesas e Tendência de Saldo
                 </p>
               </div>
-              <TrendingUp className="w-4 h-4 text-[#16A66A]" />
+              <button
+                type="button"
+                onClick={() => onSelectTab('reports')}
+                className="text-xs text-[#16A66A] hover:underline font-bold cursor-pointer flex items-center gap-1"
+              >
+                <span>Ver evolução completa →</span>
+              </button>
             </div>
 
             <div className="h-56 w-full pt-2">
