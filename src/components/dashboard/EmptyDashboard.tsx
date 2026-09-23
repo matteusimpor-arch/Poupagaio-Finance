@@ -42,7 +42,7 @@ export function EmptyDashboard() {
                 src={POUPAGAIO_MASCOT_URL}
                 alt="Mascote Poupagaio Finance"
                 referrerPolicy="no-referrer"
-                className="w-full h-full object-cover rounded-2xl"
+                className="w-full h-full object-contain"
               />
             </div>
             <div className="absolute -bottom-2 -right-2 bg-[#D6A84B] text-[#202724] px-2.5 py-1 rounded-full text-xs font-bold shadow-md flex items-center gap-1 border border-white/40">

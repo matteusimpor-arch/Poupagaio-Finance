@@ -96,12 +96,7 @@ export function AuthScreen() {
     <div className="min-h-screen w-full flex flex-col justify-between bg-[#F7F4EA] dark:bg-[#121212] text-[#202724] dark:text-[#F4F4F5] p-4 md:p-6 transition-colors duration-200">
       {/* Top Bar with Theme Toggle */}
       <div className="w-full max-w-5xl mx-auto flex items-center justify-between py-2">
-        <div className="flex items-center gap-2">
-          <PoupagaioLogo className="h-10 sm:h-11" />
-          <span className="font-bold text-sm tracking-tight font-display text-[#075C45] dark:text-[#34D399]">
-            Poupagaio Finance
-          </span>
-        </div>
+        <PoupagaioLogo showText className="h-10 sm:h-11" />
 
         <button
           type="button"
@@ -118,7 +113,7 @@ export function AuthScreen() {
         <Card className="border-[#E8E4D5] dark:border-white/12 bg-white dark:bg-[#1A1A1A] shadow-xl overflow-hidden">
           {/* Header Brand */}
           <div className="p-6 pb-2 text-center flex flex-col items-center space-y-3">
-            <PoupagaioLogo className="h-20 sm:h-24 md:h-28" />
+            <PoupagaioLogo variant="hero" className="h-20 sm:h-24 md:h-28" />
             <div>
               <h1 className="text-xl font-bold font-display text-[#075C45] dark:text-[#34D399]">
                 Poupagaio Finance

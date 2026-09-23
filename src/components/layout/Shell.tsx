@@ -210,17 +210,16 @@ export function Shell({
         <div className="flex items-center justify-between px-3 sm:px-6 py-2.5 gap-2 sm:gap-4 max-w-[1480px] mx-auto">
           {/* Left: Brand & Space */}
           <div className="flex items-center gap-2.5 sm:gap-4 min-w-0">
-            <div className="flex items-center gap-2 sm:gap-2.5 cursor-pointer shrink-0" onClick={() => handleNavClick('home')}>
-              <PoupagaioLogo className="h-10 sm:h-12 md:h-14" />
-              <div className="min-w-0 flex flex-col justify-center">
-                <div className="font-bold text-sm sm:text-base md:text-lg tracking-tight font-display text-[#02402E] dark:text-[#78D9A6] leading-tight flex items-center gap-1">
-                  <span>Poupagaio</span>
-                  <span className="text-[#16A66A] dark:text-[#34D399] font-medium text-xs sm:text-sm">Finance</span>
-                </div>
-                <p className="text-[10px] text-[#5E6963] dark:text-[#95A39B] leading-none hidden lg:block">
-                  Organize hoje, conquiste amamanhã.
-                </p>
-              </div>
+            <div
+              className="cursor-pointer shrink-0"
+              onClick={() => handleNavClick('home')}
+              title="Poupagaio Finance - Início"
+            >
+              <PoupagaioLogo
+                showText
+                subtitle="Organize hoje, conquiste amanhã."
+                className="h-10 sm:h-12 md:h-14"
+              />
             </div>
 
             <div className="h-5 w-px bg-[#DCE2DE] dark:bg-[#2B322F] hidden sm:block shrink-0" />
@@ -540,12 +539,8 @@ export function Shell({
       <footer className="w-full border-t border-[#D2DDD6] dark:border-[#28322C] bg-white/80 dark:bg-[#161B18]/80 backdrop-blur-md py-8 px-4 sm:px-8 mt-12 transition-colors relative z-10">
         <div className="max-w-[1480px] mx-auto flex flex-col md:flex-row items-center justify-between gap-6 text-center md:text-left">
           <div className="space-y-1.5">
-            <div className="flex items-center justify-center md:justify-start gap-2.5">
-              <PoupagaioLogo className="h-9 sm:h-10" />
-              <div className="flex items-center gap-1 font-bold font-display text-sm sm:text-base text-[#02402E] dark:text-[#78D9A6]">
-                <span>Poupagaio</span>
-                <span className="text-[#16A66A] dark:text-[#34D399] font-medium text-xs">Finance</span>
-              </div>
+            <div className="flex items-center justify-center md:justify-start">
+              <PoupagaioLogo showText className="h-9 sm:h-10" />
             </div>
             <p className="text-xs text-[#5E6963] dark:text-[#95A39B]">
               Organize hoje. Você mais longe.
