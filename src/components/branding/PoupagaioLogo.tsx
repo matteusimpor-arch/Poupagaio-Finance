@@ -14,14 +14,14 @@ export function PoupagaioLogo({
   className = '',
   compact = false,
   alt = 'Poupagaio Finance',
-}: PoupagaioLogoProps) {
+}: PoupagaioLogoOficialProps) {
   const hasCustomHeight = className.split(' ').some((cls) => cls.startsWith('h-'));
   const defaultSize = compact ? 'h-10 sm:h-12' : 'h-14 sm:h-16 md:h-20';
   const sizeClass = hasCustomHeight ? '' : defaultSize;
 
   return (
     <img
-      src="/branding/poupagaio-logo.png"
+      src="/branding/poupagaio-logooficial.png"
       alt={alt}
       className={`w-auto object-contain shrink-0 ${sizeClass} ${className}`.trim()}
       draggable={false}
