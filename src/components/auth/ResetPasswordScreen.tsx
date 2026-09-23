@@ -6,7 +6,7 @@ import { Sun, Moon, Lock, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { useTheme } from '../../hooks/useTheme';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { POUPAGAIO_MASCOT_URL } from '../../assets/mascot';
-import { PoupagaioLogo } from '../branding/PoupagaioLogo';
+import { PoupagaioLogo } from '../branding/poupagaio-logooficial';
 
 export function ResetPasswordScreen() {
   const { theme, toggleTheme } = useTheme();
