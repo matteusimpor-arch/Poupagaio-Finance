@@ -14,6 +14,7 @@ interface FixedExpenseModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (data: CreateFixedExpenseInput | UpdateFixedExpenseInput) => Promise<boolean>;
+  onDelete?: (deleteOption: 'only_payment' | 'recurrent') => Promise<boolean>;
   editingExpense?: FixedExpenseWithStatus | null;
   spaceId: string;
   selectedYear?: number;
@@ -43,6 +44,7 @@ export function FixedExpenseModal({
   isOpen,
   onClose,
   onSave,
+  onDelete,
   editingExpense,
   spaceId,
   selectedYear,
@@ -68,6 +70,9 @@ export function FixedExpenseModal({
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteOption, setDeleteOption] = useState<'only_payment' | 'recurrent'>('recurrent');
   const [generalError, setGeneralError] = useState<string | null>(null);
 
   const isEditing = Boolean(editingExpense);
@@ -115,6 +120,9 @@ export function FixedExpenseModal({
     }
     setErrors({});
     setGeneralError(null);
+    setShowDeleteConfirm(false);
+    setIsDeleting(false);
+    setDeleteOption('recurrent');
   }, [editingExpense, isOpen, targetYear, targetMonth, currentYear, currentMonth]);
 
   if (!isOpen) return null;
@@ -204,6 +212,25 @@ export function FixedExpenseModal({
     }
   };
 
+  const handleDeleteConfirm = async () => {
+    if (!onDelete) return;
+    setIsDeleting(true);
+    setGeneralError(null);
+    try {
+      const success = await onDelete(deleteOption);
+      if (success) {
+        onClose();
+      } else {
+        setGeneralError('Não foi possível excluir o item selecionado.');
+      }
+    } catch (err: any) {
+      setGeneralError(err?.message || 'Erro ao excluir.');
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteConfirm(false);
+    }
+  };
+
   return (
     <div
       role="dialog"
@@ -211,8 +238,83 @@ export function FixedExpenseModal({
       aria-labelledby="fixed-expense-modal-title"
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150"
     >
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-[#1C211E] border border-[#D2DDD6] dark:border-[#28322C] rounded-3xl p-5 max-w-sm w-full space-y-4 shadow-xl">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-full bg-rose-100 dark:bg-rose-950/50 flex items-center justify-center text-rose-600 shrink-0">
+                <AlertCircle className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-[#02402E] dark:text-[#78D9A6]">
+                  Excluir gasto fixo?
+                </h3>
+                <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B] mt-1">
+                  Como este é um gasto fixo recorrente, escolha como deseja excluí-lo:
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-2.5 pt-1">
+              {editingExpense?.isPaid && (
+                <label className="flex items-start gap-2.5 p-2.5 rounded-xl border border-gray-100 dark:border-white/5 hover:bg-black/[0.02] dark:hover:bg-white/[0.02] cursor-pointer text-xs">
+                  <input
+                    type="radio"
+                    name="fixed-delete-option"
+                    checked={deleteOption === 'only_payment'}
+                    onChange={() => setDeleteOption('only_payment')}
+                    className="mt-0.5 text-[#16A66A] focus:ring-[#16A66A]"
+                  />
+                  <div>
+                    <span className="font-bold text-[#202724] dark:text-[#F7F4EA]">Excluir somente este lançamento</span>
+                    <p className="text-[10px] text-[#5E6963] dark:text-[#95A39B] mt-0.5">
+                      Desfaz apenas a baixa realizada para este mês. O gasto continuará previsto no calendário.
+                    </p>
+                  </div>
+                </label>
+              )}
+
+              <label className="flex items-start gap-2.5 p-2.5 rounded-xl border border-gray-100 dark:border-white/5 hover:bg-black/[0.02] dark:hover:bg-white/[0.02] cursor-pointer text-xs">
+                <input
+                  type="radio"
+                  name="fixed-delete-option"
+                  checked={deleteOption === 'recurrent'}
+                  onChange={() => setDeleteOption('recurrent')}
+                  className="mt-0.5 text-[#16A66A] focus:ring-[#16A66A]"
+                />
+                <div>
+                  <span className="font-bold text-[#202724] dark:text-[#F7F4EA]">Excluir recorrência completa</span>
+                  <p className="text-[10px] text-[#5E6963] dark:text-[#95A39B] mt-0.5">
+                    Remove definitivamente este gasto fixo recorrente do seu espaço financeiro.
+                  </p>
+                </div>
+              </label>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowDeleteConfirm(false)}
+                className="cursor-pointer text-xs"
+              >
+                Cancelar
+              </Button>
+              <button
+                type="button"
+                onClick={handleDeleteConfirm}
+                disabled={isDeleting}
+                className="px-3 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold cursor-pointer text-xs transition-colors flex items-center justify-center min-w-[70px] disabled:opacity-50"
+              >
+                {isDeleting ? 'Excluindo...' : 'Excluir'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div
-        className="w-full max-w-lg bg-white dark:bg-[#18211D] border border-[#E8E4D5] dark:border-[#24312B] rounded-3xl shadow-xl overflow-hidden flex flex-col max-h-[92vh] animate-in zoom-in-95 duration-150"
+        className="w-[calc(100vw-24px)] sm:w-full max-w-lg mx-auto bg-white dark:bg-[#18211D] border border-[#E8E4D5] dark:border-[#24312B] rounded-3xl shadow-xl overflow-hidden flex flex-col max-h-[92vh] box-border animate-in zoom-in-95 duration-150"
       >
         {/* Cabeçalho do Modal */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#E8E4D5] dark:border-[#24312B]">
@@ -451,27 +553,40 @@ export function FixedExpenseModal({
           </div>
 
           {/* Rodapé de Ações */}
-          <div className="pt-2 flex items-center justify-end gap-2.5 border-t border-[#E8E4D5] dark:border-[#24312B]">
-            <Button
-              type="button"
-              variant="outline"
-              size="md"
-              onClick={onClose}
-              disabled={isSubmitting}
-              className="rounded-2xl cursor-pointer"
-            >
-              Cancelar
-            </Button>
-            <Button
-              type="submit"
-              variant="primary"
-              size="md"
-              isLoading={isSubmitting}
-              disabled={isSubmitting}
-              className="rounded-2xl font-bold cursor-pointer"
-            >
-              {isEditing ? 'Salvar alterações' : 'Cadastrar gasto fixo'}
-            </Button>
+          <div className="pt-4 flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 sm:gap-2.5 border-t border-[#E8E4D5] dark:border-[#24312B] w-full">
+            {isEditing && (
+              <button
+                type="button"
+                onClick={() => setShowDeleteConfirm(true)}
+                disabled={isSubmitting || isDeleting}
+                className="w-full sm:w-auto text-xs font-bold text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors cursor-pointer px-3.5 py-2.5 rounded-xl border border-red-200 dark:border-red-900 bg-red-50/50 dark:bg-red-950/20 text-center shrink-0 flex items-center justify-center gap-1"
+              >
+                <span>🗑</span>
+                <span>Excluir movimentação</span>
+              </button>
+            )}
+            <div className="grid grid-cols-2 sm:flex sm:items-center gap-2.5 w-full sm:w-auto">
+              <Button
+                type="button"
+                variant="outline"
+                size="md"
+                onClick={onClose}
+                disabled={isSubmitting}
+                className="w-full sm:w-auto rounded-2xl cursor-pointer font-bold justify-center"
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                variant="primary"
+                size="md"
+                isLoading={isSubmitting}
+                disabled={isSubmitting}
+                className="w-full sm:w-auto rounded-2xl font-bold cursor-pointer justify-center whitespace-normal text-center break-words py-2 px-3 text-xs sm:text-sm"
+              >
+                {isEditing ? 'Salvar alterações' : 'Cadastrar gasto fixo'}
+              </Button>
+            </div>
           </div>
         </form>
       </div>

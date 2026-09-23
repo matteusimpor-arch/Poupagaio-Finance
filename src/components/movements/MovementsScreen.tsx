@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '../../hooks/useAuth';
+import { supabase } from '../../lib/supabase';
 import { entriesService } from '../../lib/services/entries';
 import { checklistService, NormalizedChecklistExpense } from '../../lib/services/checklist';
 import { formatCurrency, getMonthNameBR, getMonthYearLabel } from '../../lib/formatters';
@@ -94,6 +95,11 @@ export function MovementsScreen({
     'entries' | 'variable_expenses' | 'fixed_expenses' | 'installments' | null
   >(null);
   const [isPlusMenuOpen, setIsPlusMenuOpen] = useState<boolean>(false);
+
+  // Editing States
+  const [editingMovement, setEditingMovement] = useState<ConsolidatedMovement | null>(null);
+  const [freshEditingRecord, setFreshEditingRecord] = useState<any | null>(null);
+  const [isFetchingFreshRecord, setIsFetchingFreshRecord] = useState<boolean>(false);
 
   // Month navigation
   const handlePrevMonth = () => {
@@ -230,46 +236,206 @@ export function MovementsScreen({
     });
   }, [movements, typeFilter, statusFilter, searchQuery]);
 
-  // Save handlers for creation modals
+  // Modal Closing & Data Reset Helper
+  const handleCloseModals = () => {
+    setCreateModalType(null);
+    setEditingMovement(null);
+    setFreshEditingRecord(null);
+  };
+
+  // On-demand loading of fresh editing records
+  const handleEditClick = async (item: ConsolidatedMovement) => {
+    if (!supabase) return;
+    setEditingMovement(item);
+    setFreshEditingRecord(null);
+    setIsFetchingFreshRecord(true);
+
+    try {
+      if (item.sourceType === 'entry') {
+        setFreshEditingRecord(item.originalRecord);
+      } else if (item.sourceType === 'variable') {
+        const { data, error } = await supabase
+          .from('variable_expenses')
+          .select('*')
+          .eq('id', item.sourceId)
+          .single();
+        if (!error && data) {
+          setFreshEditingRecord(data);
+        } else {
+          console.error('Erro ao carregar gasto variável:', error);
+        }
+      } else if (item.sourceType === 'fixed') {
+        const { data, error } = await supabase
+          .from('fixed_expenses')
+          .select('*')
+          .eq('id', item.sourceId)
+          .single();
+        if (!error && data) {
+          const isPaid = item.status === 'paid';
+          setFreshEditingRecord({
+            ...data,
+            isPaid,
+          });
+        } else {
+          console.error('Erro ao carregar gasto fixo:', error);
+        }
+      } else if (item.sourceType === 'installment') {
+        const purchaseId = item.originalRecord?.purchaseId || item.sourceId;
+        const { data: purchaseData, error: purchaseError } = await supabase
+          .from('installment_purchases')
+          .select('*')
+          .eq('id', purchaseId)
+          .single();
+        if (!purchaseError && purchaseData) {
+          const { data: insts } = await supabase
+            .from('installments')
+            .select('*')
+            .eq('purchase_id', purchaseId);
+          const paidCount = insts?.filter((i) => i.status === 'paid').length || 0;
+          setFreshEditingRecord({
+            ...purchaseData,
+            paidCount,
+          });
+        } else {
+          console.error('Erro ao carregar compra parcelada:', purchaseError);
+        }
+      }
+    } catch (err) {
+      console.error('Erro ao carregar movimentação para edição:', err);
+    } finally {
+      setIsFetchingFreshRecord(false);
+    }
+  };
+
+  // Unified Save & Update Handlers
   const handleSaveEntry = async (data: CreateEntryInput | UpdateEntryInput): Promise<boolean> => {
     if (!user) return false;
-    const res = await entriesService.createEntry(user.id, data as CreateEntryInput);
-    if (res.error) throw new Error(res.error);
-    setCreateModalType(null);
+    if (editingMovement) {
+      const res = await entriesService.updateEntry(editingMovement.sourceId, data as UpdateEntryInput);
+      if (res.error) throw new Error(res.error);
+    } else {
+      const res = await entriesService.createEntry(user.id, data as CreateEntryInput);
+      if (res.error) throw new Error(res.error);
+    }
+    handleCloseModals();
     loadMovementsData();
     return true;
   };
 
   const handleSaveVariableExpense = async (data: CreateVariableExpenseInput | UpdateVariableExpenseInput): Promise<boolean> => {
     if (!user) return false;
-    const res = await variableExpensesService.createVariableExpense(user.id, data as CreateVariableExpenseInput);
-    if (res.error) throw new Error(res.error);
-    setCreateModalType(null);
+    if (editingMovement) {
+      const res = await variableExpensesService.updateVariableExpense(editingMovement.sourceId, data as UpdateVariableExpenseInput);
+      if (res.error) throw new Error(res.error);
+    } else {
+      const res = await variableExpensesService.createVariableExpense(user.id, data as CreateVariableExpenseInput);
+      if (res.error) throw new Error(res.error);
+    }
+    handleCloseModals();
     loadMovementsData();
     return true;
   };
 
   const handleSaveFixedExpense = async (data: CreateFixedExpenseInput | UpdateFixedExpenseInput): Promise<boolean> => {
     if (!user) return false;
-    const res = await fixedExpensesService.createFixedExpense(user.id, data as CreateFixedExpenseInput);
-    if (res.error) throw new Error(res.error);
-    setCreateModalType(null);
+    if (editingMovement) {
+      const res = await fixedExpensesService.updateFixedExpense(editingMovement.sourceId, data as UpdateFixedExpenseInput);
+      if (res.error) throw new Error(res.error);
+    } else {
+      const res = await fixedExpensesService.createFixedExpense(user.id, data as CreateFixedExpenseInput);
+      if (res.error) throw new Error(res.error);
+    }
+    handleCloseModals();
     loadMovementsData();
     return true;
   };
 
   const handleSaveInstallment = async (input: CreateInstallmentPurchaseInput | UpdateInstallmentPurchaseInput): Promise<{ success: boolean; error?: string }> => {
     if (!user || !currentSpace?.id) return { success: false, error: 'Espaço indisponível' };
-    const res = await installmentsService.createPurchase({
-      ...input,
-      space_id: currentSpace.id,
-    } as CreateInstallmentPurchaseInput);
-    if (!res.error) {
-      setCreateModalType(null);
+    if (editingMovement) {
+      const res = await installmentsService.updatePurchase(freshEditingRecord.id, currentSpace.id, input as UpdateInstallmentPurchaseInput);
+      if (!res.success) {
+        return { success: false, error: res.error };
+      }
+      handleCloseModals();
       loadMovementsData();
       return { success: true };
+    } else {
+      const res = await installmentsService.createPurchase({
+        ...input,
+        space_id: currentSpace.id,
+      } as CreateInstallmentPurchaseInput);
+      if (!res.error) {
+        handleCloseModals();
+        loadMovementsData();
+        return { success: true };
+      }
+      return { success: false, error: res.error };
     }
-    return { success: false, error: res.error };
+  };
+
+  // Deletion Handlers
+  const handleDeleteEntry = async (): Promise<boolean> => {
+    if (!editingMovement) return false;
+    const res = await entriesService.deleteEntry(editingMovement.sourceId);
+    if (res.success) {
+      handleCloseModals();
+      loadMovementsData();
+      return true;
+    }
+    return false;
+  };
+
+  const handleDeleteVariableExpense = async (): Promise<boolean> => {
+    if (!editingMovement) return false;
+    const res = await variableExpensesService.deleteVariableExpense(editingMovement.sourceId);
+    if (res.success) {
+      handleCloseModals();
+      loadMovementsData();
+      return true;
+    }
+    return false;
+  };
+
+  const handleDeleteFixedExpense = async (deleteOption: 'only_payment' | 'recurrent'): Promise<boolean> => {
+    if (!editingMovement || !currentSpace?.id) return false;
+    if (deleteOption === 'only_payment') {
+      const res = await fixedExpensesService.unmarkPaid(editingMovement.sourceId, selectedYear, selectedMonth);
+      if (res.success) {
+        handleCloseModals();
+        loadMovementsData();
+        return true;
+      }
+    } else {
+      const res = await fixedExpensesService.deleteFixedExpense(editingMovement.sourceId);
+      if (res.success) {
+        handleCloseModals();
+        loadMovementsData();
+        return true;
+      }
+    }
+    return false;
+  };
+
+  const handleDeleteInstallment = async (deleteOption: 'only_installment' | 'full_purchase'): Promise<boolean> => {
+    if (!editingMovement || !currentSpace?.id) return false;
+    if (deleteOption === 'only_installment') {
+      const res = await installmentsService.deleteSingleInstallment(editingMovement.sourceId, currentSpace.id);
+      if (res.success) {
+        handleCloseModals();
+        loadMovementsData();
+        return true;
+      }
+    } else {
+      const purchaseId = freshEditingRecord?.id || editingMovement.sourceId;
+      const res = await installmentsService.deletePurchase(purchaseId, currentSpace.id);
+      if (res.success) {
+        handleCloseModals();
+        loadMovementsData();
+        return true;
+      }
+    }
+    return false;
   };
 
   // Toggle expense status directly from movements list
@@ -485,76 +651,6 @@ export function MovementsScreen({
 
         {/* Tab Filters */}
         <div className="pt-2 border-t border-[#E2ECE6] dark:border-[#28322C] space-y-2">
-          {/* Type filters (Scroll Horizontal on Mobile) */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar -mx-1 px-1">
-            <button
-              type="button"
-              onClick={() => setTypeFilter('all')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
-                typeFilter === 'all'
-                  ? 'bg-[#02402E] text-white dark:bg-[#78D9A6] dark:text-[#101614]'
-                  : 'bg-[#F4F7F5] dark:bg-[#161B18] text-[#5E6963] dark:text-[#95A39B] hover:text-[#02402E]'
-              }`}
-            >
-              Todas
-            </button>
-            <button
-              type="button"
-              onClick={() => setTypeFilter('entries')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
-                typeFilter === 'entries'
-                  ? 'bg-[#16A66A] text-white'
-                  : 'bg-[#F4F7F5] dark:bg-[#161B18] text-[#5E6963] dark:text-[#95A39B] hover:text-[#16A66A]'
-              }`}
-            >
-              Entradas
-            </button>
-            <button
-              type="button"
-              onClick={() => setTypeFilter('expenses')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
-                typeFilter === 'expenses'
-                  ? 'bg-rose-600 text-white'
-                  : 'bg-[#F4F7F5] dark:bg-[#161B18] text-[#5E6963] dark:text-[#95A39B] hover:text-rose-600'
-              }`}
-            >
-              Despesas
-            </button>
-            <button
-              type="button"
-              onClick={() => setTypeFilter('fixed')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
-                typeFilter === 'fixed'
-                  ? 'bg-[#02402E]/20 text-[#02402E] dark:text-[#78D9A6]'
-                  : 'bg-[#F4F7F5] dark:bg-[#161B18] text-[#5E6963] dark:text-[#95A39B]'
-              }`}
-            >
-              Fixos
-            </button>
-            <button
-              type="button"
-              onClick={() => setTypeFilter('variable')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
-                typeFilter === 'variable'
-                  ? 'bg-[#02402E]/20 text-[#02402E] dark:text-[#78D9A6]'
-                  : 'bg-[#F4F7F5] dark:bg-[#161B18] text-[#5E6963] dark:text-[#95A39B]'
-              }`}
-            >
-              Variáveis
-            </button>
-            <button
-              type="button"
-              onClick={() => setTypeFilter('installment')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
-                typeFilter === 'installment'
-                  ? 'bg-[#02402E]/20 text-[#02402E] dark:text-[#78D9A6]'
-                  : 'bg-[#F4F7F5] dark:bg-[#161B18] text-[#5E6963] dark:text-[#95A39B]'
-              }`}
-            >
-              Parcelados
-            </button>
-          </div>
-
           {/* Status Filters */}
           <div className="flex items-center gap-1.5 pt-1">
             <button
@@ -640,12 +736,12 @@ export function MovementsScreen({
                     <div
                       className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
                         item.isIncome
-                          ? 'bg-emerald-100 text-[#16A66A] dark:bg-emerald-950/50'
+                          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400'
                           : item.sourceType === 'fixed'
-                          ? 'bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-400'
+                          ? 'bg-purple-100 text-purple-700 dark:bg-purple-950/30 dark:text-purple-400'
                           : item.sourceType === 'installment'
-                          ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400'
-                          : 'bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-400'
+                          ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400'
+                          : 'bg-rose-100 text-rose-700 dark:bg-rose-950/30 dark:text-rose-400'
                       }`}
                     >
                       {item.isIncome ? (
@@ -712,17 +808,39 @@ export function MovementsScreen({
                       </span>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => handleToggleStatus(item)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 shrink-0 ${
-                        isCompleted
-                          ? 'bg-[#F4F7F5] dark:bg-[#161B18] text-[#5E6963] dark:text-[#95A39B] hover:bg-black/5 dark:hover:bg-white/5'
-                          : 'bg-[#02402E] text-white dark:bg-[#16A66A] dark:text-[#101614] hover:bg-[#16A66A]'
-                      }`}
-                    >
-                      <span>{isCompleted ? 'Desmarcar' : 'Dar Baixa'}</span>
-                    </button>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => handleEditClick(item)}
+                        className="p-2 rounded-xl text-[#5E6963] hover:text-[#02402E] dark:text-[#95A39B] dark:hover:text-[#78D9A6] hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer"
+                        title="Editar movimentação"
+                      >
+                        <svg
+                          className="w-4 h-4"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M12 20h9" />
+                          <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                        </svg>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleToggleStatus(item)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                          isCompleted
+                            ? 'bg-[#F4F7F5] dark:bg-[#161B18] text-[#5E6963] dark:text-[#95A39B] hover:bg-black/5 dark:hover:bg-white/5'
+                            : 'bg-[#02402E] text-white dark:bg-[#16A66A] dark:text-[#101614] hover:bg-[#16A66A]'
+                        }`}
+                      >
+                        <span>{isCompleted ? 'Desmarcar' : 'Dar Baixa'}</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               );
@@ -731,40 +849,52 @@ export function MovementsScreen({
         )}
       </div>
 
-      {/* MODAIS DE CADASTRO REUTILIZADOS */}
+      {/* MODAIS DE CADASTRO E EDIÇÃO REUTILIZADOS */}
       {currentSpace?.id && (
         <>
+          {/* 1. EntryModal (Cadastro ou Edição) */}
           <EntryModal
-            isOpen={createModalType === 'entries'}
-            onClose={() => setCreateModalType(null)}
+            isOpen={createModalType === 'entries' || (editingMovement?.sourceType === 'entry' && !isFetchingFreshRecord && Boolean(freshEditingRecord))}
+            onClose={handleCloseModals}
             onSave={handleSaveEntry}
+            onDelete={handleDeleteEntry}
+            editingEntry={editingMovement?.sourceType === 'entry' ? freshEditingRecord : null}
             spaceId={currentSpace.id}
             selectedYear={selectedYear}
             selectedMonth={selectedMonth}
           />
 
+          {/* 2. VariableExpenseModal (Cadastro ou Edição) */}
           <VariableExpenseModal
-            isOpen={createModalType === 'variable_expenses'}
-            onClose={() => setCreateModalType(null)}
+            isOpen={createModalType === 'variable_expenses' || (editingMovement?.sourceType === 'variable' && !isFetchingFreshRecord && Boolean(freshEditingRecord))}
+            onClose={handleCloseModals}
             onSave={handleSaveVariableExpense}
+            onDelete={handleDeleteVariableExpense}
+            editingExpense={editingMovement?.sourceType === 'variable' ? freshEditingRecord : null}
             spaceId={currentSpace.id}
             selectedYear={selectedYear}
             selectedMonth={selectedMonth}
           />
 
+          {/* 3. FixedExpenseModal (Cadastro ou Edição) */}
           <FixedExpenseModal
-            isOpen={createModalType === 'fixed_expenses'}
-            onClose={() => setCreateModalType(null)}
+            isOpen={createModalType === 'fixed_expenses' || (editingMovement?.sourceType === 'fixed' && !isFetchingFreshRecord && Boolean(freshEditingRecord))}
+            onClose={handleCloseModals}
             onSave={handleSaveFixedExpense}
+            onDelete={handleDeleteFixedExpense}
+            editingExpense={editingMovement?.sourceType === 'fixed' ? freshEditingRecord : null}
             spaceId={currentSpace.id}
             selectedYear={selectedYear}
             selectedMonth={selectedMonth}
           />
 
+          {/* 4. InstallmentPurchaseModal (Cadastro ou Edição) */}
           <InstallmentPurchaseModal
-            isOpen={createModalType === 'installments'}
-            onClose={() => setCreateModalType(null)}
+            isOpen={createModalType === 'installments' || (editingMovement?.sourceType === 'installment' && !isFetchingFreshRecord && Boolean(freshEditingRecord))}
+            onClose={handleCloseModals}
             onSave={handleSaveInstallment}
+            onDelete={handleDeleteInstallment}
+            purchaseToEdit={editingMovement?.sourceType === 'installment' ? freshEditingRecord : null}
             spaceId={currentSpace.id}
             selectedYear={selectedYear}
             selectedMonth={selectedMonth}

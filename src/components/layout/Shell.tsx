@@ -193,6 +193,14 @@ export function Shell({
     setIsMoreMenuOpen(false);
   };
 
+  const handleHomeClick = () => {
+    if (currentTab !== 'home') {
+      handleNavClick('home');
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
   return (
     <div className="min-h-screen w-full flex flex-col bg-[#EAEDEB] dark:bg-[#121614] text-[#202724] dark:text-[#F4F4F5] transition-colors duration-200 relative overflow-x-hidden">
       {/* Botanical Background Leaf Elements */}
@@ -375,8 +383,19 @@ export function Shell({
         </div>
 
         {/* Mobile Space Selector Bar (Prevents congestion on mobile header) */}
-        <div className="sm:hidden px-3 py-1.5 border-t border-[#D2DDD6]/60 dark:border-[#28322C]/60 bg-[#EBF0EC]/90 dark:bg-[#161B18]/90">
-          <SpaceSelector />
+        <div className="sm:hidden px-3 py-1.5 border-t border-[#D2DDD6]/60 dark:border-[#28322C]/60 bg-[#EBF0EC]/90 dark:bg-[#161B18]/90 flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleHomeClick}
+            aria-label="Ir para o início"
+            title="Início"
+            className="flex items-center justify-center w-12 self-stretch rounded-xl border border-[#E8E4D5] bg-white text-[#16A66A] hover:bg-black/5 dark:border-[#24312B] dark:bg-[#18211D] dark:hover:bg-white/5 dark:text-[#78D9A6] transition-all duration-150 shrink-0 cursor-pointer shadow-2xs"
+          >
+            <Home className="w-5 h-5" />
+          </button>
+          <div className="flex-1 min-w-0">
+            <SpaceSelector hideIcon />
+          </div>
         </div>
 
         {/* Desktop Horizontal Navigation Bar */}

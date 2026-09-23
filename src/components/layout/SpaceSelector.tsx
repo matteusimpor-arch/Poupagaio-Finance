@@ -2,7 +2,11 @@ import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { ChevronDown, Check, User, Users, Home, Building2 } from 'lucide-react';
 
-export function SpaceSelector() {
+export interface SpaceSelectorProps {
+  hideIcon?: boolean;
+}
+
+export function SpaceSelector({ hideIcon = false }: SpaceSelectorProps) {
   const { currentSpace, spaces, setCurrentSpace, memberships, user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -73,9 +77,11 @@ export function SpaceSelector() {
         className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-[#E8E4D5] bg-white hover:bg-black/5 dark:border-[#24312B] dark:bg-[#18211D] dark:hover:bg-white/5 transition-all duration-150 text-left cursor-pointer group"
       >
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-8 h-8 rounded-lg bg-[#16A66A]/15 text-[#075C45] dark:bg-[#16A66A]/25 dark:text-[#78D9A6] flex items-center justify-center shrink-0">
-            <ActiveIcon className="w-4 h-4" />
-          </div>
+          {!hideIcon && (
+            <div className="w-8 h-8 rounded-lg bg-[#16A66A]/15 text-[#075C45] dark:bg-[#16A66A]/25 dark:text-[#78D9A6] flex items-center justify-center shrink-0">
+              <ActiveIcon className="w-4 h-4" />
+            </div>
+          )}
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
               <span className="text-xs text-[#5E6963] dark:text-[#95A39B] uppercase font-semibold tracking-wider">

@@ -352,6 +352,10 @@ export function ReportsScreen() {
 
     // 2. GASTOS FIXOS
     const applicableFixed = rawFixedExpenses.filter((f: any) => {
+      const expStartDate = f.start_date ? f.start_date.substring(0, 10) : '1970-01-01';
+      if (selectedPrevistoCycle + '-01' < expStartDate) {
+        return false;
+      }
       if (f.recurrence === 'yearly') {
         return f.due_month === month;
       }
@@ -472,6 +476,10 @@ export function ReportsScreen() {
 
       // 2. Gastos Fixos
       const applicableFixed = rawFixedExpenses.filter((f: any) => {
+        const expStartDate = f.start_date ? f.start_date.substring(0, 10) : '1970-01-01';
+        if (item.cycle + '-01' < expStartDate) {
+          return false;
+        }
         if (f.recurrence === 'yearly') {
           return f.due_month === item.month;
         }
@@ -638,9 +646,9 @@ export function ReportsScreen() {
     if (total === 0) return [];
 
     const items = [
-      { id: 'fixed', label: 'Gastos Fixos', value: totalFixed, color: '#D6A84B', hoverColor: '#E6B85B' },
-      { id: 'variable', label: 'Gastos Variáveis', value: totalVariable, color: '#F43F5E', hoverColor: '#FB7185' },
-      { id: 'installments', label: 'Parcelados', value: totalInstallments, color: '#6366F1', hoverColor: '#818CF8' },
+      { id: 'fixed', label: 'Gastos Fixos', value: totalFixed, color: '#8B5CF6', hoverColor: '#A78BFA' }, // ROXO
+      { id: 'variable', label: 'Gastos Variáveis', value: totalVariable, color: '#E11D48', hoverColor: '#F43F5E' }, // VERMELHO
+      { id: 'installments', label: 'Parcelados', value: totalInstallments, color: '#F59E0B', hoverColor: '#FBBF24' }, // LARANJA
     ];
 
     // Calcula coordenadas para o Donut chart em SVG (raio 70, centro 100,100)
@@ -1066,7 +1074,7 @@ export function ReportsScreen() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Gráfico 1: Evolução Financeira Mensal (SVG) */}
             <Card className="lg:col-span-2 border-[#E2E8E4] dark:border-[#2E3532] bg-white dark:bg-[#1E2220] shadow-2xs">
-              <CardContent className="p-4 sm:p-5 space-y-4">
+              <CardContent className="pt-6 pb-4 px-4 sm:pt-7 sm:pb-5 sm:px-5 space-y-4">
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left pb-1">
                   <div className="flex flex-col items-center sm:items-start">
                     <h4 className="text-xs font-bold uppercase tracking-wider text-[#075C45] dark:text-[#78D9A6]">
@@ -1325,7 +1333,7 @@ export function ReportsScreen() {
 
             {/* Gráfico 2: Composição de Despesas (SVG Donut) */}
             <Card className="border-[#E2E8E4] dark:border-[#2E3532] bg-white dark:bg-[#1E2220] shadow-2xs">
-              <CardContent className="p-4 sm:p-5 space-y-4 text-center">
+              <CardContent className="pt-6 pb-4 px-4 sm:pt-7 sm:pb-5 sm:px-5 space-y-4 text-center">
                 <div className="flex flex-col items-center sm:items-start text-center sm:text-left pb-1">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-[#075C45] dark:text-[#78D9A6]">
                     Composição de Despesas
@@ -1412,8 +1420,8 @@ export function ReportsScreen() {
 
           {/* SEÇÃO COMPACTA: PREVISTO X REALIZADO — ETAPA 3.10 */}
           {previstoRealizadoData && (
-            <Card className="border-[#E2E8E4] dark:border-[#2E3532] bg-white dark:bg-[#1E2220] shadow-2xs">
-              <CardContent className="p-4 sm:p-5 space-y-4">
+            <Card className="mt-10 border-[#E2E8E4] dark:border-[#2E3532] bg-white dark:bg-[#1E2220] shadow-2xs">
+              <CardContent className="pt-6 pb-4 px-4 sm:pt-7 sm:pb-5 sm:px-5 space-y-4">
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-3 border-b border-[#F3F4F4] dark:border-[#282E2B] pb-3 text-center sm:text-left">
                   <div className="flex flex-col items-center sm:items-start">
                     <h4 className="text-xs font-bold uppercase tracking-wider text-[#075C45] dark:text-[#78D9A6] flex items-center justify-center sm:justify-start gap-1.5">
@@ -1835,8 +1843,8 @@ export function ReportsScreen() {
           )}
 
           {/* 5. TABELA COMPARATIVA DE COMPETÊNCIAS */}
-          <Card className="border-[#E2E8E4] dark:border-[#2E3532] bg-white dark:bg-[#1E2220] shadow-2xs">
-            <CardContent className="p-4 sm:p-5 space-y-4">
+          <Card className="mt-10 border-[#E2E8E4] dark:border-[#2E3532] bg-white dark:bg-[#1E2220] shadow-2xs">
+            <CardContent className="pt-6 pb-4 px-4 sm:pt-7 sm:pb-5 sm:px-5 space-y-4">
               <div className="flex flex-col items-center sm:items-start text-center sm:text-left pb-1">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-[#075C45] dark:text-[#78D9A6]">
                   Comparativo de Competências do Período
@@ -2009,8 +2017,8 @@ export function ReportsScreen() {
           </Card>
 
           {/* 6. HISTÓRICO DE FECHAMENTO */}
-          <Card className="border-[#E2E8E4] dark:border-[#2E3532] bg-[#F7F9F7] dark:bg-[#131514] overflow-hidden">
-            <CardContent className="p-4 sm:p-5">
+          <Card className="mt-10 border-[#E2E8E4] dark:border-[#2E3532] bg-[#F7F9F7] dark:bg-[#131514] overflow-hidden">
+            <CardContent className="pt-6 pb-4 px-4 sm:pt-7 sm:pb-5 sm:px-5">
               <div className="flex items-center justify-center sm:justify-start gap-2 pb-3 border-b border-[#E2E8E4] dark:border-[#2E3532] mb-3 text-center sm:text-left">
                 <History className="w-4 h-4 text-[#16A66A]" />
                 <span className="text-xs font-bold uppercase tracking-wider text-[#202724] dark:text-[#F4F4F5]">

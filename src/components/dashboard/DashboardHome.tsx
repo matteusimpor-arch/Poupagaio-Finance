@@ -85,9 +85,9 @@ const MONTH_SHORT_NAMES = [
 ];
 
 const DONUT_COLORS = {
-  fixed: '#02402E',
-  variable: '#16A66A',
-  installments: '#F2B807',
+  fixed: '#8B5CF6',       // ROXO
+  variable: '#E11D48',    // VERMELHO
+  installments: '#F59E0B', // LARANJA
 };
 
 export function DashboardHome({
@@ -587,7 +587,13 @@ export function DashboardHome({
                           {item.title}
                         </h3>
                         <div className="flex items-center gap-1.5 text-[10px] text-[#5E6963] dark:text-[#95A39B] mt-0.5">
-                          <span className="font-semibold">{typeLabel}</span>
+                          <span className={`font-bold ${
+                            item.sourceType === 'fixed'
+                              ? 'text-purple-600 dark:text-purple-400'
+                              : item.sourceType === 'installment'
+                              ? 'text-amber-600 dark:text-amber-400'
+                              : 'text-rose-600 dark:text-rose-400'
+                          }`}>{typeLabel}</span>
                           <span>•</span>
                           <span>{item.category}</span>
                         </div>
@@ -1130,7 +1136,13 @@ export function DashboardHome({
                         </span>
                         
                         {/* Type badge */}
-                        <span className="text-[10px] px-2 py-0.5 rounded-md bg-[#E8F2EC] dark:bg-[#25322A] text-[#02402E] dark:text-[#78D9A6] font-bold shrink-0">
+                        <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold shrink-0 ${
+                          item.sourceType === 'fixed'
+                            ? 'bg-purple-100 text-purple-700 dark:bg-purple-950/40 dark:text-purple-400'
+                            : item.sourceType === 'installment'
+                            ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400'
+                            : 'bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400'
+                        }`}>
                           {typeLabel}
                         </span>
 

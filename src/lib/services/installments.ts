@@ -630,6 +630,30 @@ export const installmentsService = {
   },
 
   /**
+   * Exclui uma única parcela vinculada.
+   */
+  async deleteSingleInstallment(installmentId: string, spaceId: string): Promise<{ success: boolean; error?: string }> {
+    if (!supabase) return { success: false, error: 'Conexão Supabase não inicializada.' };
+    try {
+      const { error } = await supabase
+        .from('installments')
+        .delete()
+        .eq('id', installmentId)
+        .eq('space_id', spaceId);
+
+      if (error) {
+        console.warn('Erro ao excluir parcela individual:', error);
+        return { success: false, error: 'Não foi possível excluir a parcela.' };
+      }
+
+      return { success: true };
+    } catch (err: any) {
+      console.warn('Exceção ao excluir parcela individual:', err);
+      return { success: false, error: 'Erro ao excluir parcela.' };
+    }
+  },
+
+  /**
    * Marca uma parcela como paga.
    */
   async markInstallmentAsPaid(

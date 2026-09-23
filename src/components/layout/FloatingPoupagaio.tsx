@@ -34,8 +34,40 @@ interface QuickActionItem {
 export function FloatingPoupagaio({ onSelectTab, onOpenCreateModal }: FloatingPoupagaioProps) {
   const [isOpen, setIsOpen] = useState(false);
 
+  const containerRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  // Snappy draggable position states
+  const [pos, setPos] = useState<{ side: 'left' | 'right'; y: number }>(() => {
+    const saved = localStorage.getItem('poupagaio-assistant-position');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed && (parsed.side === 'left' || parsed.side === 'right') && typeof parsed.y === 'number') {
+          return parsed;
+        }
+      } catch (e) {
+        // Ignore parsing errors
+      }
+    }
+    // Default standard bottom-right snap
+    return { side: 'right', y: window.innerHeight - 150 };
+  });
+
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragPos, setDragPos] = useState({ x: 0, y: 0 });
+  const [isTransitioning, setIsTransitioning] = useState(false);
+
+  const dragStartRef = useRef<{ startX: number; startY: number; buttonX: number; buttonY: number; hasMoved: boolean }>({
+    startX: 0,
+    startY: 0,
+    buttonX: 0,
+    buttonY: 0,
+    hasMoved: false,
+  });
+
+  const wasDraggingRef = useRef(false);
 
   // Close on Click Outside or Escape key
   useEffect(() => {
@@ -64,6 +96,114 @@ export function FloatingPoupagaio({ onSelectTab, onOpenCreateModal }: FloatingPo
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [isOpen]);
+
+  // Handle Resize and Keep Assistant accessible on screen
+  useEffect(() => {
+    const handleResize = () => {
+      const buttonHeight = buttonRef.current?.offsetHeight || 72;
+      const minY = 16;
+      const maxY = window.innerHeight - buttonHeight - 16;
+
+      setPos((current) => {
+        const clampedY = Math.max(minY, Math.min(maxY, current.y));
+        if (clampedY !== current.y) {
+          return { ...current, y: clampedY };
+        }
+        return current;
+      });
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
+    e.currentTarget.setPointerCapture(e.pointerId);
+
+    const buttonRect = e.currentTarget.getBoundingClientRect();
+    dragStartRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      buttonX: buttonRect.left,
+      buttonY: buttonRect.top,
+      hasMoved: false,
+    };
+
+    setIsDragging(true);
+    setDragPos({ x: buttonRect.left, y: buttonRect.top });
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (!isDragging) return;
+
+    const dx = e.clientX - dragStartRef.current.startX;
+    const dy = e.clientY - dragStartRef.current.startY;
+
+    // Movement threshold (5px) to differentiate click and drag
+    if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+      dragStartRef.current.hasMoved = true;
+    }
+
+    let newX = dragStartRef.current.buttonX + dx;
+    let newY = dragStartRef.current.buttonY + dy;
+
+    // Clamps keeping the assistant within screen bounds
+    const buttonWidth = buttonRef.current?.offsetWidth || 72;
+    const buttonHeight = buttonRef.current?.offsetHeight || 72;
+
+    const minX = 16;
+    const maxX = window.innerWidth - buttonWidth - 16;
+    const minY = 16;
+    const maxY = window.innerHeight - buttonHeight - 16;
+
+    newX = Math.max(minX, Math.min(maxX, newX));
+    newY = Math.max(minY, Math.min(maxY, newY));
+
+    setDragPos({ x: newX, y: newY });
+  };
+
+  const handlePointerUp = (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (!isDragging) return;
+    e.currentTarget.releasePointerCapture(e.pointerId);
+    setIsDragging(false);
+
+    const buttonWidth = buttonRef.current?.offsetWidth || 72;
+    const buttonHeight = buttonRef.current?.offsetHeight || 72;
+
+    // Nearest lateral snapping logic
+    const midX = window.innerWidth / 2;
+    const centerX = dragPos.x + buttonWidth / 2;
+    const side = centerX < midX ? 'left' : 'right';
+
+    const minY = 16;
+    const maxY = window.innerHeight - buttonHeight - 16;
+    const finalY = Math.max(minY, Math.min(maxY, dragPos.y));
+
+    const newPos = { side, y: finalY };
+    setPos(newPos);
+    localStorage.setItem('poupagaio-assistant-position', JSON.stringify(newPos));
+
+    setIsTransitioning(true);
+    setTimeout(() => setIsTransitioning(false), 300);
+
+    if (dragStartRef.current.hasMoved) {
+      wasDraggingRef.current = true;
+      e.stopPropagation();
+      e.preventDefault();
+    } else {
+      wasDraggingRef.current = false;
+    }
+  };
+
+  const handleButtonClick = (e: React.MouseEvent) => {
+    if (wasDraggingRef.current) {
+      wasDraggingRef.current = false;
+      e.stopPropagation();
+      e.preventDefault();
+      return;
+    }
+    setIsOpen(!isOpen);
+  };
 
   const handleItemClick = (tab: ActiveTab, categoryName: string) => {
     setIsOpen(false);
@@ -114,8 +254,37 @@ export function FloatingPoupagaio({ onSelectTab, onOpenCreateModal }: FloatingPo
     },
   ];
 
+  // Snappy layout positioning styles
+  const containerStyle: React.CSSProperties = isDragging
+    ? {
+        position: 'fixed',
+        left: `${dragPos.x}px`,
+        top: `${dragPos.y}px`,
+        right: 'auto',
+        zIndex: 100,
+        touchAction: 'none',
+      }
+    : {
+        position: 'fixed',
+        top: `${pos.y}px`,
+        left: pos.side === 'left' ? '16px' : 'auto',
+        right: pos.side === 'right' ? '16px' : 'auto',
+        zIndex: 100,
+        transition: isTransitioning ? 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)' : 'none',
+        touchAction: 'none',
+      };
+
+  // Align panel based on snap side
+  const menuAlignClass = pos.side === 'left'
+    ? 'md:left-0 md:right-auto'
+    : 'md:right-0 md:left-auto';
+
   return (
-    <div className="fixed bottom-3 right-3 sm:bottom-6 sm:right-6 z-30 select-none pb-[env(safe-area-inset-bottom)] pr-[env(safe-area-inset-right)]">
+    <div
+      ref={containerRef}
+      style={containerStyle}
+      className="select-none"
+    >
       
       {/* ==================================================
           QUICK ACCESS PANEL (Desktop Floating + Mobile Bottom Sheet)
@@ -132,7 +301,7 @@ export function FloatingPoupagaio({ onSelectTab, onOpenCreateModal }: FloatingPo
             ref={menuRef}
             className={`
               fixed md:absolute
-              bottom-0 md:bottom-22 right-0 left-0 md:left-auto
+              bottom-0 md:bottom-24 right-0 left-0 ${menuAlignClass}
               w-full md:w-[320px] lg:w-[340px]
               max-h-[85vh] md:max-h-[580px]
               bg-[#F2EFDC] dark:bg-[#181C1A]
@@ -229,12 +398,17 @@ export function FloatingPoupagaio({ onSelectTab, onOpenCreateModal }: FloatingPo
       <button
         ref={buttonRef}
         type="button"
-        onClick={() => setIsOpen(!isOpen)}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onClick={handleButtonClick}
         aria-label="Abrir acessos rápidos do Poupagaio"
-        title="Poupagaio - Acesso rápido"
-        className="relative group cursor-pointer focus:outline-none focus-visible:ring-4 focus-visible:ring-[#F2B807] rounded-full transition-transform active:scale-95 duration-200"
+        title="Poupagaio - Pressione e arraste para reposicionar"
+        className={`relative group focus:outline-none focus-visible:ring-4 focus-visible:ring-[#F2B807] rounded-full transition-transform duration-200 ${
+          isDragging ? 'cursor-grabbing scale-95' : 'cursor-grab active:cursor-grabbing hover:scale-105'
+        }`}
       >
-        <div className="w-[52px] h-[52px] sm:w-[72px] sm:h-[72px] relative flex items-center justify-center filter drop-shadow-md group-hover:drop-shadow-xl group-hover:scale-105 transition-all duration-200">
+        <div className="w-[52px] h-[52px] sm:w-[72px] sm:h-[72px] relative flex items-center justify-center filter drop-shadow-md group-hover:drop-shadow-xl transition-all duration-200">
           <img
             src={POUPAGAIO_ASSISTANTE_URL}
             alt="Poupagaio Assistente - Acesso Rápido"
