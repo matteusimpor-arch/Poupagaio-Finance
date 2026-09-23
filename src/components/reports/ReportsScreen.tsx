@@ -36,6 +36,7 @@ import {
   X,
   Download,
 } from 'lucide-react';
+import { generateFinancialPDFReport } from '../../lib/services/pdfReport';
 
 // Tipos locais para organizar os dados compilados por mês
 interface MonthReportData {
@@ -559,6 +560,37 @@ export function ReportsScreen() {
     document.body.removeChild(link);
   };
 
+  // Geração de Relatório Financeiro Executivo em PDF com layout profissional
+  const handleGeneratePDF = () => {
+    if (reportMonths.length === 0) return;
+
+    let periodLabel = '';
+    if (preset === 'current_month') {
+      periodLabel = reportMonths[0]?.label || 'Mês Atual';
+    } else if (preset === 'last_3_months') {
+      periodLabel = 'Últimos 3 Meses';
+    } else if (preset === 'last_6_months') {
+      periodLabel = 'Últimos 6 Meses';
+    } else if (preset === 'current_year') {
+      periodLabel = `Ano de ${selectedReportYear}`;
+    } else {
+      periodLabel = `${getMonthNameBR(customStartMonth)}/${customStartYear} até ${getMonthNameBR(customEndMonth)}/${customEndYear}`;
+    }
+
+    generateFinancialPDFReport({
+      spaceName: currentSpace?.name || 'Meu Espaço',
+      periodLabel,
+      totalIncome: aggregates.totalIncome,
+      totalExpenses: aggregates.totalExpenses,
+      finalBalance: aggregates.finalBalance,
+      fixedExpenses: aggregates.totalFixed,
+      variableExpenses: aggregates.totalVariable,
+      installments: aggregates.totalInstallments,
+      previstoRealizado: previstoRealizadoData,
+      months: reportMonths,
+    });
+  };
+
   // Constantes e cálculos de desenho para o Gráfico SVG de Evolução Financeira
   const trendChartMetrics = useMemo(() => {
     if (reportMonths.length === 0) return null;
@@ -718,11 +750,11 @@ export function ReportsScreen() {
           </div>
 
           <Button
-            onClick={handleExportCSV}
+            onClick={handleGeneratePDF}
             className="bg-[#075C45] hover:bg-[#054131] text-white flex items-center justify-center gap-1.5 px-3 py-1.5 h-9 rounded-xl text-xs font-bold cursor-pointer shadow-2xs dark:bg-[#16A66A] dark:hover:bg-[#128a58] transition-colors w-full sm:w-auto"
           >
-            <Download className="w-4 h-4" />
-            Exportar CSV
+            <FileText className="w-4 h-4" />
+            Gerar relatório PDF
           </Button>
         </div>
       </div>
@@ -1063,11 +1095,11 @@ export function ReportsScreen() {
 
                 {/* SVG Drawing of the Trend Chart */}
                 {trendChartMetrics && (
-                  <div className="relative w-full overflow-x-auto pt-2 scrollbar-none">
-                    <div style={{ minWidth: '600px', width: '100%' }}>
+                  <div className="relative w-full min-h-[220px] sm:min-h-[260px] pt-2">
+                    <div className="w-full">
                       <svg
                         viewBox={`0 0 ${trendChartMetrics.width} ${trendChartMetrics.height}`}
-                        className="w-full h-auto overflow-visible select-none"
+                        className="w-full h-auto max-h-[300px] overflow-visible select-none"
                       >
                         {/* Linhas de Grade de Fundo (Y-axis gridlines) */}
                         {Array.from({ length: 5 }).map((_, idx) => {
@@ -1345,8 +1377,8 @@ export function ReportsScreen() {
                       </div>
                     </div>
 
-                    {/* Legendas & Valores */}
-                    <div className="w-full space-y-1.5 text-left text-xs pt-1">
+                    {/* Legendas & Valores em Cards Limpos */}
+                    <div className="w-full space-y-2 text-left text-xs pt-1">
                       {expenseBreakdownParts.map((seg) => {
                         const isHovered = hoveredBreakdownSegment === seg.id;
                         return (
@@ -1354,17 +1386,17 @@ export function ReportsScreen() {
                             key={seg.id}
                             onMouseEnter={() => setHoveredBreakdownSegment(seg.id)}
                             onMouseLeave={() => setHoveredBreakdownSegment(null)}
-                            className={`flex items-center justify-between p-1.5 rounded-lg transition-colors ${
-                              isHovered ? 'bg-[#F3F4F4] dark:bg-[#151817]' : ''
+                            className={`flex items-center justify-between p-2.5 rounded-xl border border-[#E2E8E4] dark:border-[#2E3532] transition-colors ${
+                              isHovered ? 'bg-[#F3F4F4] dark:bg-[#151817]' : 'bg-white dark:bg-[#1E2220]'
                             }`}
                           >
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 min-w-0">
                               <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: seg.color }} />
-                              <span className="font-semibold text-xs text-[#202724] dark:text-[#F4F4F5]">{seg.label}</span>
+                              <span className="font-semibold text-xs text-[#202724] dark:text-[#F4F4F5] truncate">{seg.label}</span>
                             </div>
-                            <div className="text-right flex items-center gap-1.5">
-                              <span className="font-bold text-[#202724] dark:text-[#F4F4F5]">{formatCurrency(seg.value)}</span>
-                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-[#F3F4F4] dark:bg-[#202623] text-[#5E6963] dark:text-[#95A39B]">
+                            <div className="text-right flex items-center gap-2 shrink-0">
+                              <span className="font-bold text-[#202724] dark:text-[#F4F4F5] whitespace-nowrap">{formatCurrency(seg.value)}</span>
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#F3F4F4] dark:bg-[#202623] text-[#5E6963] dark:text-[#95A39B] whitespace-nowrap">
                                 {seg.percent}%
                               </span>
                             </div>
@@ -1413,8 +1445,164 @@ export function ReportsScreen() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-1">
-                  {/* Tabela de Valores */}
-                  <div className="overflow-x-auto">
+                  {/* Mobile Cards (telas pequenas) */}
+                  <div className="block md:hidden space-y-3">
+                    {[
+                      {
+                        title: 'Entradas (Receitas)',
+                        color: 'bg-emerald-500',
+                        textColor: 'text-emerald-700 dark:text-emerald-400',
+                        badgeBg: 'bg-emerald-50 dark:bg-emerald-950/40',
+                        previsto: previstoRealizadoData.entries.previsto,
+                        realizado: previstoRealizadoData.entries.realizado,
+                        diff: previstoRealizadoData.entries.realizado - previstoRealizadoData.entries.previsto,
+                        isHighlight: false,
+                        progress: previstoRealizadoData.entries.previsto > 0
+                          ? (previstoRealizadoData.entries.realizado / previstoRealizadoData.entries.previsto) * 100
+                          : 0,
+                        barColor: 'bg-emerald-500',
+                      },
+                      {
+                        title: 'Gastos Fixos',
+                        color: 'bg-[#D6A84B]',
+                        textColor: 'text-[#B4882F] dark:text-[#F2C052]',
+                        badgeBg: 'bg-amber-50 dark:bg-amber-950/40',
+                        previsto: previstoRealizadoData.fixed.previsto,
+                        realizado: previstoRealizadoData.fixed.realizado,
+                        diff: previstoRealizadoData.fixed.previsto - previstoRealizadoData.fixed.realizado,
+                        isHighlight: false,
+                        progress: previstoRealizadoData.fixed.previsto > 0
+                          ? (previstoRealizadoData.fixed.realizado / previstoRealizadoData.fixed.previsto) * 100
+                          : 0,
+                        barColor: 'bg-[#D6A84B]',
+                      },
+                      {
+                        title: 'Gastos Variáveis',
+                        color: 'bg-rose-500',
+                        textColor: 'text-rose-600 dark:text-rose-400',
+                        badgeBg: 'bg-rose-50 dark:bg-rose-950/40',
+                        previsto: previstoRealizadoData.variable.previsto,
+                        realizado: previstoRealizadoData.variable.realizado,
+                        diff: previstoRealizadoData.variable.previsto - previstoRealizadoData.variable.realizado,
+                        isHighlight: false,
+                        progress: previstoRealizadoData.variable.previsto > 0
+                          ? (previstoRealizadoData.variable.realizado / previstoRealizadoData.variable.previsto) * 100
+                          : 0,
+                        barColor: 'bg-rose-500',
+                      },
+                      {
+                        title: 'Parcelados',
+                        color: 'bg-indigo-500',
+                        textColor: 'text-indigo-600 dark:text-indigo-400',
+                        badgeBg: 'bg-indigo-50 dark:bg-indigo-950/40',
+                        previsto: previstoRealizadoData.installments.previsto,
+                        realizado: previstoRealizadoData.installments.realizado,
+                        diff: previstoRealizadoData.installments.previsto - previstoRealizadoData.installments.realizado,
+                        isHighlight: false,
+                        progress: previstoRealizadoData.installments.previsto > 0
+                          ? (previstoRealizadoData.installments.realizado / previstoRealizadoData.installments.previsto) * 100
+                          : 0,
+                        barColor: 'bg-indigo-500',
+                      },
+                      {
+                        title: 'Total de Despesas',
+                        color: 'bg-red-600',
+                        textColor: 'text-red-700 dark:text-red-400',
+                        badgeBg: 'bg-red-50 dark:bg-red-950/40',
+                        previsto: previstoRealizadoData.expenses.previsto,
+                        realizado: previstoRealizadoData.expenses.realizado,
+                        diff: previstoRealizadoData.expenses.previsto - previstoRealizadoData.expenses.realizado,
+                        isHighlight: true,
+                        progress: previstoRealizadoData.expenses.previsto > 0
+                          ? (previstoRealizadoData.expenses.realizado / previstoRealizadoData.expenses.previsto) * 100
+                          : 0,
+                        barColor: 'bg-rose-600',
+                      },
+                      {
+                        title: 'Resultado Líquido',
+                        color: previstoRealizadoData.result.realizado >= 0 ? 'bg-emerald-600' : 'bg-rose-600',
+                        textColor: previstoRealizadoData.result.realizado >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-600',
+                        badgeBg: previstoRealizadoData.result.realizado >= 0 ? 'bg-emerald-50 dark:bg-emerald-950/40' : 'bg-rose-50 dark:bg-rose-950/40',
+                        previsto: previstoRealizadoData.result.previsto,
+                        realizado: previstoRealizadoData.result.realizado,
+                        diff: previstoRealizadoData.result.realizado - previstoRealizadoData.result.previsto,
+                        isHighlight: true,
+                        progress: previstoRealizadoData.result.previsto !== 0
+                          ? (previstoRealizadoData.result.realizado / previstoRealizadoData.result.previsto) * 100
+                          : 0,
+                        barColor: previstoRealizadoData.result.realizado >= 0 ? 'bg-emerald-600' : 'bg-rose-600',
+                      },
+                    ].map((item, idx) => (
+                      <div
+                        key={idx}
+                        className={`p-3.5 rounded-2xl border transition-all ${
+                          item.isHighlight
+                            ? 'bg-[#F2F7F4] dark:bg-[#151C18] border-[#075C45]/20 dark:border-[#78D9A6]/20'
+                            : 'bg-white dark:bg-[#1E2220] border-[#E2E8E4] dark:border-[#2E3532]'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2 pb-2 border-b border-[#F3F4F4] dark:border-[#282E2B]">
+                          <div className="flex items-center gap-2">
+                            <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${item.color}`} />
+                            <span className="font-bold text-xs text-[#202724] dark:text-[#F4F4F5] uppercase tracking-wide">
+                              {item.title}
+                            </span>
+                          </div>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${item.badgeBg} ${item.textColor}`}>
+                            {item.previsto > 0 || (item.title === 'Resultado Líquido' && item.previsto !== 0) ? `${item.progress.toFixed(0)}%` : '—'}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-2 pt-2.5 text-left">
+                          <div>
+                            <span className="text-[10px] uppercase font-bold text-[#5E6963] dark:text-[#95A39B] block">
+                              Previsto
+                            </span>
+                            <span className="text-xs font-semibold text-[#5E6963] dark:text-[#95A39B] whitespace-nowrap block mt-0.5">
+                              {formatCurrency(item.previsto)}
+                            </span>
+                          </div>
+
+                          <div>
+                            <span className="text-[10px] uppercase font-bold text-[#5E6963] dark:text-[#95A39B] block">
+                              Realizado
+                            </span>
+                            <span className={`text-xs font-bold whitespace-nowrap block mt-0.5 ${item.textColor}`}>
+                              {formatCurrency(item.realizado)}
+                            </span>
+                          </div>
+
+                          <div>
+                            <span className="text-[10px] uppercase font-bold text-[#5E6963] dark:text-[#95A39B] block">
+                              Diferença
+                            </span>
+                            <span
+                              className={`text-xs font-bold whitespace-nowrap block mt-0.5 ${
+                                item.diff >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500'
+                              }`}
+                            >
+                              {formatCurrency(item.diff)}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Barra de Progresso visual */}
+                        {item.previsto > 0 && (
+                          <div className="mt-2.5 pt-1">
+                            <div className="w-full bg-[#F3F4F4] dark:bg-[#282E2B] h-1.5 rounded-full overflow-hidden">
+                              <div
+                                className={`h-full rounded-full ${item.barColor} transition-all duration-300`}
+                                style={{ width: `${Math.min(100, Math.max(0, item.progress))}%` }}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Tabela de Valores (Desktop) */}
+                  <div className="hidden md:block overflow-x-auto">
                     <table className="w-full text-left text-xs">
                       <thead>
                         <tr className="border-b border-[#F3F4F4] dark:border-[#282E2B] text-[#5E6963] dark:text-[#95A39B] text-[10px] font-bold uppercase tracking-wider">
@@ -1658,7 +1846,87 @@ export function ReportsScreen() {
                 </p>
               </div>
 
-              <div className="overflow-x-auto">
+              {/* Mobile: Cards de Competência */}
+              <div className="block md:hidden space-y-3">
+                {reportMonths.map((m) => {
+                  const commitment = m.summary.total_income > 0 ? (m.summary.total_expenses / m.summary.total_income) * 100 : 0;
+                  return (
+                    <div
+                      key={m.cycle}
+                      className="p-3.5 rounded-2xl border border-[#E2E8E4] dark:border-[#2E3532] bg-white dark:bg-[#1E2220] space-y-3 shadow-2xs"
+                    >
+                      <div className="flex items-center justify-between gap-2 border-b border-[#F3F4F4] dark:border-[#282E2B] pb-2">
+                        <span className="font-bold text-xs uppercase tracking-wide text-[#202724] dark:text-[#F4F4F5]">
+                          {m.label}
+                        </span>
+                        <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                          m.isClosed
+                            ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
+                            : 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400'
+                        }`}>
+                          {m.isClosed ? <Lock className="w-3 h-3" /> : <Unlock className="w-3 h-3" />}
+                          {m.isClosed ? 'Fechado' : 'Aberto'}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div>
+                          <span className="text-[10px] uppercase font-bold text-[#5E6963] dark:text-[#95A39B] block">
+                            Entradas
+                          </span>
+                          <span className="font-bold text-[#16A66A] whitespace-nowrap block mt-0.5">
+                            {formatCurrency(m.summary.total_income)}
+                          </span>
+                        </div>
+
+                        <div>
+                          <span className="text-[10px] uppercase font-bold text-[#5E6963] dark:text-[#95A39B] block">
+                            Despesas
+                          </span>
+                          <span className="font-bold text-[#E11D48] whitespace-nowrap block mt-0.5">
+                            {formatCurrency(m.summary.total_expenses)}
+                          </span>
+                        </div>
+
+                        <div>
+                          <span className="text-[10px] uppercase font-bold text-[#5E6963] dark:text-[#95A39B] block">
+                            Saldo
+                          </span>
+                          <span className={`font-bold whitespace-nowrap block mt-0.5 ${
+                            m.summary.final_balance >= 0 ? 'text-emerald-600' : 'text-rose-500'
+                          }`}>
+                            {formatCurrency(m.summary.final_balance)}
+                          </span>
+                        </div>
+
+                        <div>
+                          <span className="text-[10px] uppercase font-bold text-[#5E6963] dark:text-[#95A39B] block">
+                            Comprometimento
+                          </span>
+                          <span className="font-bold text-[#202724] dark:text-[#F4F4F5] whitespace-nowrap block mt-0.5">
+                            {m.summary.total_income > 0 ? `${commitment.toFixed(1)}%` : '—'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="pt-1">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => loadMonthDetails(m)}
+                          className="w-full h-8.5 rounded-xl border-[#E2E8E4] dark:border-[#2E3532] text-[#075C45] dark:text-[#78D9A6] text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          Ver detalhes da competência
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Tabela de Competências (Desktop) */}
+              <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
                     <tr className="border-b border-[#E2E8E4] dark:border-[#2E3532] text-[#5E6963] dark:text-[#95A39B] text-[10px] font-bold uppercase tracking-wider">
@@ -1779,18 +2047,18 @@ export function ReportsScreen() {
                         </p>
                       </div>
 
-                      <div className="flex items-center gap-4 text-right">
+                      <div className="grid grid-cols-3 gap-2 text-left sm:text-right pt-2 sm:pt-0 border-t sm:border-t-0 border-[#E2E8E4]/60 dark:border-[#2E3532]/60">
                         <div>
                           <p className="text-[9px] uppercase font-bold text-[#5E6963] dark:text-[#95A39B]">Receitas</p>
-                          <p className="font-bold text-[#16A66A]">{formatCurrency(cl.total_income)}</p>
+                          <p className="font-bold text-[#16A66A] whitespace-nowrap text-xs">{formatCurrency(cl.total_income)}</p>
                         </div>
                         <div>
                           <p className="text-[9px] uppercase font-bold text-[#5E6963] dark:text-[#95A39B]">Despesas</p>
-                          <p className="font-bold text-[#E11D48]">{formatCurrency(cl.total_expenses)}</p>
+                          <p className="font-bold text-[#E11D48] whitespace-nowrap text-xs">{formatCurrency(cl.total_expenses)}</p>
                         </div>
                         <div>
                           <p className="text-[9px] uppercase font-bold text-[#5E6963] dark:text-[#95A39B]">Saldo Final</p>
-                          <p className={`font-bold ${cl.final_balance >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
+                          <p className={`font-bold whitespace-nowrap text-xs ${cl.final_balance >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
                             {formatCurrency(cl.final_balance)}
                           </p>
                         </div>

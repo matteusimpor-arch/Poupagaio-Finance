@@ -133,10 +133,10 @@ export function MarketListCard({
               : 'border-neutral-100 dark:border-neutral-800/80'
           }`}
         >
-          <div className="flex items-start justify-between gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex-1 min-w-0">
               <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                <h3 className="font-semibold text-base sm:text-lg text-neutral-900 dark:text-neutral-100 truncate">
+                <h3 className="font-semibold text-base sm:text-lg text-neutral-900 dark:text-neutral-100 break-words">
                   {list.name}
                 </h3>
 
@@ -535,35 +535,46 @@ export function MarketListCard({
           <div className="p-4 sm:p-5 space-y-3">
             {/* Adicionar Item Rápido (Somente quando em Planejamento ou Compra) */}
             {(isActive || isShopping) && (
-              <form onSubmit={handleQuickAdd} className="flex items-center gap-2 pb-2">
-                <input
-                  id={`input-quick-item-name-${list.id}`}
-                  type="text"
-                  placeholder="+ Adicionar produto..."
-                  value={quickItemName}
-                  onChange={(e) => setQuickItemName(e.target.value)}
-                  className="flex-1 px-3 py-2 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 text-xs focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 transition-colors"
-                />
-                <input
-                  id={`input-quick-item-qty-${list.id}`}
-                  type="number"
-                  min="0.01"
-                  step="any"
-                  placeholder="Qtd"
-                  value={quickItemQty}
-                  onChange={(e) => setQuickItemQty(e.target.value)}
-                  className="w-16 px-2.5 py-2 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 text-xs text-center focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 transition-colors"
-                />
-                <Button
-                  id={`btn-quick-add-${list.id}`}
-                  type="submit"
-                  size="sm"
-                  disabled={isAddingQuick || !quickItemName.trim()}
-                  className="h-8.5 px-3 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-medium shrink-0"
-                >
-                  <Plus className="w-3.5 h-3.5 mr-1" />
-                  Adicionar
-                </Button>
+              <form onSubmit={handleQuickAdd} className="space-y-2 pb-3">
+                {/* Linha 1: Nome do produto ocupando 100% da largura útil */}
+                <div className="w-full">
+                  <input
+                    id={`input-quick-item-name-${list.id}`}
+                    type="text"
+                    placeholder="Nome do produto (ex: Arroz, Feijão, Leite)..."
+                    value={quickItemName}
+                    onChange={(e) => setQuickItemName(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 transition-colors placeholder:text-neutral-400"
+                  />
+                </div>
+
+                {/* Linha 2: Quantidade e Botão Adicionar sempre 100% visível sem cortar */}
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span className="text-[11px] font-semibold text-neutral-500 dark:text-neutral-400">Qtd:</span>
+                    <input
+                      id={`input-quick-item-qty-${list.id}`}
+                      type="number"
+                      min="0.01"
+                      step="any"
+                      placeholder="1"
+                      value={quickItemQty}
+                      onChange={(e) => setQuickItemQty(e.target.value)}
+                      className="w-18 sm:w-20 px-2.5 py-2 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 text-xs text-center font-semibold focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 transition-colors"
+                    />
+                  </div>
+
+                  <Button
+                    id={`btn-quick-add-${list.id}`}
+                    type="submit"
+                    size="sm"
+                    disabled={isAddingQuick || !quickItemName.trim()}
+                    className="flex-1 sm:flex-none sm:px-4 h-9 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold shadow-xs flex items-center justify-center gap-1.5 transition-colors"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Adicionar produto</span>
+                  </Button>
+                </div>
               </form>
             )}
 
@@ -587,7 +598,7 @@ export function MarketListCard({
                 Nenhum item adicionado nesta lista ainda.
               </div>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 {list.items.map((item) => {
                   const hasEst =
                     item.estimated_unit_price !== null && item.estimated_unit_price !== undefined;
@@ -601,122 +612,60 @@ export function MarketListCard({
                     <div
                       key={item.id}
                       id={`market-item-row-${item.id}`}
-                      className={`group flex items-center justify-between gap-2.5 p-3 rounded-xl transition-all ${
+                      className={`p-3 rounded-2xl transition-all ${
                         item.is_checked
                           ? 'bg-emerald-50/40 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30'
                           : 'bg-white dark:bg-neutral-900 hover:bg-neutral-50 dark:hover:bg-neutral-900/80 border border-neutral-100 dark:border-neutral-800'
                       }`}
                     >
-                      {/* Checkbox Otimizado para Toque no Celular (Min 44x44px) */}
-                      <button
-                        id={`btn-toggle-item-${item.id}`}
-                        type="button"
-                        onClick={() => onToggleItem(item, !item.is_checked)}
-                        className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-neutral-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors shrink-0 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
-                        title={item.is_checked ? 'Desmarcar produto' : 'Marcar como comprado'}
-                      >
-                        {item.is_checked ? (
-                          <CheckSquare className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
-                        ) : (
-                          <Square className="w-6 h-6 text-neutral-400 hover:text-emerald-500" />
-                        )}
-                      </button>
+                      {/* Linha Superior: Checkbox + Nome Completo + Ações */}
+                      <div className="flex items-start gap-2.5">
+                        {/* Checkbox Otimizado para Toque no Celular (Min 40x40px) */}
+                        <button
+                          id={`btn-toggle-item-${item.id}`}
+                          type="button"
+                          onClick={() => onToggleItem(item, !item.is_checked)}
+                          className="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl flex items-center justify-center text-neutral-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors shrink-0 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 -mt-0.5 cursor-pointer"
+                          title={item.is_checked ? 'Desmarcar produto' : 'Marcar como comprado'}
+                        >
+                          {item.is_checked ? (
+                            <CheckSquare className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                          ) : (
+                            <Square className="w-5 h-5 text-neutral-400 hover:text-emerald-500" />
+                          )}
+                        </button>
 
-                      {/* Informações do Produto */}
-                      <div className="flex-1 min-w-0 space-y-0.5">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span
-                            className={`text-sm font-semibold truncate ${
+                        {/* Nome Completo do Produto (NUNCA cortado!) */}
+                        <div className="flex-1 min-w-0 pt-0.5">
+                          <p
+                            className={`text-sm font-semibold break-words leading-snug ${
                               item.is_checked
                                 ? 'line-through text-neutral-400 dark:text-neutral-500'
                                 : 'text-neutral-900 dark:text-neutral-100'
                             }`}
                           >
                             {item.name}
-                          </span>
-                        </div>
+                          </p>
 
-                        {/* Detalhes e Comparativo de Preço Estimado */}
-                        <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-neutral-500 dark:text-neutral-400">
-                          {item.category && item.category !== 'Geral' && (
-                            <span className="text-[11px] font-medium px-1.5 py-0.2 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300">
-                              {item.category}
-                            </span>
-                          )}
-                          {hasEst && (
-                            <span className="text-[11px] text-neutral-400">
-                              Est: {formatCurrency(item.estimated_unit_price!)}/{item.unit || 'un'}
-                            </span>
-                          )}
-                          {item.notes && <span className="italic text-[11px]">"{item.notes}"</span>}
-                        </div>
-                      </div>
-
-                      {/* Ajuste Rápido de Quantidade & Preço Unitário Real */}
-                      <div className="flex items-center gap-2 shrink-0">
-                        {/* Controles Rápido de Quantidade */}
-                        {(isActive || isShopping) && (
-                          <div className="flex items-center rounded-lg border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 overflow-hidden">
-                            <button
-                              type="button"
-                              onClick={() => onUpdateItemQuantity(item, Math.max(0.5, item.quantity - 1))}
-                              className="w-7 h-7 flex items-center justify-center text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-800 text-xs font-bold"
-                              title="Diminuir quantidade"
-                            >
-                              <Minus className="w-3 h-3" />
-                            </button>
-                            <span className="px-2 text-xs font-semibold text-neutral-800 dark:text-neutral-200 min-w-[28px] text-center">
-                              {item.quantity} {item.unit || 'un'}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => onUpdateItemQuantity(item, item.quantity + 1)}
-                              className="w-7 h-7 flex items-center justify-center text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-800 text-xs font-bold"
-                              title="Aumentar quantidade"
-                            >
-                              <Plus className="w-3 h-3" />
-                            </button>
+                          {/* Detalhes, Categoria, Preço Estimado e Notas */}
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5 text-xs text-neutral-500 dark:text-neutral-400">
+                            {item.category && item.category !== 'Geral' && (
+                              <span className="text-[10px] font-medium px-1.5 py-0.2 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300">
+                                {item.category}
+                              </span>
+                            )}
+                            {hasEst && (
+                              <span className="text-[11px] text-neutral-400">
+                                Est: {formatCurrency(item.estimated_unit_price!)}/{item.unit || 'un'}
+                              </span>
+                            )}
+                            {item.notes && <span className="italic text-[11px]">"{item.notes}"</span>}
                           </div>
-                        )}
-
-                        {/* Campo para Informar/Editar Preço Real Unitário */}
-                        <div className="flex flex-col items-end">
-                          {!isCompleted ? (
-                            <div className="flex items-center gap-1">
-                              <span className="text-[10px] text-neutral-400 font-medium">R$</span>
-                              <input
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                defaultValue={hasAct ? item.actual_unit_price! : ''}
-                                key={`price-${item.id}-${item.actual_unit_price}`}
-                                onBlur={(e) => {
-                                  const val = parseFloat(e.target.value.replace(',', '.'));
-                                  if (!isNaN(val) && val >= 0) {
-                                    onUpdateItemActualPrice(item, val);
-                                  }
-                                }}
-                                placeholder="Preço"
-                                className="w-18 px-2 py-1 text-xs font-semibold rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 text-right focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
-                              />
-                            </div>
-                          ) : (
-                            <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400">
-                              {hasAct ? formatCurrency(item.actual_unit_price!) : '—'}
-                            </span>
-                          )}
-
-                          {/* Subtotal da linha */}
-                          {lineTotalActual !== null && lineTotalActual > 0 && (
-                            <span className="text-[10px] font-medium text-neutral-500 dark:text-neutral-400 mt-0.5">
-                              Subtotal: {formatCurrency(lineTotalActual)}
-                            </span>
-                          )}
                         </div>
 
-                        {/* Botões de Ação do Item */}
+                        {/* Botões de Ação do Item (Editar & Excluir) */}
                         {!isCompleted && (
-                          <div className="flex items-center gap-0.5 opacity-80 group-hover:opacity-100 transition-opacity">
+                          <div className="flex items-center gap-0.5 shrink-0 pt-0.5">
                             <button
                               id={`btn-edit-item-${item.id}`}
                               type="button"
@@ -737,6 +686,79 @@ export function MarketListCard({
                             </button>
                           </div>
                         )}
+                      </div>
+
+                      {/* Linha Inferior: Quantidade, Preço Unitário e Subtotal */}
+                      <div className="mt-2.5 pt-2 border-t border-neutral-100 dark:border-neutral-800/80 flex flex-wrap items-center justify-between gap-2 pl-0 sm:pl-12">
+                        {/* Controles de Quantidade */}
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[11px] font-medium text-neutral-500 dark:text-neutral-400">Qtd:</span>
+                          {(isActive || isShopping) ? (
+                            <div className="flex items-center rounded-lg border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 overflow-hidden">
+                              <button
+                                type="button"
+                                onClick={() => onUpdateItemQuantity(item, Math.max(0.5, item.quantity - 1))}
+                                className="w-7 h-7 flex items-center justify-center text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-800 text-xs font-bold"
+                                title="Diminuir quantidade"
+                              >
+                                <Minus className="w-3 h-3" />
+                              </button>
+                              <span className="px-2 text-xs font-semibold text-neutral-800 dark:text-neutral-200 min-w-[28px] text-center">
+                                {item.quantity} {item.unit || 'un'}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => onUpdateItemQuantity(item, item.quantity + 1)}
+                                className="w-7 h-7 flex items-center justify-center text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-800 text-xs font-bold"
+                                title="Aumentar quantidade"
+                              >
+                                <Plus className="w-3 h-3" />
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="text-xs font-semibold text-neutral-800 dark:text-neutral-200">
+                              {item.quantity} {item.unit || 'un'}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Preço Unitário e Subtotal */}
+                        <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap">
+                          <div className="flex items-center gap-1">
+                            <span className="text-[11px] font-medium text-neutral-500 dark:text-neutral-400">Preço:</span>
+                            {!isCompleted ? (
+                              <div className="flex items-center gap-0.5">
+                                <span className="text-[10px] text-neutral-400 font-medium">R$</span>
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  defaultValue={hasAct ? item.actual_unit_price! : ''}
+                                  key={`price-${item.id}-${item.actual_unit_price}`}
+                                  onBlur={(e) => {
+                                    const val = parseFloat(e.target.value.replace(',', '.'));
+                                    if (!isNaN(val) && val >= 0) {
+                                      onUpdateItemActualPrice(item, val);
+                                    }
+                                  }}
+                                  placeholder="0,00"
+                                  className="w-18 px-2 py-1 text-xs font-semibold rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 text-right focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                                />
+                              </div>
+                            ) : (
+                              <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400">
+                                {hasAct ? formatCurrency(item.actual_unit_price!) : '—'}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Subtotal da linha */}
+                          <div className="text-right">
+                            <span className="text-[11px] font-medium text-neutral-500 dark:text-neutral-400">
+                              Subtotal: <strong className="text-emerald-600 dark:text-emerald-400 font-bold whitespace-nowrap">{lineTotalActual !== null && lineTotalActual > 0 ? formatCurrency(lineTotalActual) : 'R$ 0,00'}</strong>
+                            </span>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   );

@@ -447,12 +447,12 @@ export function MarketScreen() {
       )}
 
       {/* Filtros de Status (Abas Simplificadas) */}
-      <div className="flex flex-wrap items-center gap-1.5 p-1 rounded-xl bg-neutral-100 dark:bg-neutral-900/80 border border-neutral-200 dark:border-neutral-800 w-fit">
+      <div className="flex flex-wrap items-center gap-1 p-1 rounded-xl bg-neutral-100 dark:bg-neutral-900/80 border border-neutral-200 dark:border-neutral-800 w-full sm:w-fit">
         <button
           id="tab-market-active"
           type="button"
           onClick={() => setStatusFilter('active')}
-          className={`px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+          className={`flex-1 sm:flex-none px-2.5 sm:px-3.5 py-1.5 rounded-lg text-xs font-medium text-center transition-all cursor-pointer ${
             statusFilter === 'active'
               ? 'bg-white dark:bg-[#1E2220] text-neutral-900 dark:text-neutral-100 shadow-xs'
               : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200'
@@ -464,20 +464,20 @@ export function MarketScreen() {
           id="tab-market-shopping"
           type="button"
           onClick={() => setStatusFilter('shopping')}
-          className={`px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
+          className={`flex-1 sm:flex-none px-2.5 sm:px-3.5 py-1.5 rounded-lg text-xs font-medium text-center transition-all flex items-center justify-center gap-1 cursor-pointer ${
             statusFilter === 'shopping'
               ? 'bg-amber-500 text-white shadow-2xs font-semibold'
               : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200'
           }`}
         >
-          <ShoppingCart className="w-3.5 h-3.5" />
+          <ShoppingCart className="w-3.5 h-3.5 shrink-0" />
           Em Compra
         </button>
         <button
           id="tab-market-completed"
           type="button"
           onClick={() => setStatusFilter('completed')}
-          className={`px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+          className={`flex-1 sm:flex-none px-2.5 sm:px-3.5 py-1.5 rounded-lg text-xs font-medium text-center transition-all cursor-pointer ${
             statusFilter === 'completed'
               ? 'bg-white dark:bg-[#1E2220] text-neutral-900 dark:text-neutral-100 shadow-xs'
               : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200'
@@ -489,7 +489,7 @@ export function MarketScreen() {
           id="tab-market-archived"
           type="button"
           onClick={() => setStatusFilter('archived')}
-          className={`px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+          className={`flex-1 sm:flex-none px-2.5 sm:px-3.5 py-1.5 rounded-lg text-xs font-medium text-center transition-all cursor-pointer ${
             statusFilter === 'archived'
               ? 'bg-white dark:bg-[#1E2220] text-neutral-900 dark:text-neutral-100 shadow-xs'
               : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200'
@@ -501,7 +501,7 @@ export function MarketScreen() {
           id="tab-market-all"
           type="button"
           onClick={() => setStatusFilter('all')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+          className={`flex-1 sm:flex-none px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-medium text-center transition-all cursor-pointer ${
             statusFilter === 'all'
               ? 'bg-white dark:bg-[#1E2220] text-neutral-900 dark:text-neutral-100 shadow-xs'
               : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200'
