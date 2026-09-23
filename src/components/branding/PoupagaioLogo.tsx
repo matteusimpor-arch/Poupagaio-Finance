@@ -14,7 +14,7 @@ export function PoupagaioLogo({
   className = '',
   compact = false,
   alt = 'Poupagaio Finance',
-}: PoupagaioLogoOficialProps) {
+}: poupagaio-logooficialProps) {
   const hasCustomHeight = className.split(' ').some((cls) => cls.startsWith('h-'));
   const defaultSize = compact ? 'h-10 sm:h-12' : 'h-14 sm:h-16 md:h-20';
   const sizeClass = hasCustomHeight ? '' : defaultSize;
