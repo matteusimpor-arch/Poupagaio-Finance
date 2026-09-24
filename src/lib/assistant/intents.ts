@@ -160,7 +160,7 @@ export const ASSISTANT_INTENTS: AssistantIntent[] = [
     steps: [
       'Acesse a aba "Suporte" no menu principal.',
       'Consulte as perguntas frequentes ou envie uma mensagem direta.',
-      'E-mail oficial de contato: matteus.impor@gmail.com'
+      'E-mail oficial de contato: poupagaiofinance@gmail.com'
     ],
     actionTab: 'support',
     actionLabel: 'Falar com o Suporte',

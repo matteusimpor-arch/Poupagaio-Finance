@@ -243,7 +243,11 @@ export function DashboardHome({
 
   const handleSaveFixedExpense = async (data: CreateFixedExpenseInput | UpdateFixedExpenseInput): Promise<boolean> => {
     if (!user) return false;
-    const res = await fixedExpensesService.createFixedExpense(user.id, data as CreateFixedExpenseInput);
+    const targetSpaceId = ('space_id' in data && data.space_id) ? data.space_id : (currentSpace?.id || user.id);
+    const res = await fixedExpensesService.createFixedExpense(user.id, {
+      ...data,
+      space_id: targetSpaceId,
+    } as CreateFixedExpenseInput);
     if (res.error) throw new Error(res.error);
     setQuickAddModalType(null);
     loadDashboardData();
@@ -252,7 +256,11 @@ export function DashboardHome({
 
   const handleSaveVariableExpense = async (data: CreateVariableExpenseInput | UpdateVariableExpenseInput): Promise<boolean> => {
     if (!user) return false;
-    const res = await variableExpensesService.createVariableExpense(user.id, data as CreateVariableExpenseInput);
+    const targetSpaceId = ('space_id' in data && data.space_id) ? data.space_id : (currentSpace?.id || user.id);
+    const res = await variableExpensesService.createVariableExpense(user.id, {
+      ...data,
+      space_id: targetSpaceId,
+    } as CreateVariableExpenseInput);
     if (res.error) throw new Error(res.error);
     setQuickAddModalType(null);
     loadDashboardData();
@@ -260,10 +268,11 @@ export function DashboardHome({
   };
 
   const handleSaveInstallment = async (input: CreateInstallmentPurchaseInput | UpdateInstallmentPurchaseInput): Promise<{ success: boolean; error?: string }> => {
-    if (!user || !currentSpace?.id) return { success: false, error: 'Espaço indisponível' };
+    const targetSpaceId = ('space_id' in input && input.space_id) ? input.space_id : (currentSpace?.id || user?.id);
+    if (!user || !targetSpaceId) return { success: false, error: 'Espaço indisponível' };
     const res = await installmentsService.createPurchase({
       ...input,
-      space_id: currentSpace.id,
+      space_id: targetSpaceId,
     } as CreateInstallmentPurchaseInput);
     if (!res.error) {
       setQuickAddModalType(null);
@@ -1700,48 +1709,59 @@ export function DashboardHome({
       </section>
       </div>
 
-      {/* MOBILE BOTTOM SHEET MENU FOR QUICK ADD */}
+      {/* MENU MODAL PARA ADICIONAR NOVA CONTA (DESKTOP E MOBILE) */}
       {isQuickAddMenuOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-xs md:hidden animate-in fade-in duration-200"
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
           onClick={() => setIsQuickAddMenuOpen(false)}
         >
           <div
-            className="w-full max-w-lg bg-white dark:bg-[#1C211E] rounded-t-3xl p-5 border-t border-[#D2DDD6] dark:border-[#28322C] shadow-2xl space-y-4 animate-in slide-in-from-bottom duration-200"
+            className="w-full max-w-lg bg-white dark:bg-[#1C211E] rounded-t-3xl sm:rounded-2xl p-5 sm:p-6 border-t sm:border border-[#D2DDD6] dark:border-[#28322C] shadow-2xl space-y-4 animate-in slide-in-from-bottom sm:zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b border-[#E2ECE6] dark:border-[#28322C] pb-3">
-              <h3 className="text-base font-bold text-[#02402E] dark:text-[#78D9A6] font-display">
-                Adicionar conta
-              </h3>
+              <div>
+                <h3 className="text-base font-bold text-[#02402E] dark:text-[#78D9A6] font-display flex items-center gap-2">
+                  <CalendarCheck className="w-5 h-5 text-[#16A66A]" />
+                  Adicionar Nova Conta
+                </h3>
+                <p className="text-xs text-[#5E6963] dark:text-[#95A39B] mt-0.5">
+                  Selecione o tipo de conta para {MONTH_NAMES[currentMonth - 1]}/{currentYear}
+                </p>
+              </div>
               <button
                 type="button"
                 onClick={() => setIsQuickAddMenuOpen(false)}
-                className="p-1 rounded-full text-[#5E6963] hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer"
+                className="p-1.5 rounded-full text-[#5E6963] hover:text-[#02402E] dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer transition-colors"
+                aria-label="Fechar"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="space-y-2 py-1">
+            <div className="space-y-2.5 py-1">
               <button
                 type="button"
                 onClick={() => {
                   setIsQuickAddMenuOpen(false);
                   setQuickAddModalType('fixed_expenses');
                 }}
-                className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-[#F4F7F5] dark:bg-[#222825] hover:bg-[#E8F2EC] dark:hover:bg-[#28322C] text-left transition-colors cursor-pointer group"
+                className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-[#F4F7F5] dark:bg-[#222825] hover:bg-[#E8F2EC] dark:hover:bg-[#28322C] border border-transparent hover:border-[#8B5CF6]/40 text-left transition-all cursor-pointer group shadow-2xs hover:shadow-sm"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-purple-100 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
                     <FileText className="w-5 h-5" />
                   </div>
                   <div>
-                    <p className="text-xs font-bold text-[#02402E] dark:text-[#78D9A6]">Gasto Fixo</p>
-                    <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B]">Recorrente (Ex: Luz, Aluguel, Internet)</p>
+                    <p className="text-xs font-bold text-[#02402E] dark:text-[#78D9A6] group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
+                      Gasto Fixo
+                    </p>
+                    <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B]">
+                      Recorrente mensal (Ex: Luz, Água, Aluguel, Internet, Academia)
+                    </p>
                   </div>
                 </div>
-                <ChevronRight className="w-4 h-4 text-[#5E6963] group-hover:translate-x-0.5 transition-transform" />
+                <ChevronRight className="w-4 h-4 text-[#5E6963] group-hover:text-purple-600 group-hover:translate-x-0.5 transition-transform" />
               </button>
 
               <button
@@ -1750,18 +1770,22 @@ export function DashboardHome({
                   setIsQuickAddMenuOpen(false);
                   setQuickAddModalType('variable_expenses');
                 }}
-                className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-[#F4F7F5] dark:bg-[#222825] hover:bg-[#E8F2EC] dark:hover:bg-[#28322C] text-left transition-colors cursor-pointer group"
+                className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-[#F4F7F5] dark:bg-[#222825] hover:bg-[#E8F2EC] dark:hover:bg-[#28322C] border border-transparent hover:border-[#E11D48]/40 text-left transition-all cursor-pointer group shadow-2xs hover:shadow-sm"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-rose-100 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-xl bg-rose-100 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
                     <CreditCard className="w-5 h-5" />
                   </div>
                   <div>
-                    <p className="text-xs font-bold text-[#02402E] dark:text-[#78D9A6]">Gasto Variável</p>
-                    <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B]">Eventual (Ex: Restaurante, Farmácia)</p>
+                    <p className="text-xs font-bold text-[#02402E] dark:text-[#78D9A6] group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors">
+                      Gasto Variável
+                    </p>
+                    <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B]">
+                      Eventual ou imprevisto (Ex: Restaurante, Farmácia, Combustível, Mercado)
+                    </p>
                   </div>
                 </div>
-                <ChevronRight className="w-4 h-4 text-[#5E6963] group-hover:translate-x-0.5 transition-transform" />
+                <ChevronRight className="w-4 h-4 text-[#5E6963] group-hover:text-rose-600 group-hover:translate-x-0.5 transition-transform" />
               </button>
 
               <button
@@ -1770,18 +1794,22 @@ export function DashboardHome({
                   setIsQuickAddMenuOpen(false);
                   setQuickAddModalType('installments');
                 }}
-                className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-[#F4F7F5] dark:bg-[#222825] hover:bg-[#E8F2EC] dark:hover:bg-[#28322C] text-left transition-colors cursor-pointer group"
+                className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-[#F4F7F5] dark:bg-[#222825] hover:bg-[#E8F2EC] dark:hover:bg-[#28322C] border border-transparent hover:border-[#F59E0B]/40 text-left transition-all cursor-pointer group shadow-2xs hover:shadow-sm"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
                     <Calendar className="w-5 h-5" />
                   </div>
                   <div>
-                    <p className="text-xs font-bold text-[#02402E] dark:text-[#78D9A6]">Parcelamento</p>
-                    <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B]">Compra parcelada no cartão</p>
+                    <p className="text-xs font-bold text-[#02402E] dark:text-[#78D9A6] group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
+                      Parcelamento
+                    </p>
+                    <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B]">
+                      Compra parcelada no cartão (Ex: 10x sem juros, parcelas futuras)
+                    </p>
                   </div>
                 </div>
-                <ChevronRight className="w-4 h-4 text-[#5E6963] group-hover:translate-x-0.5 transition-transform" />
+                <ChevronRight className="w-4 h-4 text-[#5E6963] group-hover:text-amber-600 group-hover:translate-x-0.5 transition-transform" />
               </button>
             </div>
           </div>
@@ -1789,13 +1817,13 @@ export function DashboardHome({
       )}
 
       {/* MODAIS REUTILIZADOS COM CONTEXTO DA COMPETÊNCIA ATUAL */}
-      {currentSpace?.id && (
+      {(currentSpace?.id || user?.id) && (
         <>
           <FixedExpenseModal
             isOpen={quickAddModalType === 'fixed_expenses'}
             onClose={() => setQuickAddModalType(null)}
             onSave={handleSaveFixedExpense}
-            spaceId={currentSpace.id}
+            spaceId={currentSpace?.id || user?.id || ''}
             selectedYear={currentYear}
             selectedMonth={currentMonth}
           />
@@ -1804,7 +1832,7 @@ export function DashboardHome({
             isOpen={quickAddModalType === 'variable_expenses'}
             onClose={() => setQuickAddModalType(null)}
             onSave={handleSaveVariableExpense}
-            spaceId={currentSpace.id}
+            spaceId={currentSpace?.id || user?.id || ''}
             selectedYear={currentYear}
             selectedMonth={currentMonth}
           />
@@ -1813,7 +1841,7 @@ export function DashboardHome({
             isOpen={quickAddModalType === 'installments'}
             onClose={() => setQuickAddModalType(null)}
             onSave={handleSaveInstallment}
-            spaceId={currentSpace.id}
+            spaceId={currentSpace?.id || user?.id || ''}
             selectedYear={currentYear}
             selectedMonth={currentMonth}
           />
@@ -1822,7 +1850,7 @@ export function DashboardHome({
             isOpen={isGoalModalOpen}
             onClose={() => setIsGoalModalOpen(false)}
             onSave={handleSaveGoal}
-            spaceId={currentSpace.id}
+            spaceId={currentSpace?.id || user?.id || ''}
           />
         </>
       )}

@@ -3,7 +3,7 @@ import { Mail, HelpCircle, MessageSquare, AlertCircle, Sparkles, Send, ArrowRigh
 import { POUPAGAIO_MASCOT_URL } from '../../assets/mascot';
 
 export function SupportScreen() {
-  const supportEmail = 'matteus.impor@gmail.com';
+  const supportEmail = 'poupagaiofinance@gmail.com';
 
   return (
     <div className="w-full max-w-4xl mx-auto space-y-6 pb-12 animate-in fade-in duration-200">
