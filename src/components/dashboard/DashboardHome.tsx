@@ -1112,41 +1112,52 @@ export function DashboardHome({
             </button>
           </div>
 
-          {/* Filter Pills */}
-          <div className="flex items-center gap-1 bg-white/80 dark:bg-[#1C211E]/80 border border-[#D2DDD6] dark:border-[#28322C] p-1 rounded-xl shrink-0 self-start sm:self-auto">
+          {/* Filter Pills & Add Button */}
+          <div className="flex items-center gap-2.5 shrink-0 self-start sm:self-auto">
             <button
               type="button"
-              onClick={() => setChecklistFilter('pending')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                checklistFilter === 'pending'
-                  ? 'bg-[#02402E] text-white dark:bg-[#16A66A] dark:text-[#101614]'
-                  : 'text-[#5E6963] dark:text-[#95A39B] hover:text-[#02402E]'
-              }`}
+              onClick={() => setIsQuickAddMenuOpen(true)}
+              className="px-3.5 py-1.5 rounded-xl bg-[#02402E] text-white dark:bg-[#78D9A6] dark:text-[#101614] text-xs font-bold hover:bg-[#16A66A] dark:hover:bg-[#5ECB93] transition-all cursor-pointer flex items-center gap-1.5 shrink-0 shadow-2xs active:scale-95"
             >
-              Pendentes ({checklistResult?.stats.pendingCount || 0})
+              <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+              <span>Nova Conta</span>
             </button>
-            <button
-              type="button"
-              onClick={() => setChecklistFilter('paid')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                checklistFilter === 'paid'
-                  ? 'bg-[#02402E] text-white dark:bg-[#16A66A] dark:text-[#101614]'
-                  : 'text-[#5E6963] dark:text-[#95A39B] hover:text-[#02402E]'
-              }`}
-            >
-              Pagas ({checklistResult?.stats.paidCount || 0})
-            </button>
-            <button
-              type="button"
-              onClick={() => setChecklistFilter('all')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                checklistFilter === 'all'
-                  ? 'bg-[#02402E] text-white dark:bg-[#16A66A] dark:text-[#101614]'
-                  : 'text-[#5E6963] dark:text-[#95A39B] hover:text-[#02402E]'
-              }`}
-            >
-              Todas ({checklistResult?.stats.totalCount || 0})
-            </button>
+
+            <div className="flex items-center gap-1 bg-white/80 dark:bg-[#1C211E]/80 border border-[#D2DDD6] dark:border-[#28322C] p-1 rounded-xl shrink-0">
+              <button
+                type="button"
+                onClick={() => setChecklistFilter('pending')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  checklistFilter === 'pending'
+                    ? 'bg-[#02402E] text-white dark:bg-[#16A66A] dark:text-[#101614]'
+                    : 'text-[#5E6963] dark:text-[#95A39B] hover:text-[#02402E]'
+                }`}
+              >
+                Pendentes ({checklistResult?.stats.pendingCount || 0})
+              </button>
+              <button
+                type="button"
+                onClick={() => setChecklistFilter('paid')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  checklistFilter === 'paid'
+                    ? 'bg-[#02402E] text-white dark:bg-[#16A66A] dark:text-[#101614]'
+                    : 'text-[#5E6963] dark:text-[#95A39B] hover:text-[#02402E]'
+                }`}
+              >
+                Pagas ({checklistResult?.stats.paidCount || 0})
+              </button>
+              <button
+                type="button"
+                onClick={() => setChecklistFilter('all')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  checklistFilter === 'all'
+                    ? 'bg-[#02402E] text-white dark:bg-[#16A66A] dark:text-[#101614]'
+                    : 'text-[#5E6963] dark:text-[#95A39B] hover:text-[#02402E]'
+                }`}
+              >
+                Todas ({checklistResult?.stats.totalCount || 0})
+              </button>
+            </div>
           </div>
         </div>
 
@@ -1287,18 +1298,9 @@ export function DashboardHome({
       </section>
 
       {/* ==================================================
-          SEÇÃO 3: MINHAS RESERVAS E MERCADO
+          SEÇÃO 3: MERCADO E MINHAS RESERVAS
           ================================================== */}
       <section className="space-y-6">
-        {currentSpace && (
-          <DashboardReservesSection
-            spaceId={currentSpace.id}
-            selectedYear={currentYear}
-            selectedMonth={currentMonth}
-            onSelectTab={onSelectTab}
-          />
-        )}
-
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-bold font-display text-[#02402E] dark:text-[#78D9A6] flex items-center gap-2">
@@ -1314,82 +1316,91 @@ export function DashboardHome({
             </button>
           </div>
 
-        <div className="bg-white/90 dark:bg-[#1C211E]/90 backdrop-blur-md border border-[#D2DDD6] dark:border-[#28322C] rounded-2xl p-5 shadow-2xs space-y-4">
-          {!activeMarketList ? (
-            <div className="py-4 text-center space-y-2">
-              <ShoppingBag className="w-7 h-7 text-[#16A66A] mx-auto opacity-60" />
-              <p className="text-xs font-bold text-[#02402E] dark:text-[#78D9A6]">
-                Nenhuma lista de mercado ativa no momento.
-              </p>
-              <button
-                type="button"
-                onClick={() => onSelectTab('market')}
-                className="px-4 py-2 rounded-xl bg-[#02402E] text-white dark:bg-[#78D9A6] dark:text-[#101614] text-xs font-bold cursor-pointer hover:bg-[#16A66A] transition-all inline-flex items-center gap-1.5 shadow-2xs active:scale-95"
-              >
-                <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-                <span>Criar Lista de Mercado</span>
-              </button>
-            </div>
-          ) : (
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="space-y-2 min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <h3 className="text-sm sm:text-base font-bold text-[#02402E] dark:text-[#78D9A6] truncate font-display">
-                    {activeMarketList.name}
-                  </h3>
-                  <span className="text-[10px] px-2 py-0.5 rounded-md bg-[#E8F2EC] dark:bg-[#25322A] text-[#02402E] dark:text-[#78D9A6] font-bold shrink-0">
-                    Lista Atual
-                  </span>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[#5E6963] dark:text-[#95A39B]">
-                  <span>
-                    <strong>{activeMarketTotals?.totalItems || 0}</strong> itens • <strong>{activeMarketTotals?.checkedItems || 0}</strong> comprados
-                  </span>
-                  
-                  {activeMarketList.budget_amount ? (
-                    <span>Orçamento: <strong className="text-[#02402E] dark:text-[#78D9A6]">{formatCurrency(activeMarketList.budget_amount)}</strong></span>
-                  ) : null}
-
-                  {activeMarketTotals?.totalActual ? (
-                    <span>Gasto: <strong className="text-[#16A66A]">{formatCurrency(activeMarketTotals.totalActual)}</strong></span>
-                  ) : activeMarketTotals?.totalEstimated ? (
-                    <span>Estimado: <strong className="text-[#02402E] dark:text-[#78D9A6]">{formatCurrency(activeMarketTotals.totalEstimated)}</strong></span>
-                  ) : null}
-                </div>
-
-                {/* Progress bar */}
-                {activeMarketTotals && activeMarketTotals.totalItems > 0 && (
-                  <div className="w-full max-w-md space-y-1 pt-1">
-                    <div className="w-full h-2 rounded-full bg-[#E2ECE6] dark:bg-[#28322C] overflow-hidden">
-                      <div
-                        className="h-full bg-[#16A66A] rounded-full transition-all duration-300"
-                        style={{
-                          width: `${Math.min(
-                            100,
-                            Math.round((activeMarketTotals.checkedItems / activeMarketTotals.totalItems) * 100)
-                          )}%`,
-                        }}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="shrink-0 pt-1 md:pt-0">
+          <div className="bg-white/90 dark:bg-[#1C211E]/90 backdrop-blur-md border border-[#D2DDD6] dark:border-[#28322C] rounded-2xl p-5 shadow-2xs space-y-4">
+            {!activeMarketList ? (
+              <div className="py-4 text-center space-y-2">
+                <ShoppingBag className="w-7 h-7 text-[#16A66A] mx-auto opacity-60" />
+                <p className="text-xs font-bold text-[#02402E] dark:text-[#78D9A6]">
+                  Nenhuma lista de mercado ativa no momento.
+                </p>
                 <button
                   type="button"
                   onClick={() => onSelectTab('market')}
-                  className="w-full md:w-auto px-4 py-2.5 rounded-xl bg-[#02402E] text-white hover:bg-[#16A66A] dark:bg-[#78D9A6] dark:text-[#101614] text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 shadow-2xs"
+                  className="px-4 py-2 rounded-xl bg-[#02402E] text-white dark:bg-[#78D9A6] dark:text-[#101614] text-xs font-bold cursor-pointer hover:bg-[#16A66A] transition-all inline-flex items-center gap-1.5 shadow-2xs active:scale-95"
                 >
-                  <ShoppingBag className="w-4 h-4" />
-                  <span>Continuar compras →</span>
+                  <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                  <span>Criar Lista de Mercado</span>
                 </button>
               </div>
-            </div>
-          )}
+            ) : (
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="space-y-2 min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm sm:text-base font-bold text-[#02402E] dark:text-[#78D9A6] truncate font-display">
+                      {activeMarketList.name}
+                    </h3>
+                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-[#E8F2EC] dark:bg-[#25322A] text-[#02402E] dark:text-[#78D9A6] font-bold shrink-0">
+                      Lista Atual
+                    </span>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[#5E6963] dark:text-[#95A39B]">
+                    <span>
+                      <strong>{activeMarketTotals?.totalItems || 0}</strong> itens • <strong>{activeMarketTotals?.checkedItems || 0}</strong> comprados
+                    </span>
+                    
+                    {activeMarketList.budget_amount ? (
+                      <span>Orçamento: <strong className="text-[#02402E] dark:text-[#78D9A6]">{formatCurrency(activeMarketList.budget_amount)}</strong></span>
+                    ) : null}
+
+                    {activeMarketTotals?.totalActual ? (
+                      <span>Gasto: <strong className="text-[#16A66A]">{formatCurrency(activeMarketTotals.totalActual)}</strong></span>
+                    ) : activeMarketTotals?.totalEstimated ? (
+                      <span>Estimado: <strong className="text-[#02402E] dark:text-[#78D9A6]">{formatCurrency(activeMarketTotals.totalEstimated)}</strong></span>
+                    ) : null}
+                  </div>
+
+                  {/* Progress bar */}
+                  {activeMarketTotals && activeMarketTotals.totalItems > 0 && (
+                    <div className="w-full max-w-md space-y-1 pt-1">
+                      <div className="w-full h-2 rounded-full bg-[#E2ECE6] dark:bg-[#28322C] overflow-hidden">
+                        <div
+                          className="h-full bg-[#16A66A] rounded-full transition-all duration-300"
+                          style={{
+                            width: `${Math.min(
+                              100,
+                              Math.round((activeMarketTotals.checkedItems / activeMarketTotals.totalItems) * 100)
+                            )}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="shrink-0 pt-1 md:pt-0">
+                  <button
+                    type="button"
+                    onClick={() => onSelectTab('market')}
+                    className="w-full md:w-auto px-4 py-2.5 rounded-xl bg-[#02402E] text-white hover:bg-[#16A66A] dark:bg-[#78D9A6] dark:text-[#101614] text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 shadow-2xs"
+                  >
+                    <ShoppingBag className="w-4 h-4" />
+                    <span>Continuar compras →</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
-        </div>
+
+        {currentSpace && (
+          <DashboardReservesSection
+            spaceId={currentSpace.id}
+            selectedYear={currentYear}
+            selectedMonth={currentMonth}
+            onSelectTab={onSelectTab}
+          />
+        )}
       </section>
 
       {/* ==================================================
