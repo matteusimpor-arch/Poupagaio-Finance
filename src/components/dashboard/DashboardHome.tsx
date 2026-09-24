@@ -56,8 +56,11 @@ import {
 import { FixedExpenseModal } from '../fixed-expenses/FixedExpenseModal';
 import { VariableExpenseModal } from '../variable-expenses/VariableExpenseModal';
 import { InstallmentPurchaseModal } from '../installments/InstallmentPurchaseModal';
+import { DashboardReservesSection } from './DashboardReservesSection';
+import { PaymentOriginConfirmModal } from '../reserves/PaymentOriginConfirmModal';
 import { fixedExpensesService } from '../../lib/services/fixedExpenses';
 import { variableExpensesService } from '../../lib/services/variableExpenses';
+import { reservesService, emptyReservesSummary } from '../../lib/services/reserves';
 import {
   CreateFixedExpenseInput,
   UpdateFixedExpenseInput,
@@ -65,6 +68,7 @@ import {
   UpdateVariableExpenseInput,
   CreateInstallmentPurchaseInput,
   UpdateInstallmentPurchaseInput,
+  ReservesSummary,
 } from '../../types';
 
 interface DashboardHomeProps {
@@ -135,6 +139,7 @@ export function DashboardHome({
   const [activeInstallments, setActiveInstallments] = useState<InstallmentPurchaseWithInstallments[]>([]);
   const [activeMarketList, setActiveMarketList] = useState<ShoppingListWithItems | null>(null);
   const [activeMarketTotals, setActiveMarketTotals] = useState<ShoppingListTotals | null>(null);
+  const [reservesSummary, setReservesSummary] = useState<ReservesSummary>(emptyReservesSummary);
   
   // Interactive Modal & View States
   const [confirmPaymentItem, setConfirmPaymentItem] = useState<NormalizedChecklistExpense | null>(null);
@@ -171,6 +176,7 @@ export function DashboardHome({
         goalsRes,
         installmentsRes,
         marketListsRes,
+        reservesRes,
       ] = await Promise.all([
         checklistService.getMonthlyChecklist(currentSpace.id, currentYear, currentMonth),
         entriesService.getMonthSummary(currentSpace.id, currentYear, currentMonth),
@@ -178,6 +184,7 @@ export function DashboardHome({
         goalsService.getGoalsWithProgress(currentSpace.id, { filterStatus: 'active' }),
         installmentsService.getPurchasesWithInstallments(currentSpace.id, { filterStatus: 'active' }),
         marketService.getShoppingLists(currentSpace.id, { filterStatus: 'active' }),
+        reservesService.getReservesWithSummary(currentSpace.id, currentYear, currentMonth),
       ]);
 
       setChecklistResult(checklistRes);
@@ -185,6 +192,7 @@ export function DashboardHome({
       setCalendarNotes(notesRes.notes || []);
       setActiveGoals((goalsRes.goals || []).slice(0, 3));
       setActiveInstallments((installmentsRes.purchases || []).slice(0, 3));
+      setReservesSummary(reservesRes.summary);
       
       // Store primary active market list and compute arithmetic totals
       const activeList = marketListsRes.lists?.[0] || null;
@@ -283,6 +291,14 @@ export function DashboardHome({
   // Toggle item payment status using existing category services
   const handleToggleItemStatus = async (item: NormalizedChecklistExpense) => {
     if (!currentSpace?.id) return;
+    if (item.status === 'paid' && user?.id) {
+      await reservesService.refundExpensePayment(
+        item.sourceType as any,
+        item.sourceId,
+        currentSpace.id,
+        user.id
+      );
+    }
     const res = await checklistService.toggleItemPaymentStatus(item, currentSpace.id, currentYear, currentMonth);
     if (res.success) {
       await loadDashboardData();
@@ -365,66 +381,19 @@ export function DashboardHome({
         </div>
       )}
 
-      {/* CONFIRMATION MODAL BEFORE MARKING AS PAID */}
-      {confirmPaymentItem && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-[#1C211E] border border-[#D2DDD6] dark:border-[#28322C] rounded-2xl p-5 max-w-md w-full shadow-2xl space-y-4">
-            <div className="flex items-center justify-between pb-2 border-b border-[#E2ECE6] dark:border-[#28322C]">
-              <div className="flex items-center gap-2 text-[#02402E] dark:text-[#78D9A6]">
-                <CheckCircle2 className="w-5 h-5 text-[#16A66A]" />
-                <h3 className="text-base font-bold font-display">Confirmar Pagamento</h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setConfirmPaymentItem(null)}
-                className="p-1 rounded-lg text-[#5E6963] dark:text-[#95A39B] hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="space-y-3">
-              <div className="p-3.5 rounded-xl bg-[#F4F8F5] dark:bg-[#222825] border border-[#E2ECE6] dark:border-[#2C3630] space-y-1">
-                <p className="text-xs text-[#5E6963] dark:text-[#95A39B] font-medium">Conta / Compromisso:</p>
-                <p className="text-sm font-bold text-[#202724] dark:text-[#F4F4F5]">{confirmPaymentItem.title}</p>
-                <div className="flex items-center justify-between pt-2 text-xs">
-                  <span className="px-2 py-0.5 rounded-md bg-[#E8F2EC] dark:bg-[#25322A] text-[#02402E] dark:text-[#78D9A6] font-semibold">
-                    {confirmPaymentItem.sourceType === 'fixed' ? 'Gasto Fixo' : confirmPaymentItem.sourceType === 'variable' ? 'Gasto Variável' : 'Parcelamento'} • {confirmPaymentItem.category}
-                  </span>
-                  <span className="text-base font-extrabold text-[#02402E] dark:text-[#78D9A6] font-display">
-                    {formatCurrency(confirmPaymentItem.amount)}
-                  </span>
-                </div>
-              </div>
-
-              <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 text-[11px] text-amber-800 dark:text-amber-300 leading-tight">
-                💡 <strong>Nota financeira:</strong> Marcar como paga atualiza o status de prevista para realizada. O valor continua sendo uma <strong>Despesa</strong> e não altera suas Entradas.
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setConfirmPaymentItem(null)}
-                className="px-4 py-2 rounded-xl border border-[#D2DDD6] dark:border-[#28322C] text-xs font-semibold text-[#5E6963] dark:text-[#95A39B] hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={async () => {
-                  const item = confirmPaymentItem;
-                  setConfirmPaymentItem(null);
-                  await handleToggleItemStatus(item);
-                }}
-                className="px-4 py-2 rounded-xl bg-[#02402E] text-white dark:bg-[#16A66A] dark:text-[#101614] text-xs font-bold hover:opacity-90 transition-opacity cursor-pointer flex items-center gap-1.5"
-              >
-                <Check className="w-4 h-4 stroke-[3]" />
-                Confirmar Pagamento
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* PAYMENT ORIGIN CONFIRMATION MODAL (SALDO LIVRE VS RESERVAS) */}
+      {confirmPaymentItem && currentSpace && user && (
+        <PaymentOriginConfirmModal
+          isOpen={!!confirmPaymentItem}
+          onClose={() => setConfirmPaymentItem(null)}
+          spaceId={currentSpace.id}
+          userId={user.id}
+          item={confirmPaymentItem}
+          onSuccess={async () => {
+            setConfirmPaymentItem(null);
+            await loadDashboardData();
+          }}
+        />
       )}
 
       {/* ==================================================
@@ -459,7 +428,34 @@ export function DashboardHome({
           </div>
         </div>
 
-        {/* 2. Resumo Financeiro COMPACTO (Entradas & Despesas) */}
+        {/* 2. Resumo Financeiro COMPACTO (Saldo Total, Reservas, Saldo Livre) */}
+        <div className="bg-[#02402E] text-white rounded-2xl p-3.5 shadow-2xs space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[#A1D9BD]">
+              Saldo Total do Mês
+            </span>
+            <span className="text-sm font-extrabold font-display">
+              {formatCurrency(saldoConsolidado)}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 pt-1 border-t border-white/10 text-xs">
+            <div className="bg-white/10 rounded-xl p-2">
+              <span className="text-[10px] text-[#C0E3D3] block font-medium">Saldo Livre</span>
+              <span className="text-xs font-bold text-[#78D9A6]">
+                {formatCurrency(reservesSummary.freeBalance)}
+              </span>
+            </div>
+            <div className="bg-white/10 rounded-xl p-2">
+              <span className="text-[10px] text-[#C0E3D3] block font-medium">Reservado</span>
+              <span className="text-xs font-bold text-[#F2D58A]">
+                {formatCurrency(reservesSummary.totalReserved)}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Entradas e Despesas Mobile */}
         <div className="grid grid-cols-2 gap-2">
           {/* Entradas */}
           <div className="bg-white/90 dark:bg-[#1C211E]/90 border border-[#D2DDD6] dark:border-[#28322C] rounded-2xl p-3 shadow-2xs space-y-1 min-w-0">
@@ -642,7 +638,17 @@ export function DashboardHome({
           </div>
         </div>
 
-        {/* 4. MERCADO (Logo abaixo de Contas Previstas) */}
+        {/* 4. MINHAS RESERVAS (Mobile) */}
+        {currentSpace && (
+          <DashboardReservesSection
+            spaceId={currentSpace.id}
+            selectedYear={currentYear}
+            selectedMonth={currentMonth}
+            onSelectTab={onSelectTab}
+          />
+        )}
+
+        {/* 5. MERCADO (Logo abaixo das Reservas) */}
         <div className="bg-white/90 dark:bg-[#1C211E]/90 border border-[#D2DDD6] dark:border-[#28322C] rounded-2xl p-4 shadow-2xs space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="text-base font-bold font-display text-[#02402E] dark:text-[#78D9A6] flex items-center gap-1.5">
@@ -915,7 +921,7 @@ export function DashboardHome({
           <div className="bg-[#02402E] text-white rounded-2xl p-5 shadow-sm space-y-3 relative overflow-hidden flex flex-col justify-between border border-[#02402E]">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold uppercase tracking-wider text-[#A1D9BD] font-display">
-                Saldo do Mês
+                Saldo Total
               </span>
               <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center text-[#F2B807]">
                 <Wallet className="w-4 h-4" />
@@ -926,9 +932,15 @@ export function DashboardHome({
               <div className="text-2xl sm:text-3xl font-extrabold tracking-tight font-display">
                 {formatCurrency(saldoConsolidado)}
               </div>
-              <p className="text-[11px] text-[#C0E3D3] mt-1 font-medium flex items-center gap-1">
-                {saldoConsolidado >= 0 ? 'Seu resultado está positivo! 🚀' : 'Saldo do período negativo ⚠️'}
-              </p>
+              <div className="flex items-center gap-2 mt-2 pt-2 border-t border-white/15 text-[11px]">
+                <span className="text-[#C0E3D3]">
+                  Livre: <strong className="text-white font-bold">{formatCurrency(reservesSummary.freeBalance)}</strong>
+                </span>
+                <span className="text-[#C0E3D3]/50">•</span>
+                <span className="text-[#C0E3D3]">
+                  Reservado: <strong className="text-[#F2D58A] font-bold">{formatCurrency(reservesSummary.totalReserved)}</strong>
+                </span>
+              </div>
             </div>
           </div>
 
@@ -1214,22 +1226,32 @@ export function DashboardHome({
       </section>
 
       {/* ==================================================
-          SEÇÃO 3: MERCADO (RESUMO + CONTINUAR COMPRAS)
+          SEÇÃO 3: MINHAS RESERVAS E MERCADO
           ================================================== */}
-      <section className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold font-display text-[#02402E] dark:text-[#78D9A6] flex items-center gap-2">
-            <ShoppingBag className="w-5 h-5 text-[#16A66A]" />
-            Mercado
-          </h2>
-          <button
-            type="button"
-            onClick={() => onSelectTab('market')}
-            className="text-xs text-[#16A66A] hover:underline font-bold cursor-pointer"
-          >
-            Ir para Mercado →
-          </button>
-        </div>
+      <section className="space-y-6">
+        {currentSpace && (
+          <DashboardReservesSection
+            spaceId={currentSpace.id}
+            selectedYear={currentYear}
+            selectedMonth={currentMonth}
+            onSelectTab={onSelectTab}
+          />
+        )}
+
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-bold font-display text-[#02402E] dark:text-[#78D9A6] flex items-center gap-2">
+              <ShoppingBag className="w-5 h-5 text-[#16A66A]" />
+              Mercado
+            </h2>
+            <button
+              type="button"
+              onClick={() => onSelectTab('market')}
+              className="text-xs text-[#16A66A] hover:underline font-bold cursor-pointer"
+            >
+              Ir para Mercado →
+            </button>
+          </div>
 
         <div className="bg-white/90 dark:bg-[#1C211E]/90 backdrop-blur-md border border-[#D2DDD6] dark:border-[#28322C] rounded-2xl p-5 shadow-2xs space-y-4">
           {!activeMarketList ? (
@@ -1304,6 +1326,7 @@ export function DashboardHome({
               </div>
             </div>
           )}
+        </div>
         </div>
       </section>
 

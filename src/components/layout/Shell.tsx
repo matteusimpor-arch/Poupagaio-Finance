@@ -36,6 +36,7 @@ import {
   Linkedin,
   MoreHorizontal,
   ChevronDown,
+  PiggyBank,
 } from 'lucide-react';
 import { ActiveTab } from '../../types';
 import { EntryModal } from '../entries/EntryModal';
@@ -163,6 +164,7 @@ export function Shell({
     { id: 'home', label: 'Início', icon: Home },
     { id: 'movements', label: 'Movimentações', icon: ArrowLeftRight },
     { id: 'planning', label: 'Planejamento', icon: Target },
+    { id: 'reserves', label: 'Reservas', icon: PiggyBank },
     { id: 'entries', label: 'Entradas', icon: ArrowUpRight },
     { id: 'fixed_expenses', label: 'Gastos Fixos', icon: FileText },
     { id: 'variable_expenses', label: 'Gastos Variáveis', icon: CreditCard },

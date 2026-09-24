@@ -7,6 +7,7 @@ import { Shell } from './components/layout/Shell';
 import { DashboardHome } from './components/dashboard/DashboardHome';
 import { MovementsScreen } from './components/movements/MovementsScreen';
 import { PlanningScreen } from './components/planning/PlanningScreen';
+import { ReservesScreen } from './components/reserves/ReservesScreen';
 import { EntriesScreen } from './components/entries/EntriesScreen';
 import { FixedExpensesScreen } from './components/fixed-expenses/FixedExpensesScreen';
 import { VariableExpensesScreen } from './components/variable-expenses/VariableExpensesScreen';
@@ -108,6 +109,17 @@ function AppContent() {
       return (
         <React.Fragment key={refreshKey}>
           <PlanningScreen onSelectTab={setCurrentTab} />
+        </React.Fragment>
+      );
+    }
+    if (currentTab === 'reserves') {
+      return (
+        <React.Fragment key={refreshKey}>
+          <ReservesScreen
+            selectedYear={selectedYear}
+            selectedMonth={selectedMonth}
+            onMonthChange={handleMonthChange}
+          />
         </React.Fragment>
       );
     }

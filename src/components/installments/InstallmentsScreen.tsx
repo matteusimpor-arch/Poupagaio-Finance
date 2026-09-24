@@ -15,6 +15,8 @@ import {
 import { formatCurrency } from '../../lib/formatters';
 import { InstallmentCard } from './InstallmentCard';
 import { InstallmentPurchaseModal } from './InstallmentPurchaseModal';
+import { PaymentOriginConfirmModal } from '../reserves/PaymentOriginConfirmModal';
+import { reservesService } from '../../lib/services/reserves';
 import { Button } from '../ui/button';
 import { Card, CardContent } from '../ui/card';
 import { Skeleton } from '../ui/skeleton';
@@ -61,7 +63,7 @@ export function InstallmentsScreen({
   selectedMonth: initialMonth,
   onMonthChange,
 }: InstallmentsScreenProps = {}) {
-  const { currentSpace } = useAuth();
+  const { user, currentSpace } = useAuth();
 
   // Competência selecionada (Mês / Ano)
   const now = new Date();
@@ -95,6 +97,13 @@ export function InstallmentsScreen({
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
   const [purchaseToEdit, setPurchaseToEdit] = useState<InstallmentPurchaseWithInstallments | null>(null);
   const [purchaseToDelete, setPurchaseToDelete] = useState<InstallmentPurchaseWithInstallments | null>(null);
+  const [payingInstallment, setPayingInstallment] = useState<{
+    installmentId: string;
+    purchase: InstallmentPurchaseWithInstallments;
+    amount: number;
+    dueDate: string;
+    number: number;
+  } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
   // Carregar dados de parcelados
@@ -195,22 +204,36 @@ export function InstallmentsScreen({
   // Marcar parcela como paga
   const handleMarkInstallmentPaid = async (installmentId: string) => {
     if (!currentSpace?.id) return;
-    const res = await installmentsService.markInstallmentAsPaid(installmentId, currentSpace.id);
-    if (res.success) {
-      await loadInstallmentsData();
-    } else {
-      setUserFriendlyError(res.error || 'Não foi possível registrar o pagamento.');
+    for (const p of purchases) {
+      const found = p.installments?.find((i) => i.id === installmentId);
+      if (found) {
+        setPayingInstallment({
+          installmentId,
+          purchase: p,
+          amount: found.amount,
+          dueDate: found.due_date,
+          number: found.installment_number,
+        });
+        return;
+      }
     }
   };
 
   // Desfazer pagamento de parcela
   const handleUnmarkInstallmentPaid = async (installmentId: string) => {
     if (!currentSpace?.id) return;
-    const res = await installmentsService.unmarkInstallmentPayment(installmentId, currentSpace.id);
-    if (res.success) {
-      await loadInstallmentsData();
-    } else {
-      setUserFriendlyError(res.error || 'Não foi possível desfazer o pagamento.');
+    try {
+      if (user?.id) {
+        await reservesService.refundExpensePayment('installment', installmentId, currentSpace.id, user.id);
+      }
+      const res = await installmentsService.unmarkInstallmentPayment(installmentId, currentSpace.id);
+      if (res.success) {
+        await loadInstallmentsData();
+      } else {
+        setUserFriendlyError(res.error || 'Não foi possível desfazer o pagamento.');
+      }
+    } catch {
+      setUserFriendlyError('Não foi possível desfazer o pagamento.');
     }
   };
 
@@ -555,6 +578,28 @@ export function InstallmentsScreen({
             </div>
           </div>
         </div>
+      )}
+      {/* MODAL DE CONFIRMAÇÃO DE ORIGEM DO PAGAMENTO DA PARCELA */}
+      {payingInstallment && currentSpace && user && (
+        <PaymentOriginConfirmModal
+          isOpen={Boolean(payingInstallment)}
+          onClose={() => setPayingInstallment(null)}
+          spaceId={currentSpace.id}
+          userId={user.id}
+          item={{
+            id: payingInstallment.installmentId,
+            sourceType: 'installment',
+            sourceId: payingInstallment.installmentId,
+            title: `${payingInstallment.purchase.description} (${payingInstallment.number}/${payingInstallment.purchase.installment_count})`,
+            amount: payingInstallment.amount,
+            dueDate: payingInstallment.dueDate,
+            category: payingInstallment.purchase.category,
+          }}
+          onSuccess={async () => {
+            setPayingInstallment(null);
+            await loadInstallmentsData();
+          }}
+        />
       )}
     </div>
   );

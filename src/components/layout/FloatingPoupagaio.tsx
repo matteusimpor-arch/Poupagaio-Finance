@@ -234,6 +234,7 @@ export function FloatingPoupagaio({ onSelectTab, onOpenCreateModal }: FloatingPo
     {
       name: 'ORGANIZAR',
       items: [
+        { id: 'reserves' as ActiveTab, label: 'Reservas', icon: Sparkles, iconBg: 'bg-[#16A66A]', iconColor: 'text-white' },
         { id: 'market' as ActiveTab, label: 'Mercado', icon: ShoppingBag, iconBg: 'bg-[#02402E]', iconColor: 'text-white' },
         { id: 'goals' as ActiveTab, label: 'Metas', icon: Target, iconBg: 'bg-[#0D9488]', iconColor: 'text-white' },
         { id: 'wishlist' as ActiveTab, label: 'Lista de Desejos', icon: Heart, iconBg: 'bg-[#EC4899]', iconColor: 'text-white' },

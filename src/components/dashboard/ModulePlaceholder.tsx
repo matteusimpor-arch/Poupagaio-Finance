@@ -13,6 +13,7 @@ import {
   ArrowLeft,
   Sparkles,
   Layers,
+  ShieldCheck,
 } from 'lucide-react';
 
 interface ModulePlaceholderProps {
@@ -34,6 +35,13 @@ const moduleDetails: Record<ActiveTab, { title: string; subtitle: string; icon: 
     icon: ArrowUpRight,
     description: 'Gerencie salários, freelances, rendimentos e outras fontes de receita de forma organizada.',
     highlights: ['Categorização por fonte', 'Recorrência mensal', 'Histórico detalhado'],
+  },
+  reserves: {
+    title: 'Minhas Reservas',
+    subtitle: 'Caixinhas financeiras',
+    icon: ShieldCheck,
+    description: 'Separe seu dinheiro em caixinhas específicas para combustível, mercado, lazer e emergências sem misturar com despesas.',
+    highlights: ['Separação interna sem despesa antecipada', 'Origem de pagamento flexível', 'Transferências entre reservas'],
   },
   fixed_expenses: {
     title: 'Gastos Fixos',

@@ -38,6 +38,7 @@ export type ActiveTab =
   | 'home' 
   | 'movements'
   | 'planning'
+  | 'reserves'
   | 'entries' 
   | 'fixed_expenses' 
   | 'variable_expenses' 
@@ -563,6 +564,145 @@ export interface CloseMonthInput {
   total_variable_expenses?: number;
   total_installments?: number;
 }
+
+// ==========================================
+// RESERVAS FINANCEIRAS ("CAIXINHAS")
+// ==========================================
+export type ReserveTransactionType = 
+  | 'initial_allocation' 
+  | 'deposit' 
+  | 'withdraw' 
+  | 'expense_payment' 
+  | 'transfer_in' 
+  | 'transfer_out' 
+  | 'refund';
+
+export interface Reserve {
+  id: string;
+  space_id: string;
+  created_by?: string | null;
+  name: string;
+  allocated_amount: number; // Valor reservado inicial/planejado
+  current_balance: number;   // Saldo disponível atual na caixinha
+  billing_cycle: string;     // YYYY-MM
+  category?: string | null;  // Categoria vinculada (ex: Combustível, Mercado)
+  icon?: string | null;      // Emoji ou chave de ícone (ex: ⛽, 🛒, 🏠, 🎮, 🚗, 💰)
+  color?: string | null;     // Cor de destaque visual
+  renew_monthly: boolean;    // Se renova automaticamente na nova competência
+  is_preferred: boolean;     // Se é a reserva preferencial da categoria
+  is_archived?: boolean;     // Soft delete / arquivamento para manter integridade histórica
+  archived_at?: string | null;
+  notes?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ReserveTransaction {
+  id: string;
+  reserve_id: string;
+  space_id: string;
+  operation_id?: string;     // Identificador idempotente de operação
+  created_by?: string | null;
+  type: ReserveTransactionType;
+  amount: number;
+  previous_balance: number;
+  new_balance: number;
+  source_description: string;
+  related_expense_type?: 'fixed' | 'variable' | 'installment' | null;
+  related_expense_id?: string | null;
+  related_reserve_id?: string | null;
+  transaction_date: string; // YYYY-MM-DD
+  notes?: string | null;
+  created_at: string;
+}
+
+export interface ExpensePaymentSource {
+  id: string;
+  space_id: string;
+  operation_id?: string;     // Identificador idempotente de operação
+  expense_type: 'fixed' | 'variable' | 'installment';
+  expense_id: string;
+  payment_id?: string | null;
+  reserve_id?: string | null; // null quando pago com Saldo Livre
+  amount: number;
+  is_free_balance: boolean;
+  payment_date: string; // YYYY-MM-DD
+  created_at: string;
+}
+
+export interface ReservesSummary {
+  totalBalance: number;              // Saldo Total do usuário (Entradas - Despesas Pagas)
+  totalReserved: number;             // Total acumulado disponível nas reservas
+  freeBalance: number;               // Saldo Livre = Saldo Total - Total Reservado
+  totalAllocated: number;            // Total inicialmente alocado nas reservas da competência
+  totalSpentFromReserves: number;    // Total gasto a partir das reservas
+  count: number;
+}
+
+export interface CreateReserveInput {
+  space_id: string;
+  name: string;
+  allocated_amount: number;
+  billing_cycle: string; // YYYY-MM
+  category?: string | null;
+  icon?: string | null;
+  color?: string | null;
+  renew_monthly?: boolean;
+  is_preferred?: boolean;
+  notes?: string | null;
+}
+
+export interface UpdateReserveInput {
+  name?: string;
+  allocated_amount?: number;
+  category?: string | null;
+  icon?: string | null;
+  color?: string | null;
+  renew_monthly?: boolean;
+  is_preferred?: boolean;
+  notes?: string | null;
+}
+
+export interface AddReserveMoneyInput {
+  reserve_id: string;
+  space_id: string;
+  amount: number;
+  date?: string; // YYYY-MM-DD
+  notes?: string | null;
+}
+
+export interface WithdrawReserveMoneyInput {
+  reserve_id: string;
+  space_id: string;
+  amount: number;
+  date?: string; // YYYY-MM-DD
+  notes?: string | null;
+}
+
+export interface TransferReserveMoneyInput {
+  from_reserve_id: string;
+  to_reserve_id: string;
+  space_id: string;
+  amount: number;
+  date?: string; // YYYY-MM-DD
+  notes?: string | null;
+}
+
+export type PaymentOriginType = 'free_balance' | 'reserve' | 'split';
+
+export interface ConfirmPaymentWithOriginInput {
+  space_id: string;
+  expense_type: 'fixed' | 'variable' | 'installment';
+  expense_id: string;
+  amount: number;
+  payment_date: string; // YYYY-MM-DD
+  origin_type: PaymentOriginType;
+  primary_reserve_id?: string | null;
+  reserve_amount?: number;
+  free_balance_amount?: number;
+  notes?: string | null;
+}
+
 
 
 

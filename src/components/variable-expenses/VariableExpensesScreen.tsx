@@ -11,6 +11,8 @@ import { variableExpensesService } from '../../lib/services/variableExpenses';
 import { MonthPicker } from '../entries/MonthPicker';
 import { VariableExpenseModal } from './VariableExpenseModal';
 import { VariableExpenseDeleteModal } from './VariableExpenseDeleteModal';
+import { PaymentOriginConfirmModal } from '../reserves/PaymentOriginConfirmModal';
+import { reservesService } from '../../lib/services/reserves';
 import { Button } from '../ui/button';
 import { Skeleton } from '../ui/skeleton';
 import { POUPAGAIO_MASCOT_URL } from '../../assets/mascot';
@@ -84,6 +86,7 @@ export function VariableExpensesScreen({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<VariableExpense | null>(null);
   const [expenseToDelete, setExpenseToDelete] = useState<VariableExpense | null>(null);
+  const [payingExpense, setPayingExpense] = useState<VariableExpense | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
 
@@ -181,21 +184,26 @@ export function VariableExpensesScreen({
   };
 
   const handleToggleStatus = async (exp: VariableExpense) => {
-    setActionLoadingId(exp.id);
-    const newStatus: VariableExpenseStatus = exp.status === 'paid' ? 'pending' : 'paid';
+    if (!currentSpace) return;
 
-    const res = await variableExpensesService.toggleStatus(exp.id, exp.status);
-    setActionLoadingId(null);
-
-    if (res.error) {
-      setErrorMessage(res.error);
+    if (exp.status === 'paid') {
+      setActionLoadingId(exp.id);
+      try {
+        if (user?.id) {
+          await reservesService.refundExpensePayment('variable', exp.id, currentSpace.id, user.id);
+        }
+        const res = await variableExpensesService.toggleStatus(exp.id, 'paid');
+        if (res.error) {
+          setErrorMessage(res.error);
+        } else {
+          setFeedbackMessage(`Gasto "${exp.description}" marcado como pendente.`);
+          await loadExpenses();
+        }
+      } finally {
+        setActionLoadingId(null);
+      }
     } else {
-      setFeedbackMessage(
-        newStatus === 'paid'
-          ? `Gasto "${exp.description}" marcado como pago!`
-          : `Gasto "${exp.description}" marcado como pendente.`
-      );
-      await loadExpenses();
+      setPayingExpense(exp);
     }
   };
 
@@ -608,6 +616,30 @@ export function VariableExpensesScreen({
         expense={expenseToDelete}
         isDeleting={isDeleting}
       />
+
+      {/* MODAL DE CONFIRMAÇÃO DE ORIGEM DO PAGAMENTO */}
+      {payingExpense && currentSpace && user && (
+        <PaymentOriginConfirmModal
+          isOpen={Boolean(payingExpense)}
+          onClose={() => setPayingExpense(null)}
+          spaceId={currentSpace.id}
+          userId={user.id}
+          item={{
+            id: payingExpense.id,
+            sourceType: 'variable',
+            sourceId: payingExpense.id,
+            title: payingExpense.description,
+            amount: payingExpense.amount,
+            dueDate: payingExpense.date,
+            category: payingExpense.category,
+          }}
+          onSuccess={async () => {
+            setPayingExpense(null);
+            setFeedbackMessage(`Gasto "${payingExpense.description}" marcado como pago!`);
+            await loadExpenses();
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -10,6 +10,8 @@ import { fixedExpensesService } from '../../lib/services/fixedExpenses';
 import { MonthPicker } from '../entries/MonthPicker';
 import { FixedExpenseModal } from './FixedExpenseModal';
 import { FixedExpenseDeleteModal } from './FixedExpenseDeleteModal';
+import { PaymentOriginConfirmModal } from '../reserves/PaymentOriginConfirmModal';
+import { reservesService } from '../../lib/services/reserves';
 import { Button } from '../ui/button';
 import { Skeleton } from '../ui/skeleton';
 import { POUPAGAIO_MASCOT_URL } from '../../assets/mascot';
@@ -87,6 +89,7 @@ export function FixedExpensesScreen({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<FixedExpenseWithStatus | null>(null);
   const [expenseToDelete, setExpenseToDelete] = useState<FixedExpenseWithStatus | null>(null);
+  const [payingExpense, setPayingExpense] = useState<FixedExpenseWithStatus | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
 
@@ -198,11 +201,13 @@ export function FixedExpensesScreen({
   // Alternar pagamento do gasto fixo para esta competência
   const handleTogglePayment = async (exp: FixedExpenseWithStatus) => {
     if (!currentSpace) return;
-    setActionLoadingId(exp.id);
 
-    try {
-      if (exp.isPaid) {
-        // Desmarcar pagamento
+    if (exp.isPaid) {
+      setActionLoadingId(exp.id);
+      try {
+        if (user?.id) {
+          await reservesService.refundExpensePayment('fixed', exp.id, currentSpace.id, user.id);
+        }
         const res = await fixedExpensesService.unmarkPaid(exp.id, selectedYear, selectedMonth);
         if (res.error) {
           setErrorMessage(res.error);
@@ -210,25 +215,11 @@ export function FixedExpensesScreen({
           setFeedbackMessage(`Pagamento de "${exp.description}" desmarcado.`);
           await loadExpenses();
         }
-      } else {
-        // Marcar como pago
-        const res = await fixedExpensesService.markAsPaid(
-          exp.id,
-          currentSpace.id,
-          selectedYear,
-          selectedMonth,
-          exp.amount,
-          user?.id
-        );
-        if (res.error) {
-          setErrorMessage(res.error);
-        } else {
-          setFeedbackMessage(`Gasto "${exp.description}" marcado como pago em ${getMonthYearLabel(selectedMonth, selectedYear)}!`);
-          await loadExpenses();
-        }
+      } finally {
+        setActionLoadingId(null);
       }
-    } finally {
-      setActionLoadingId(null);
+    } else {
+      setPayingExpense(exp);
     }
   };
 
@@ -668,6 +659,30 @@ export function FixedExpensesScreen({
         expense={expenseToDelete}
         isDeleting={isDeleting}
       />
+
+      {/* MODAL DE CONFIRMAÇÃO DE ORIGEM DO PAGAMENTO */}
+      {payingExpense && currentSpace && user && (
+        <PaymentOriginConfirmModal
+          isOpen={Boolean(payingExpense)}
+          onClose={() => setPayingExpense(null)}
+          spaceId={currentSpace.id}
+          userId={user.id}
+          item={{
+            id: payingExpense.id,
+            sourceType: 'fixed',
+            sourceId: payingExpense.id,
+            title: payingExpense.description,
+            amount: payingExpense.amount,
+            dueDate: `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(payingExpense.due_day).padStart(2, '0')}`,
+            category: payingExpense.category,
+          }}
+          onSuccess={async () => {
+            setPayingExpense(null);
+            setFeedbackMessage(`Gasto "${payingExpense.description}" marcado como pago!`);
+            await loadExpenses();
+          }}
+        />
+      )}
     </div>
   );
 }

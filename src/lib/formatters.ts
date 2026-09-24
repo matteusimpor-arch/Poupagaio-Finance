@@ -86,7 +86,7 @@ export function getDefaultDateForBillingCycle(selectedYear?: number, selectedMon
   return `${y}-${m}-01`;
 }
 
-const MONTH_NAMES = [
+export const MONTH_NAMES = [
   'Janeiro',
   'Fevereiro',
   'Março',

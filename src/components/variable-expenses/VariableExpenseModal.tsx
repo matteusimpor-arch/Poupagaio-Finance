@@ -4,11 +4,14 @@ import {
   VariableExpenseStatus,
   CreateVariableExpenseInput,
   UpdateVariableExpenseInput,
+  Reserve,
 } from '../../types';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
-import { X, DollarSign, Calendar, Tag, FileText, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
-import { parseCurrencyInput, getISODateToday, getDefaultDateForBillingCycle } from '../../lib/formatters';
+import { X, DollarSign, Calendar, Tag, FileText, CheckCircle2, Clock, AlertCircle, Wallet, Trash2 } from 'lucide-react';
+import { parseCurrencyInput, getDefaultDateForBillingCycle, formatCurrency } from '../../lib/formatters';
+import { reservesService } from '../../lib/services/reserves';
+import { useAuth } from '../../hooks/useAuth';
 
 interface VariableExpenseModalProps {
   isOpen: boolean;
@@ -45,6 +48,7 @@ export function VariableExpenseModal({
   selectedYear,
   selectedMonth,
 }: VariableExpenseModalProps) {
+  const { user } = useAuth();
   const [description, setDescription] = useState('');
   const [rawAmount, setRawAmount] = useState('');
   const [date, setDate] = useState(() => getDefaultDateForBillingCycle(selectedYear, selectedMonth));
@@ -52,6 +56,12 @@ export function VariableExpenseModal({
   const [customCategory, setCustomCategory] = useState('');
   const [status, setStatus] = useState<VariableExpenseStatus>('paid');
   const [notes, setNotes] = useState('');
+
+  // Reserve origin state
+  const [originType, setOriginType] = useState<'free_balance' | 'reserve'>('free_balance');
+  const [selectedReserveId, setSelectedReserveId] = useState<string | null>(null);
+  const [availableReserves, setAvailableReserves] = useState<Reserve[]>([]);
+  const [freeBalance, setFreeBalance] = useState<number>(0);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -62,33 +72,79 @@ export function VariableExpenseModal({
   const isEditing = Boolean(editingExpense);
 
   useEffect(() => {
-    if (editingExpense) {
-      setDescription(editingExpense.description);
-      setRawAmount(editingExpense.amount.toFixed(2).replace('.', ','));
-      setDate(editingExpense.date);
-      if (VARIABLE_EXPENSE_CATEGORIES.includes(editingExpense.category)) {
-        setCategory(editingExpense.category);
-        setCustomCategory('');
-      } else {
-        setCategory('Outros');
-        setCustomCategory(editingExpense.category);
+    if (isOpen) {
+      const year = selectedYear || new Date().getFullYear();
+      const month = selectedMonth || (new Date().getMonth() + 1);
+
+      // Load reserves for origin selector
+      if (spaceId) {
+        reservesService.getReservesWithSummary(spaceId, year, month).then((res) => {
+          setAvailableReserves(res.reserves);
+          setFreeBalance(res.summary.freeBalance);
+
+          if (!editingExpense) {
+            // Auto match category to reserve
+            const cat = category === 'Outros' ? customCategory : category;
+            const match = res.reserves.find(
+              (r) =>
+                (r.category && r.category.toLowerCase() === cat.toLowerCase()) ||
+                r.name.toLowerCase().includes(cat.toLowerCase())
+            );
+            if (match) {
+              setOriginType('reserve');
+              setSelectedReserveId(match.id);
+            } else {
+              setOriginType('free_balance');
+              setSelectedReserveId(null);
+            }
+          }
+        });
       }
-      setStatus(editingExpense.status);
-      setNotes(editingExpense.notes || '');
-    } else {
-      setDescription('');
-      setRawAmount('');
-      setDate(getDefaultDateForBillingCycle(selectedYear, selectedMonth));
-      setCategory('Mercado');
-      setCustomCategory('');
-      setStatus('paid');
-      setNotes('');
+
+      if (editingExpense) {
+        setDescription(editingExpense.description);
+        setRawAmount(editingExpense.amount.toFixed(2).replace('.', ','));
+        setDate(editingExpense.date);
+        if (VARIABLE_EXPENSE_CATEGORIES.includes(editingExpense.category)) {
+          setCategory(editingExpense.category);
+          setCustomCategory('');
+        } else {
+          setCategory('Outros');
+          setCustomCategory(editingExpense.category);
+        }
+        setStatus(editingExpense.status);
+        setNotes(editingExpense.notes || '');
+      } else {
+        setDescription('');
+        setRawAmount('');
+        setDate(getDefaultDateForBillingCycle(selectedYear, selectedMonth));
+        setCategory('Mercado');
+        setCustomCategory('');
+        setStatus('paid');
+        setNotes('');
+      }
+      setErrors({});
+      setGeneralError(null);
+      setShowDeleteConfirm(false);
+      setIsDeleting(false);
     }
-    setErrors({});
-    setGeneralError(null);
-    setShowDeleteConfirm(false);
-    setIsDeleting(false);
-  }, [editingExpense, isOpen, selectedYear, selectedMonth]);
+  }, [editingExpense, isOpen, selectedYear, selectedMonth, spaceId]);
+
+  // When category changes, auto suggest matching reserve
+  const handleCategoryChange = (newCat: string) => {
+    setCategory(newCat);
+    if (availableReserves.length > 0) {
+      const match = availableReserves.find(
+        (r) =>
+          (r.category && r.category.toLowerCase() === newCat.toLowerCase()) ||
+          r.name.toLowerCase().includes(newCat.toLowerCase())
+      );
+      if (match) {
+        setOriginType('reserve');
+        setSelectedReserveId(match.id);
+      }
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -144,8 +200,34 @@ export function VariableExpenseModal({
     };
 
     try {
+      // If was paid and we are editing or creating, handle reserve deduction
+      if (status === 'paid' && originType === 'reserve' && selectedReserveId) {
+        const reserveObj = availableReserves.find((r) => r.id === selectedReserveId);
+        const resBal = reserveObj ? Number(reserveObj.current_balance) || 0 : 0;
+        if (parsedAmount > resBal) {
+          setGeneralError(
+            `Saldo insuficiente na reserva "${reserveObj?.name}". Disponível: ${formatCurrency(resBal)}.`
+          );
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
       const success = await onSave(payload);
       if (success) {
+        // If paid with reserve or free balance, register payment with origin
+        if (status === 'paid' && user?.id) {
+          const expenseId = editingExpense?.id || (typeof success === 'string' ? success : crypto.randomUUID());
+          await reservesService.payExpenseWithOrigin(user.id, {
+            space_id: spaceId,
+            expense_type: 'variable',
+            expense_id: expenseId,
+            amount: parsedAmount,
+            payment_date: date,
+            origin_type: originType === 'reserve' ? 'reserve' : 'free_balance',
+            primary_reserve_id: originType === 'reserve' ? selectedReserveId : null,
+          });
+        }
         onClose();
       } else {
         setGeneralError('Não foi possível salvar este gasto. Tente novamente.');
@@ -162,6 +244,9 @@ export function VariableExpenseModal({
     setIsDeleting(true);
     setGeneralError(null);
     try {
+      if (editingExpense && editingExpense.status === 'paid' && user?.id) {
+        await reservesService.refundExpensePayment('variable', editingExpense.id, spaceId, user.id);
+      }
       const success = await onDelete();
       if (success) {
         onClose();
@@ -181,21 +266,22 @@ export function VariableExpenseModal({
       role="dialog"
       aria-modal="true"
       aria-labelledby="variable-expense-modal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150"
     >
+      {/* Modal de Confirmação de Exclusão */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-[#1C211E] border border-[#D2DDD6] dark:border-[#28322C] rounded-3xl p-5 max-w-sm w-full space-y-4 shadow-xl">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-full bg-rose-100 dark:bg-rose-950/50 flex items-center justify-center text-rose-600 shrink-0">
-                <AlertCircle className="w-5 h-5" />
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/70 animate-in fade-in">
+          <div className="w-full max-w-sm bg-white dark:bg-[#18211D] border border-red-200 dark:border-red-900 rounded-3xl p-5 shadow-2xl space-y-4">
+            <div className="flex items-center gap-3 text-red-600 dark:text-red-400">
+              <div className="w-10 h-10 rounded-2xl bg-red-100 dark:bg-red-950/50 flex items-center justify-center shrink-0">
+                <Trash2 className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-[#02402E] dark:text-[#78D9A6]">
-                  Excluir esta movimentação?
+                <h3 className="text-sm font-bold text-[#202724] dark:text-[#F7F4EA]">
+                  Excluir gasto variável?
                 </h3>
-                <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B] mt-1">
-                  Esta ação removerá este lançamento e atualizará os valores financeiros relacionados.
+                <p className="text-xs text-[#5E6963] dark:text-[#95A39B]">
+                  Esta ação não pode ser desfeita. Se houver reserva vinculada, o saldo será estornado.
                 </p>
               </div>
             </div>
@@ -222,7 +308,9 @@ export function VariableExpenseModal({
           </div>
         </div>
       )}
+
       <div className="w-[calc(100vw-24px)] sm:w-full max-w-lg mx-auto bg-white dark:bg-[#18211D] border border-[#E8E4D5] dark:border-[#24312B] rounded-3xl shadow-xl overflow-hidden flex flex-col max-h-[92vh] box-border animate-in zoom-in-95 duration-150">
+        
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#E8E4D5] dark:border-[#24312B]">
           <div className="flex items-center gap-2.5">
@@ -263,7 +351,7 @@ export function VariableExpenseModal({
             <Input
               id="variable-expense-description-input"
               type="text"
-              placeholder="Ex: Compras da semana no mercado, Combustível posto"
+              placeholder="Ex: Compras da semana no mercado, Gasolina posto"
               value={description}
               onChange={(e) => {
                 setDescription(e.target.value);
@@ -301,25 +389,21 @@ export function VariableExpenseModal({
 
             {/* Data */}
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-[#202724] dark:text-[#F7F4EA]">
+              <label className="text-xs font-bold text-[#202724] dark:text-[#F7F4EA] flex items-center gap-1.5">
+                <Calendar className="w-3.5 h-3.5 text-[#5E6963] dark:text-[#95A39B]" />
                 Data <span className="text-rose-500">*</span>
               </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#5E6963] dark:text-[#95A39B]">
-                  <Calendar className="w-4 h-4" />
-                </div>
-                <Input
-                  id="variable-expense-date-input"
-                  type="date"
-                  value={date}
-                  onChange={(e) => {
-                    setDate(e.target.value);
-                    if (errors.date) setErrors((prev) => ({ ...prev, date: '' }));
-                  }}
-                  error={errors.date}
-                  className="pl-9 rounded-2xl font-medium"
-                />
-              </div>
+              <Input
+                id="variable-expense-date-input"
+                type="date"
+                value={date}
+                onChange={(e) => {
+                  setDate(e.target.value);
+                  if (errors.date) setErrors((prev) => ({ ...prev, date: '' }));
+                }}
+                error={errors.date}
+                className="rounded-2xl"
+              />
             </div>
           </div>
 
@@ -332,7 +416,7 @@ export function VariableExpenseModal({
             <select
               id="variable-expense-category-select"
               value={category}
-              onChange={(e) => setCategory(e.target.value)}
+              onChange={(e) => handleCategoryChange(e.target.value)}
               className="w-full h-11 px-3.5 rounded-2xl bg-white dark:bg-[#101614] border border-[#E8E4D5] dark:border-[#24312B] text-xs sm:text-sm text-[#202724] dark:text-[#F7F4EA] focus:outline-hidden focus:ring-2 focus:ring-[#16A66A] cursor-pointer"
             >
               {VARIABLE_EXPENSE_CATEGORIES.map((cat) => (
@@ -392,6 +476,85 @@ export function VariableExpenseModal({
             </div>
           </div>
 
+          {/* DE ONDE SAIU O DINHEIRO (Quando Status = Pago) */}
+          {status === 'paid' && (
+            <div className="space-y-2 p-3.5 rounded-2xl bg-[#F7FAF8] dark:bg-[#202723] border border-[#E2ECE6] dark:border-[#28322C] animate-in fade-in">
+              <label className="text-xs font-bold uppercase tracking-wider text-[#02402E] dark:text-[#78D9A6] block">
+                De onde saiu o dinheiro?
+              </label>
+
+              <div className="space-y-2">
+                <label
+                  onClick={() => {
+                    setOriginType('free_balance');
+                    setSelectedReserveId(null);
+                  }}
+                  className={`flex items-center justify-between p-2.5 rounded-xl border cursor-pointer transition-all ${
+                    originType === 'free_balance'
+                      ? 'border-[#16A66A] bg-[#16A66A]/10 text-[#02402E] dark:text-[#78D9A6] font-bold shadow-2xs'
+                      : 'border-[#D2DDD6] dark:border-[#28322C] bg-white dark:bg-[#161B18] text-[#202724] dark:text-[#F4F4F5]'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="expense_source_modal"
+                      checked={originType === 'free_balance'}
+                      onChange={() => {
+                        setOriginType('free_balance');
+                        setSelectedReserveId(null);
+                      }}
+                      className="w-4 h-4 text-[#16A66A] accent-[#16A66A]"
+                    />
+                    <Wallet className="w-4 h-4 text-[#16A66A]" />
+                    <span className="text-xs">Saldo Livre</span>
+                  </div>
+                  <span className="text-xs font-bold text-[#16A66A]">
+                    {formatCurrency(freeBalance)}
+                  </span>
+                </label>
+
+                {availableReserves.map((res) => {
+                  const isSelected = originType === 'reserve' && selectedReserveId === res.id;
+                  const resBal = Number(res.current_balance) || 0;
+
+                  return (
+                    <label
+                      key={res.id}
+                      onClick={() => {
+                        setOriginType('reserve');
+                        setSelectedReserveId(res.id);
+                      }}
+                      className={`flex items-center justify-between p-2.5 rounded-xl border cursor-pointer transition-all ${
+                        isSelected
+                          ? 'border-[#16A66A] bg-[#16A66A]/10 text-[#02402E] dark:text-[#78D9A6] font-bold shadow-2xs'
+                          : 'border-[#D2DDD6] dark:border-[#28322C] bg-white dark:bg-[#161B18] text-[#202724] dark:text-[#F4F4F5]'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="radio"
+                          name="expense_source_modal"
+                          checked={isSelected}
+                          onChange={() => {
+                            setOriginType('reserve');
+                            setSelectedReserveId(res.id);
+                          }}
+                          className="w-4 h-4 text-[#16A66A] accent-[#16A66A]"
+                        />
+                        <span className="text-base">{res.icon || '💰'}</span>
+                        <span className="text-xs">{res.name}</span>
+                      </div>
+                      <span className="text-xs font-bold text-[#02402E] dark:text-[#78D9A6]">
+                        {formatCurrency(resBal)}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Observações */}
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-[#202724] dark:text-[#F7F4EA] flex items-center gap-1.5">
@@ -417,30 +580,28 @@ export function VariableExpenseModal({
                 disabled={isSubmitting || isDeleting}
                 className="w-full sm:w-auto text-xs font-bold text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors cursor-pointer px-3.5 py-2.5 rounded-xl border border-red-200 dark:border-red-900 bg-red-50/50 dark:bg-red-950/20 text-center shrink-0 flex items-center justify-center gap-1"
               >
-                <span>🗑</span>
-                <span>Excluir movimentação</span>
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Excluir</span>
               </button>
             )}
-            <div className="grid grid-cols-2 sm:flex sm:items-center gap-2.5 w-full sm:w-auto">
+
+            <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-2.5 w-full sm:w-auto">
               <Button
                 type="button"
                 variant="outline"
-                size="md"
                 onClick={onClose}
-                disabled={isSubmitting}
-                className="w-full sm:w-auto rounded-2xl cursor-pointer font-bold justify-center"
+                disabled={isSubmitting || isDeleting}
+                className="w-full sm:w-auto cursor-pointer rounded-2xl"
               >
                 Cancelar
               </Button>
               <Button
                 type="submit"
                 variant="primary"
-                size="md"
-                isLoading={isSubmitting}
-                disabled={isSubmitting}
-                className="w-full sm:w-auto rounded-2xl font-bold cursor-pointer justify-center whitespace-normal text-center break-words py-2 px-3 text-xs sm:text-sm"
+                disabled={isSubmitting || isDeleting}
+                className="w-full sm:w-auto font-bold cursor-pointer rounded-2xl bg-[#02402E] text-white hover:bg-[#16A66A] dark:bg-[#78D9A6] dark:text-[#101614]"
               >
-                {isEditing ? 'Salvar alterações' : 'Cadastrar gasto variável'}
+                {isSubmitting ? 'Salvando...' : isEditing ? 'Salvar alterações' : 'Adicionar gasto'}
               </Button>
             </div>
           </div>
