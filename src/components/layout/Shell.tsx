@@ -632,19 +632,20 @@ export function Shell({
       </main>
 
       {/* FOOTER */}
-      <footer className="w-full border-t border-[#D2DDD6] dark:border-[#28322C] bg-white/80 dark:bg-[#161B18]/80 backdrop-blur-md py-6 sm:py-8 px-4 sm:px-8 mt-6 transition-colors relative z-10">
-        <div className="max-w-[1480px] mx-auto flex flex-col md:flex-row items-center justify-between gap-6 text-center md:text-left">
-          <div className="space-y-1.5">
+      <footer className="w-full border-t border-[#D2DDD6] dark:border-[#28322C] bg-white/80 dark:bg-[#161B18]/80 backdrop-blur-md py-2.5 sm:py-3 px-4 sm:px-6 mt-3 transition-colors relative z-10">
+        <div className="max-w-[1480px] mx-auto flex flex-col md:flex-row items-center justify-between gap-2.5 sm:gap-4 text-center md:text-left">
+          <div className="flex items-center gap-2 sm:gap-2.5">
             <div className="flex items-center justify-center md:justify-start">
-              <PoupagaioLogo showText className="h-9 sm:h-10" />
+              <PoupagaioLogo showText className="h-6 sm:h-7" />
             </div>
-            <p className="text-xs text-[#5E6963] dark:text-[#95A39B]">
+            <span className="hidden sm:inline text-xs text-[#5E6963] dark:text-[#95A39B] opacity-60">•</span>
+            <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B]">
               Organize hoje. Você mais longe.
             </p>
           </div>
 
           {/* Navigation Links */}
-          <div className="flex flex-wrap justify-center items-center gap-4 sm:gap-6 text-xs font-semibold text-[#5E6963] dark:text-[#95A39B]">
+          <div className="flex flex-wrap justify-center items-center gap-3 sm:gap-4 text-xs font-medium text-[#5E6963] dark:text-[#95A39B]">
             <button onClick={() => onSelectTab('home')} className="hover:text-[#02402E] dark:hover:text-[#78D9A6] transition-colors cursor-pointer">Início</button>
             <button onClick={() => onSelectTab('reports')} className="hover:text-[#02402E] dark:hover:text-[#78D9A6] transition-colors cursor-pointer">Visão Financeira</button>
             <button onClick={() => onSelectTab('support')} className="hover:text-[#02402E] dark:hover:text-[#78D9A6] transition-colors cursor-pointer">Suporte</button>
@@ -652,18 +653,18 @@ export function Shell({
           </div>
 
           {/* Credits & Social */}
-          <div className="text-xs text-[#5E6963] dark:text-[#95A39B] space-y-2">
-            <p className="font-bold text-[#02402E] dark:text-[#78D9A6]">
-              Desenvolvido por Mateus Araujo
-            </p>
-            <div className="flex items-center justify-center md:justify-end gap-3 text-[#02402E] dark:text-[#78D9A6]">
-              <Youtube className="w-4 h-4 cursor-pointer hover:opacity-80 transition-opacity" />
-              <Instagram className="w-4 h-4 cursor-pointer hover:opacity-80 transition-opacity" />
-              <Linkedin className="w-4 h-4 cursor-pointer hover:opacity-80 transition-opacity" />
+          <div className="flex flex-wrap items-center justify-center md:justify-end gap-2 text-[11px] text-[#5E6963] dark:text-[#95A39B]">
+            <span className="font-semibold text-[#02402E] dark:text-[#78D9A6]">
+              Mateus Araujo
+            </span>
+            <div className="flex items-center gap-2 text-[#02402E] dark:text-[#78D9A6]">
+              <Youtube className="w-3.5 h-3.5 cursor-pointer hover:opacity-80 transition-opacity" />
+              <Instagram className="w-3.5 h-3.5 cursor-pointer hover:opacity-80 transition-opacity" />
+              <Linkedin className="w-3.5 h-3.5 cursor-pointer hover:opacity-80 transition-opacity" />
             </div>
-            <p className="text-[11px] opacity-80">
-              © 2026 Poupagaio Finance. Todos os direitos reservados.
-            </p>
+            <span className="opacity-75">
+              © 2026 Poupagaio Finance
+            </span>
           </div>
         </div>
       </footer>
