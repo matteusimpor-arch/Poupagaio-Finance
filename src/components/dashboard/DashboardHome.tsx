@@ -56,6 +56,7 @@ import {
 import { FixedExpenseModal } from '../fixed-expenses/FixedExpenseModal';
 import { VariableExpenseModal } from '../variable-expenses/VariableExpenseModal';
 import { InstallmentPurchaseModal } from '../installments/InstallmentPurchaseModal';
+import { GoalModal } from '../goals/GoalModal';
 import { DashboardReservesSection } from './DashboardReservesSection';
 import { PaymentOriginConfirmModal } from '../reserves/PaymentOriginConfirmModal';
 import { fixedExpensesService } from '../../lib/services/fixedExpenses';
@@ -68,6 +69,8 @@ import {
   UpdateVariableExpenseInput,
   CreateInstallmentPurchaseInput,
   UpdateInstallmentPurchaseInput,
+  CreateGoalInput,
+  UpdateGoalInput,
   ReservesSummary,
 } from '../../types';
 
@@ -145,6 +148,7 @@ export function DashboardHome({
   const [confirmPaymentItem, setConfirmPaymentItem] = useState<NormalizedChecklistExpense | null>(null);
   const [showAllChecklistMobile, setShowAllChecklistMobile] = useState<boolean>(false);
   const [isQuickAddMenuOpen, setIsQuickAddMenuOpen] = useState<boolean>(false);
+  const [isGoalModalOpen, setIsGoalModalOpen] = useState<boolean>(false);
   const [quickAddModalType, setQuickAddModalType] = useState<
     'fixed_expenses' | 'variable_expenses' | 'installments' | null
   >(null);
@@ -267,6 +271,20 @@ export function DashboardHome({
       return { success: true };
     }
     return { success: false, error: res.error };
+  };
+
+  const handleSaveGoal = async (input: CreateGoalInput | UpdateGoalInput): Promise<{ success: boolean; error?: string }> => {
+    if (!user || !currentSpace?.id) return { success: false, error: 'Espaço indisponível' };
+    const res = await goalsService.createGoal({
+      ...input,
+      space_id: currentSpace.id,
+    } as CreateGoalInput);
+    if (res.success) {
+      setIsGoalModalOpen(false);
+      loadDashboardData();
+      return { success: true };
+    }
+    return { success: false, error: res.error || 'Erro ao criar meta' };
   };
 
   // Navigate months
@@ -490,47 +508,58 @@ export function DashboardHome({
 
         {/* 3. CONTAS PREVISTAS PARA PAGAR (Prioritário no mobile) */}
         <div className="bg-white/90 dark:bg-[#1C211E]/90 border border-[#D2DDD6] dark:border-[#28322C] rounded-2xl p-4 shadow-2xs space-y-3">
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-base font-bold font-display text-[#02402E] dark:text-[#78D9A6] flex items-center gap-1.5">
               <CalendarCheck className="w-4 h-4 text-[#16A66A]" />
               Contas Previstas
             </h2>
 
-            {/* Filtros simples e compactos */}
-            <div className="flex items-center gap-0.5 bg-[#EAF3EE] dark:bg-[#181B1A] p-0.5 rounded-xl border border-[#CDE0D5] dark:border-[#2B322F]">
+            <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => setChecklistFilter('pending')}
-                className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
-                  checklistFilter === 'pending'
-                    ? 'bg-[#02402E] text-white dark:bg-[#16A66A] dark:text-[#101614]'
-                    : 'text-[#5E6963] dark:text-[#95A39B]'
-                }`}
+                onClick={() => setIsQuickAddMenuOpen(true)}
+                className="px-3 py-1.5 rounded-xl bg-[#02402E] text-white dark:bg-[#78D9A6] dark:text-[#101614] text-xs font-bold hover:bg-[#16A66A] dark:hover:bg-[#5ECB93] transition-all cursor-pointer flex items-center gap-1.5 shrink-0 shadow-2xs active:scale-95"
               >
-                Pendentes
+                <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                <span>Nova Conta</span>
               </button>
-              <button
-                type="button"
-                onClick={() => setChecklistFilter('paid')}
-                className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
-                  checklistFilter === 'paid'
-                    ? 'bg-[#02402E] text-white dark:bg-[#16A66A] dark:text-[#101614]'
-                    : 'text-[#5E6963] dark:text-[#95A39B]'
-                }`}
-              >
-                Pagas
-              </button>
-              <button
-                type="button"
-                onClick={() => setChecklistFilter('all')}
-                className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
-                  checklistFilter === 'all'
-                    ? 'bg-[#02402E] text-white dark:bg-[#16A66A] dark:text-[#101614]'
-                    : 'text-[#5E6963] dark:text-[#95A39B]'
-                }`}
-              >
-                Todas
-              </button>
+
+              {/* Filtros simples e compactos */}
+              <div className="flex items-center gap-0.5 bg-[#EAF3EE] dark:bg-[#181B1A] p-0.5 rounded-xl border border-[#CDE0D5] dark:border-[#2B322F]">
+                <button
+                  type="button"
+                  onClick={() => setChecklistFilter('pending')}
+                  className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                    checklistFilter === 'pending'
+                      ? 'bg-[#02402E] text-white dark:bg-[#16A66A] dark:text-[#101614]'
+                      : 'text-[#5E6963] dark:text-[#95A39B]'
+                  }`}
+                >
+                  Pendentes
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setChecklistFilter('paid')}
+                  className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                    checklistFilter === 'paid'
+                      ? 'bg-[#02402E] text-white dark:bg-[#16A66A] dark:text-[#101614]'
+                      : 'text-[#5E6963] dark:text-[#95A39B]'
+                  }`}
+                >
+                  Pagas
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setChecklistFilter('all')}
+                  className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                    checklistFilter === 'all'
+                      ? 'bg-[#02402E] text-white dark:bg-[#16A66A] dark:text-[#101614]'
+                      : 'text-[#5E6963] dark:text-[#95A39B]'
+                  }`}
+                >
+                  Todas
+                </button>
+              </div>
             </div>
           </div>
 
@@ -638,17 +667,7 @@ export function DashboardHome({
           </div>
         </div>
 
-        {/* 4. MINHAS RESERVAS (Mobile) */}
-        {currentSpace && (
-          <DashboardReservesSection
-            spaceId={currentSpace.id}
-            selectedYear={currentYear}
-            selectedMonth={currentMonth}
-            onSelectTab={onSelectTab}
-          />
-        )}
-
-        {/* 5. MERCADO (Logo abaixo das Reservas) */}
+        {/* 4. MERCADO */}
         <div className="bg-white/90 dark:bg-[#1C211E]/90 border border-[#D2DDD6] dark:border-[#28322C] rounded-2xl p-4 shadow-2xs space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="text-base font-bold font-display text-[#02402E] dark:text-[#78D9A6] flex items-center gap-1.5">
@@ -665,9 +684,10 @@ export function DashboardHome({
               <button
                 type="button"
                 onClick={() => onSelectTab('market')}
-                className="px-4 py-2 rounded-xl bg-[#02402E] text-white dark:bg-[#78D9A6] dark:text-[#101614] text-xs font-bold cursor-pointer hover:bg-[#16A66A]"
+                className="px-3.5 py-1.5 rounded-xl bg-[#02402E] text-white dark:bg-[#78D9A6] dark:text-[#101614] text-xs font-bold cursor-pointer hover:bg-[#16A66A] transition-all inline-flex items-center gap-1.5 shadow-2xs active:scale-95"
               >
-                + Criar lista
+                <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                <span>Criar Lista</span>
               </button>
             </div>
           ) : (
@@ -746,6 +766,16 @@ export function DashboardHome({
             </div>
           </div>
         </div>
+
+        {/* 6. MINHAS RESERVAS (Abaixo da Situação do Mês) */}
+        {currentSpace && (
+          <DashboardReservesSection
+            spaceId={currentSpace.id}
+            selectedYear={currentYear}
+            selectedMonth={currentMonth}
+            onSelectTab={onSelectTab}
+          />
+        )}
 
         {/* 6. Análises e Gráficos */}
         <div className="space-y-3 pt-1">
@@ -829,25 +859,56 @@ export function DashboardHome({
                 <Target className="w-4 h-4 text-[#16A66A]" />
                 Metas
               </h3>
-              <button type="button" onClick={() => onSelectTab('goals')} className="text-xs text-[#16A66A] font-bold">
-                Ver todas →
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsGoalModalOpen(true)}
+                  className="text-xs font-bold text-[#16A66A] hover:text-[#02402E] dark:hover:text-[#78D9A6] cursor-pointer flex items-center gap-1"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Nova meta</span>
+                </button>
+                <span className="text-[#D2DDD6] dark:text-[#28322C]">|</span>
+                <button type="button" onClick={() => onSelectTab('goals')} className="text-xs text-[#5E6963] dark:text-[#95A39B] hover:text-[#16A66A] font-semibold cursor-pointer">
+                  Ver todas →
+                </button>
+              </div>
             </div>
 
             {activeGoals.length === 0 ? (
-              <p className="text-xs text-[#5E6963] text-center py-2">Nenhuma meta ativa.</p>
+              <div className="py-3 text-center space-y-2">
+                <p className="text-xs font-bold text-[#02402E] dark:text-[#78D9A6]">
+                  Nenhuma meta ativa
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setIsGoalModalOpen(true)}
+                  className="px-3.5 py-1.5 rounded-xl bg-[#02402E] text-white dark:bg-[#78D9A6] dark:text-[#101614] text-xs font-bold cursor-pointer hover:bg-[#16A66A] transition-all inline-flex items-center gap-1.5 shadow-2xs active:scale-95"
+                >
+                  <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                  <span>Criar Meta</span>
+                </button>
+              </div>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 {activeGoals.map((goal) => {
-                  const percent = Math.min(Math.round(goal.progress_percentage || 0), 100);
+                  const percent = Math.min(Math.round(goal.progressPercentage ?? goal.progress_percentage ?? 0), 100);
+                  const accumulated = goal.accumulatedAmount ?? (goal as any).accumulated_amount ?? 0;
+                  const target = goal.target_amount ?? (goal as any).targetAmount ?? 0;
+                  const title = goal.name || (goal as any).title || 'Meta';
                   return (
                     <div key={`m-goal-${goal.id}`} className="space-y-1">
-                      <div className="flex justify-between text-xs font-bold">
-                        <span className="truncate">{goal.title}</span>
-                        <span className="text-[#16A66A]">{percent}%</span>
+                      <div className="flex justify-between items-center text-xs font-bold">
+                        <span className="truncate text-[#202724] dark:text-[#F4F4F5] max-w-[140px]">{title}</span>
+                        <div className="text-right shrink-0 flex items-center gap-1.5">
+                          <span className="text-[11px] text-[#5E6963] dark:text-[#95A39B]">
+                            {formatCurrency(accumulated)} / <strong className="text-[#02402E] dark:text-[#78D9A6]">{formatCurrency(target)}</strong>
+                          </span>
+                          <span className="text-[#16A66A] font-bold">({percent}%)</span>
+                        </div>
                       </div>
-                      <div className="w-full h-1.5 rounded-full bg-[#E2ECE6] overflow-hidden">
-                        <div className="h-full bg-[#16A66A]" style={{ width: `${percent}%` }} />
+                      <div className="w-full h-1.5 rounded-full bg-[#E2ECE6] dark:bg-[#28322C] overflow-hidden">
+                        <div className="h-full bg-[#16A66A] rounded-full transition-all duration-300" style={{ width: `${percent}%` }} />
                       </div>
                     </div>
                   );
@@ -1263,9 +1324,10 @@ export function DashboardHome({
               <button
                 type="button"
                 onClick={() => onSelectTab('market')}
-                className="px-4 py-2 rounded-xl bg-[#02402E] text-white text-xs font-bold cursor-pointer hover:bg-[#16A66A] transition-colors"
+                className="px-4 py-2 rounded-xl bg-[#02402E] text-white dark:bg-[#78D9A6] dark:text-[#101614] text-xs font-bold cursor-pointer hover:bg-[#16A66A] transition-all inline-flex items-center gap-1.5 shadow-2xs active:scale-95"
               >
-                + Criar Lista de Mercado
+                <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                <span>Criar Lista de Mercado</span>
               </button>
             </div>
           ) : (
@@ -1530,21 +1592,30 @@ export function DashboardHome({
                 <p className="text-xs text-[#5E6963] dark:text-[#95A39B]">Nenhuma meta ativa cadastrada.</p>
                 <button
                   type="button"
-                  onClick={() => onSelectTab('goals')}
-                  className="px-3 py-1.5 rounded-xl bg-[#02402E] text-white text-xs font-bold cursor-pointer hover:bg-[#16A66A]"
+                  onClick={() => setIsGoalModalOpen(true)}
+                  className="px-3.5 py-1.5 rounded-xl bg-[#02402E] text-white dark:bg-[#78D9A6] dark:text-[#101614] text-xs font-bold cursor-pointer hover:bg-[#16A66A] transition-all inline-flex items-center gap-1.5 shadow-2xs active:scale-95"
                 >
-                  + Criar Meta
+                  <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                  <span>Criar Meta</span>
                 </button>
               </div>
             ) : (
               <div className="space-y-3">
                 {activeGoals.map((goal) => {
-                  const percent = Math.min(Math.round(goal.progress_percentage || 0), 100);
+                  const percent = Math.min(Math.round(goal.progressPercentage ?? goal.progress_percentage ?? 0), 100);
+                  const accumulated = goal.accumulatedAmount ?? (goal as any).accumulated_amount ?? 0;
+                  const target = goal.target_amount ?? (goal as any).targetAmount ?? 0;
+                  const title = goal.name || (goal as any).title || 'Meta';
                   return (
                     <div key={goal.id} className="space-y-1">
                       <div className="flex justify-between items-center text-xs font-bold">
-                        <span className="text-[#202724] dark:text-[#F4F4F5] truncate">{goal.title}</span>
-                        <span className="text-[#16A66A]">{percent}%</span>
+                        <span className="text-[#202724] dark:text-[#F4F4F5] truncate">{title}</span>
+                        <div className="text-right shrink-0 flex items-center gap-2">
+                          <span className="text-xs text-[#5E6963] dark:text-[#95A39B]">
+                            {formatCurrency(accumulated)} / <strong className="text-[#02402E] dark:text-[#78D9A6]">{formatCurrency(target)}</strong>
+                          </span>
+                          <span className="text-[#16A66A] font-bold">({percent}%)</span>
+                        </div>
                       </div>
                       <div className="w-full h-2 rounded-full bg-[#E2ECE6] dark:bg-[#28322C] overflow-hidden">
                         <div className="h-full bg-[#16A66A] rounded-full transition-all duration-300" style={{ width: `${percent}%` }} />
@@ -1734,6 +1805,13 @@ export function DashboardHome({
             spaceId={currentSpace.id}
             selectedYear={currentYear}
             selectedMonth={currentMonth}
+          />
+
+          <GoalModal
+            isOpen={isGoalModalOpen}
+            onClose={() => setIsGoalModalOpen(false)}
+            onSave={handleSaveGoal}
+            spaceId={currentSpace.id}
           />
         </>
       )}

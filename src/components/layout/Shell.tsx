@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useTheme } from '../../hooks/useTheme';
+import { useAssistant } from '../../hooks/useAssistant';
 import { POUPAGAIO_MASCOT_URL } from '../../assets/mascot';
 import { PoupagaioLogo } from '../branding/PoupagaioLogo';
 import { SpaceSelector } from './SpaceSelector';
@@ -77,6 +78,7 @@ export function Shell({
 }: ShellProps) {
   const { user, profile, currentSpace, signOut } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { showAssistant, toggleAssistant } = useAssistant();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
@@ -491,6 +493,39 @@ export function Shell({
                       </button>
                     );
                   })}
+
+                  {/* Assistente Poupagaio Toggle */}
+                  <div className="pt-2 mt-1 border-t border-[#E2ECE6] dark:border-[#28322C] px-2.5 pb-1 space-y-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#5E6963] dark:text-[#95A39B] block">
+                      Assistente Poupagaio
+                    </span>
+                    <div className="flex items-center justify-between gap-2 pt-0.5">
+                      <span className="text-xs font-semibold text-[#202724] dark:text-[#F4F4F5]">
+                        Mostrar assistente
+                      </span>
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={showAssistant}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleAssistant();
+                        }}
+                        className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                          showAssistant ? 'bg-[#16A66A]' : 'bg-[#D2DDD6] dark:bg-[#28322C]'
+                        }`}
+                      >
+                        <span
+                          className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                            showAssistant ? 'translate-x-4' : 'translate-x-0'
+                          }`}
+                        />
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-[#5E6963] dark:text-[#95A39B] leading-tight">
+                      Exibe o Poupagaio e seus atalhos rápidos nas telas.
+                    </p>
+                  </div>
                 </div>
               </>
             )}
@@ -544,6 +579,46 @@ export function Shell({
                 );
               })}
             </div>
+
+            {/* Assistente Poupagaio Config Toggle */}
+            <div className="pt-3 border-t border-[#DCE2DE] dark:border-[#2B322F]">
+              <div className="flex flex-col gap-2 p-3 rounded-2xl bg-[#F4F7F5] dark:bg-[#181B1A] border border-[#E2ECE6] dark:border-[#2B322F]">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <img src={POUPAGAIO_MASCOT_URL} alt="Poupagaio" className="w-5 h-5 object-contain" />
+                    <span className="text-xs font-bold text-[#02402E] dark:text-[#78D9A6]">
+                      Assistente Poupagaio
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={showAssistant}
+                    onClick={toggleAssistant}
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                      showAssistant ? 'bg-[#16A66A]' : 'bg-[#D2DDD6] dark:bg-[#28322C]'
+                    }`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                        showAssistant ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+                <div className="flex items-center justify-between text-xs pt-1">
+                  <span className="font-semibold text-[#202724] dark:text-[#F4F4F5]">Mostrar assistente</span>
+                  <span className={`font-bold text-[10px] px-2 py-0.5 rounded-md ${
+                    showAssistant ? 'bg-[#16A66A]/15 text-[#16A66A]' : 'bg-gray-200 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+                  }`}>
+                    {showAssistant ? 'ON' : 'OFF'}
+                  </span>
+                </div>
+                <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B]">
+                  Exibe o Poupagaio e seus atalhos rápidos nas telas.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -552,12 +627,12 @@ export function Shell({
       <SupabaseSchemaNotice />
 
       {/* NATURAL VERTICAL SCROLL MAIN CONTENT AREA */}
-      <main className="flex-1 w-full max-w-[1480px] mx-auto px-2 sm:px-6 py-4 sm:py-6 pb-28 sm:pb-8 relative z-10">
+      <main className="flex-1 w-full max-w-[1480px] mx-auto px-2 sm:px-6 py-4 sm:py-6 pb-6 sm:pb-8 relative z-10">
         {children}
       </main>
 
       {/* FOOTER */}
-      <footer className="w-full border-t border-[#D2DDD6] dark:border-[#28322C] bg-white/80 dark:bg-[#161B18]/80 backdrop-blur-md py-8 px-4 sm:px-8 mt-12 transition-colors relative z-10">
+      <footer className="w-full border-t border-[#D2DDD6] dark:border-[#28322C] bg-white/80 dark:bg-[#161B18]/80 backdrop-blur-md py-6 sm:py-8 px-4 sm:px-8 mt-6 transition-colors relative z-10">
         <div className="max-w-[1480px] mx-auto flex flex-col md:flex-row items-center justify-between gap-6 text-center md:text-left">
           <div className="space-y-1.5">
             <div className="flex items-center justify-center md:justify-start">

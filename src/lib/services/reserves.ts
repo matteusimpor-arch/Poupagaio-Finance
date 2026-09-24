@@ -897,6 +897,80 @@ export const reservesService = {
     return { success: true, refundedAmount: totalRefunded };
   },
 
+  /**
+   * Ajusta incrementalmente o valor de uma despesa já paga (débito ou estorno da diferença)
+   */
+  async adjustExpensePaymentAmount(
+    expenseType: 'fixed' | 'variable' | 'installment',
+    expenseId: string,
+    spaceId: string,
+    newTotalAmount: number,
+    operationId: string = crypto.randomUUID()
+  ): Promise<{ success: boolean; difference?: number; error?: string }> {
+    if (supabase) {
+      try {
+        const { data, error } = await supabase.rpc('rpc_adjust_expense_payment_amount', {
+          p_expense_type: expenseType,
+          p_expense_id: expenseId,
+          p_space_id: spaceId,
+          p_new_total_amount: newTotalAmount,
+          p_operation_id: operationId,
+        });
+
+        if (!error && data) {
+          return { success: true, difference: data.difference };
+        }
+        if (error && !isTableMissingError(error)) {
+          return { success: false, error: error.message };
+        }
+      } catch (err: any) {
+        if (!isTableMissingError(err)) {
+          return { success: false, error: err.message };
+        }
+      }
+    }
+    return { success: true };
+  },
+
+  /**
+   * Troca a origem de uma despesa já paga (estorno da anterior e aplicação da nova atomicamente)
+   */
+  async changeExpensePaymentOrigin(
+    expenseType: 'fixed' | 'variable' | 'installment',
+    expenseId: string,
+    spaceId: string,
+    totalAmount: number,
+    paymentDate: string,
+    newSources: Array<{ reserve_id: string | null; amount: number; is_free_balance: boolean }>,
+    operationId: string = crypto.randomUUID()
+  ): Promise<{ success: boolean; error?: string }> {
+    if (supabase) {
+      try {
+        const { data, error } = await supabase.rpc('rpc_change_expense_payment_origin', {
+          p_expense_type: expenseType,
+          p_expense_id: expenseId,
+          p_space_id: spaceId,
+          p_total_amount: totalAmount,
+          p_payment_date: paymentDate,
+          p_new_sources: newSources,
+          p_operation_id: operationId,
+        });
+
+        if (!error && data) {
+          return { success: true };
+        }
+        if (error && !isTableMissingError(error)) {
+          return { success: false, error: error.message };
+        }
+      } catch (err: any) {
+        if (!isTableMissingError(err)) {
+          return { success: false, error: err.message };
+        }
+      }
+    }
+    return { success: true };
+  },
+
   async recordPaymentSource(source: ExpensePaymentSource): Promise<void> {
     if (supabase) {
       try {

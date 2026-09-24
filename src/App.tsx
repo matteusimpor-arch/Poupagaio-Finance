@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ThemeProvider } from './hooks/useTheme';
 import { AuthProvider, useAuth } from './hooks/useAuth';
+import { AssistantProvider } from './hooks/useAssistant';
 import { AuthScreen } from './components/auth/AuthScreen';
 import { ResetPasswordScreen } from './components/auth/ResetPasswordScreen';
 import { Shell } from './components/layout/Shell';
@@ -244,7 +245,9 @@ export default function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <AppContent />
+        <AssistantProvider>
+          <AppContent />
+        </AssistantProvider>
       </AuthProvider>
     </ThemeProvider>
   );

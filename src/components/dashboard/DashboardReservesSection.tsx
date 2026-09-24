@@ -76,18 +76,10 @@ export function DashboardReservesSection({
 
       {/* Lista Compacta de Reservas */}
       {reserves.length === 0 ? (
-        <div className="py-4 text-center space-y-2">
+        <div className="py-4 text-center">
           <p className="text-xs text-[#5E6963] dark:text-[#95A39B]">
             Você ainda não criou reservas financeiras para este mês.
           </p>
-          <button
-            type="button"
-            onClick={() => onSelectTab('reserves')}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#16A66A]/10 hover:bg-[#16A66A]/20 text-[#16A66A] font-bold text-xs transition-colors cursor-pointer"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>+ Criar Reserva</span>
-          </button>
         </div>
       ) : (
         <div className="space-y-2.5">
@@ -148,8 +140,8 @@ export function DashboardReservesSection({
           onClick={() => onSelectTab('reserves')}
           className="flex-1 py-2 px-3 rounded-xl bg-[#16A66A]/10 hover:bg-[#16A66A]/20 text-[#16A66A] font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
         >
-          <Plus className="w-3.5 h-3.5" />
-          <span>+ Criar Reserva</span>
+          <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+          <span>Criar Reserva</span>
         </button>
 
         <button

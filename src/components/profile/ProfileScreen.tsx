@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
+import { useAssistant } from '../../hooks/useAssistant';
 import { spaceService } from '../../lib/services/space';
+import { POUPAGAIO_MASCOT_URL } from '../../assets/mascot';
 import { LogOut, Users, ChevronRight } from 'lucide-react';
 import { Space, SpaceType, SpaceRole, SpaceMember } from '../../types';
 import { ProfileCard, SecurityCard } from './ProfileTab';
@@ -11,6 +13,7 @@ import { Badge } from '../ui/badge';
 
 export function ProfileScreen() {
   const { user, profile, spaces, memberships, currentSpace, updateProfileName, updatePassword, createSpace, updateSpaceName, deleteSpace, setCurrentSpace, signOut } = useAuth();
+  const { showAssistant, toggleAssistant } = useAssistant();
   
   const [isManageSpacesOpen, setIsManageSpacesOpen] = useState(false);
   const [fullName, setFullName] = useState(profile?.full_name || user?.full_name || '');
@@ -194,7 +197,40 @@ export function ProfileScreen() {
         </div>
       </div>
 
-      {/* LINHA 3: Sair */}
+      {/* LINHA 3: Preferências de Exibição */}
+      <div className="flex items-center justify-between p-6 bg-white dark:bg-[#18211D] rounded-xl border border-gray-100 dark:border-gray-800">
+        <div className="flex items-center gap-4">
+          <img src={POUPAGAIO_MASCOT_URL} alt="Poupagaio" className="w-8 h-8 object-contain shrink-0" />
+          <div>
+            <p className="font-bold text-gray-900 dark:text-gray-100">Assistente Poupagaio</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Exibe o Poupagaio e seus atalhos rápidos nas telas.</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className={`text-xs font-bold px-2.5 py-1 rounded-lg ${
+            showAssistant ? 'bg-[#16A66A]/15 text-[#16A66A]' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'
+          }`}>
+            {showAssistant ? 'ON' : 'OFF'}
+          </span>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={showAssistant}
+            onClick={toggleAssistant}
+            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+              showAssistant ? 'bg-[#16A66A]' : 'bg-[#D2DDD6] dark:bg-[#28322C]'
+            }`}
+          >
+            <span
+              className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                showAssistant ? 'translate-x-5' : 'translate-x-0'
+              }`}
+            />
+          </button>
+        </div>
+      </div>
+
+      {/* LINHA 4: Sair */}
       <div className="flex items-center justify-between p-6 bg-white dark:bg-[#18211D] rounded-xl border border-gray-100 dark:border-gray-800">
         <div className="flex items-center gap-4">
           <LogOut className="w-5 h-5 text-red-500" />

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { POUPAGAIO_ASSISTANTE_URL } from '../../assets/mascot';
 import { ActiveTab } from '../../types';
+import { useAssistant } from '../../hooks/useAssistant';
 import {
   Plus,
   CreditCard,
@@ -32,6 +33,7 @@ interface QuickActionItem {
 }
 
 export function FloatingPoupagaio({ onSelectTab, onOpenCreateModal }: FloatingPoupagaioProps) {
+  const { showAssistant } = useAssistant();
   const [isOpen, setIsOpen] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -279,6 +281,8 @@ export function FloatingPoupagaio({ onSelectTab, onOpenCreateModal }: FloatingPo
   const menuAlignClass = pos.side === 'left'
     ? 'md:left-0 md:right-auto'
     : 'md:right-0 md:left-auto';
+
+  if (!showAssistant) return null;
 
   return (
     <div
