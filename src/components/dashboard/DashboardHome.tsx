@@ -1064,9 +1064,6 @@ export function DashboardHome({
                   <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
                   <span className="hidden sm:inline">Nova</span>
                 </button>
-                <div className="w-8 h-8 rounded-xl bg-[#E6F6EF] dark:bg-[#16A66A]/20 flex items-center justify-center text-[#16A66A]">
-                  <ArrowUpRight className="w-4 h-4" />
-                </div>
               </div>
             </div>
 
