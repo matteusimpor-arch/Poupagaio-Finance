@@ -165,13 +165,16 @@ export function GoalHistoryModal({
                       className="p-3 bg-white dark:bg-[#1E2220] hover:bg-[#F9FAF9] dark:hover:bg-[#232725] transition-colors flex items-center justify-between gap-3"
                     >
                       <div className="space-y-1 min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-sm font-bold text-[#075C45] dark:text-[#78D9A6]">
                             +{formatCurrency(c.amount)}
                           </span>
                           <span className="text-[11px] text-[#5E6963] dark:text-[#95A39B] flex items-center gap-1">
                             <Calendar className="w-3 h-3 text-[#5E6963]/70" />
                             {formatDateBR(c.contribution_date)}
+                          </span>
+                          <span className="text-[11px] px-2 py-0.5 rounded-md bg-[#16A66A]/10 text-[#075C45] dark:bg-[#16A66A]/20 dark:text-[#78D9A6] font-medium">
+                            Origem: {c.source_name || (c.source_type === 'reserve' ? 'Reserva' : 'Saldo Livre')}
                           </span>
                         </div>
                         {c.notes && (

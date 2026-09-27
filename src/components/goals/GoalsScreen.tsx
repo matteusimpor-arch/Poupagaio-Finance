@@ -6,8 +6,11 @@ import {
   CreateGoalInput,
   UpdateGoalInput,
   CreateGoalContributionInput,
+  Reserve,
+  ReservesSummary,
 } from '../../types';
 import { goalsService, emptyGoalsSummary } from '../../lib/services/goals';
+import { reservesService, emptyReservesSummary } from '../../lib/services/reserves';
 import { formatCurrency } from '../../lib/formatters';
 import { GoalCard } from './GoalCard';
 import { GoalModal } from './GoalModal';
@@ -43,6 +46,8 @@ export function GoalsScreen() {
   // Dados
   const [goals, setGoals] = useState<GoalWithProgress[]>([]);
   const [summary, setSummary] = useState<GoalsSummary>(emptyGoalsSummary);
+  const [reservesSummary, setReservesSummary] = useState<ReservesSummary>(emptyReservesSummary);
+  const [activeReserves, setActiveReserves] = useState<Reserve[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isTableMissing, setIsTableMissing] = useState(false);
   const [userFriendlyError, setUserFriendlyError] = useState<string | null>(null);
@@ -64,7 +69,7 @@ export function GoalsScreen() {
   // Copiar SQL caso tabela não exista
   const [copiedSql, setCopiedSql] = useState(false);
 
-  // Carregar dados de metas
+  // Carregar dados de metas e reservas
   const loadGoalsData = useCallback(async () => {
     if (!currentSpace?.id) {
       setIsLoading(false);
@@ -75,9 +80,22 @@ export function GoalsScreen() {
     setUserFriendlyError(null);
 
     try {
-      const res = await goalsService.getGoalsWithProgress(currentSpace.id, {
-        filterStatus: statusFilter,
-      });
+      const now = new Date();
+      const [res, reservesRes] = await Promise.all([
+        goalsService.getGoalsWithProgress(currentSpace.id, {
+          filterStatus: statusFilter,
+        }),
+        reservesService.getReservesWithSummary(
+          currentSpace.id,
+          now.getFullYear(),
+          now.getMonth() + 1
+        ),
+      ]);
+
+      if (reservesRes.reserves) {
+        setActiveReserves(reservesRes.reserves);
+        setReservesSummary(reservesRes.summary);
+      }
 
       if (res.isTableMissing) {
         setIsTableMissing(true);
@@ -475,7 +493,7 @@ export function GoalsScreen() {
         spaceId={currentSpace?.id || ''}
       />
 
-      {/* Modal Aporte */}
+      {/* Modal Aporte com Seleção de Origem e Saldo Disponível */}
       <ContributionModal
         isOpen={isContributionModalOpen}
         onClose={() => {
@@ -484,6 +502,8 @@ export function GoalsScreen() {
         }}
         goal={goalForContribution}
         onSave={handleSaveContribution}
+        freeBalance={reservesSummary.freeBalance}
+        reserves={activeReserves}
       />
 
       {/* Modal Histórico de Aportes */}

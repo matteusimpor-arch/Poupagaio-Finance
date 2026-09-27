@@ -29,6 +29,7 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
+  LabelList,
 } from 'recharts';
 import {
   Wallet,
@@ -160,6 +161,7 @@ export function DashboardHome({
   // Historical evolution chart state
   const [evolutionData, setEvolutionData] = useState<Array<{
     monthLabel: string;
+    fullMonthLabel: string;
     Entradas: number;
     Despesas: number;
     Saldo: number;
@@ -222,13 +224,15 @@ export function DashboardHome({
             entriesService.getMonthSummary(currentSpace.id, y, m),
             checklistService.getMonthlyChecklist(currentSpace.id, y, m),
           ]);
-          const inc = ent.totalPlanned;
-          const exp = chk.stats.totalAmount;
+          const inc = Math.round((ent.totalPlanned || 0) * 100) / 100;
+          const exp = Math.round((chk.stats?.totalAmount || 0) * 100) / 100;
+          const sal = Math.round((inc - exp) * 100) / 100;
           return {
             monthLabel: `${MONTH_SHORT_NAMES[m - 1]}/${String(y).slice(-2)}`,
+            fullMonthLabel: `${MONTH_NAMES[m - 1]} de ${y}`,
             Entradas: inc,
             Despesas: exp,
-            Saldo: inc - exp,
+            Saldo: sal,
           };
         })
       );
@@ -366,18 +370,23 @@ export function DashboardHome({
   const fullName = profile?.full_name || user?.full_name || user?.email?.split('@')[0] || '';
   const firstName = fullName.trim().split(' ')[0] || 'Usuário';
 
-  // Category breakdown for Donut Chart using correct sourceType
-  let fixedSum = 0;
-  let variableSum = 0;
-  let installmentSum = 0;
+  // Category breakdown for Donut Chart using correct sourceType com precisão de centavos
+  let fixedCents = 0;
+  let variableCents = 0;
+  let installmentCents = 0;
 
   if (checklistResult?.items) {
     checklistResult.items.forEach((item) => {
-      if (item.sourceType === 'fixed') fixedSum += item.amount;
-      else if (item.sourceType === 'variable') variableSum += item.amount;
-      else if (item.sourceType === 'installment') installmentSum += item.amount;
+      const amtCents = Math.round((Number(item.amount) || 0) * 100);
+      if (item.sourceType === 'fixed') fixedCents += amtCents;
+      else if (item.sourceType === 'variable') variableCents += amtCents;
+      else if (item.sourceType === 'installment') installmentCents += amtCents;
     });
   }
+
+  const fixedSum = fixedCents / 100;
+  const variableSum = variableCents / 100;
+  const installmentSum = installmentCents / 100;
 
   const donutData = [
     { name: 'Gastos Fixos', value: fixedSum, color: DONUT_COLORS.fixed },
@@ -821,15 +830,15 @@ export function DashboardHome({
               <p className="text-xs text-center text-[#5E6963] py-4">Sem dados no mês.</p>
             ) : (
               <div className="space-y-3">
-                <div className="h-36 relative flex items-center justify-center">
+                <div className="h-40 relative flex items-center justify-center">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
                         data={donutData}
                         cx="50%"
                         cy="50%"
-                        innerRadius={36}
-                        outerRadius={54}
+                        innerRadius={42}
+                        outerRadius={62}
                         paddingAngle={3}
                         dataKey="value"
                       >
@@ -837,21 +846,45 @@ export function DashboardHome({
                           <Cell key={`m-cell-${index}`} fill={entry.color} />
                         ))}
                       </Pie>
-                      <RechartsTooltip formatter={(val: number) => formatCurrency(val)} />
+                      <RechartsTooltip
+                        formatter={(val: number) => [formatCurrency(val), 'Valor']}
+                        contentStyle={{
+                          backgroundColor: theme === 'dark' ? '#1C211E' : '#FFFFFF',
+                          borderColor: theme === 'dark' ? '#28322C' : '#D2DDD6',
+                          borderRadius: '12px',
+                          fontSize: '12px',
+                        }}
+                      />
                     </PieChart>
                   </ResponsiveContainer>
+
+                  {/* Donut Center Label */}
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center">
+                    <span className="text-[9px] uppercase font-bold text-[#5E6963] dark:text-[#95A39B]">
+                      Total
+                    </span>
+                    <span className="text-xs font-extrabold text-[#02402E] dark:text-[#78D9A6]">
+                      {formatCurrency(totalDespesas)}
+                    </span>
+                  </div>
                 </div>
 
-                <div className="space-y-1 text-[11px]">
-                  {donutData.map((d) => (
-                    <div key={`m-d-${d.name}`} className="flex justify-between items-center p-1.5 rounded-lg bg-[#F4F8F5] dark:bg-[#222825]">
-                      <span className="flex items-center gap-1.5">
-                        <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: d.color }} />
-                        {d.name}
-                      </span>
-                      <strong>{formatCurrency(d.value)}</strong>
-                    </div>
-                  ))}
+                <div className="space-y-1.5 text-xs">
+                  {donutData.map((d) => {
+                    const percentage = totalDespesas > 0 ? ((d.value / totalDespesas) * 100).toFixed(1) : '0,0';
+                    return (
+                      <div key={`m-d-${d.name}`} className="flex justify-between items-center p-2 rounded-xl bg-[#F4F8F5] dark:bg-[#222825] border border-[#E2ECE6] dark:border-[#2C3630]">
+                        <span className="flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: d.color }} />
+                          <span className="font-medium text-[#202724] dark:text-[#F4F4F5]">{d.name}</span>
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <strong className="text-[#02402E] dark:text-[#78D9A6]">{formatCurrency(d.value)}</strong>
+                          <span className="text-[10px] text-[#5E6963] dark:text-[#95A39B]">{percentage.replace('.', ',')}%</span>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -862,15 +895,22 @@ export function DashboardHome({
             <h3 className="text-xs font-bold text-[#02402E] dark:text-[#78D9A6] font-display">
               Evolução Mensal
             </h3>
-            <div className="h-44 w-full">
+            <div className="h-48 w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={evolutionData} margin={{ top: 10, right: 5, left: -25, bottom: 0 }}>
+                <ComposedChart data={evolutionData} margin={{ top: 16, right: 6, left: -25, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
                   <XAxis dataKey="monthLabel" tick={{ fontSize: 9 }} />
                   <YAxis tick={{ fontSize: 9 }} tickFormatter={(v) => `R$${v >= 1000 ? (v/1000).toFixed(0) + 'k' : v}`} />
+                  <RechartsTooltip content={<EvolutionCustomTooltip />} />
                   <Bar dataKey="Entradas" fill="#16A66A" radius={[3, 3, 0, 0]} />
                   <Bar dataKey="Despesas" fill="#E11D48" radius={[3, 3, 0, 0]} />
-                  <Line type="monotone" dataKey="Saldo" stroke="#F2B807" strokeWidth={2} dot={{ r: 3 }} />
+                  <Line type="monotone" dataKey="Saldo" stroke="#F2B807" strokeWidth={2.5} dot={{ r: 3.5, fill: '#F2B807' }}>
+                    <LabelList
+                      dataKey="Saldo"
+                      position="top"
+                      content={renderSaldoLabel}
+                    />
+                  </Line>
                 </ComposedChart>
               </ResponsiveContainer>
             </div>
@@ -1482,6 +1522,11 @@ export function DashboardHome({
                           outerRadius={70}
                           paddingAngle={3}
                           dataKey="value"
+                          label={({ percent, value }) => {
+                            if (!value || (percent && percent < 0.08)) return '';
+                            return value >= 1000 ? `R$${(value / 1000).toFixed(1)}k` : `R$${value}`;
+                          }}
+                          labelLine={false}
                         >
                           {donutData.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={entry.color} />
@@ -1556,7 +1601,7 @@ export function DashboardHome({
             <div className="w-full min-w-0 h-56 pt-2">
               {isMounted && (
                 <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-                  <ComposedChart data={evolutionData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <ComposedChart data={evolutionData} margin={{ top: 22, right: 15, left: -15, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={theme === 'dark' ? '#28322C' : '#E2ECE6'} />
                     <XAxis dataKey="monthLabel" tick={{ fontSize: 11, fill: theme === 'dark' ? '#95A39B' : '#5E6963' }} />
                     <YAxis tick={{ fontSize: 10, fill: theme === 'dark' ? '#95A39B' : '#5E6963' }} tickFormatter={(v) => `R$${v >= 1000 ? (v/1000).toFixed(0) + 'k' : v}`} />
@@ -1569,9 +1614,42 @@ export function DashboardHome({
                         fontSize: '12px',
                       }}
                     />
-                    <Bar dataKey="Entradas" fill="#16A66A" radius={[4, 4, 0, 0]} maxBarSize={28} />
-                    <Bar dataKey="Despesas" fill="#E11D48" radius={[4, 4, 0, 0]} maxBarSize={28} />
-                    <Line type="monotone" dataKey="Saldo" stroke="#F2B807" strokeWidth={3} dot={{ r: 4, fill: '#F2B807' }} />
+                    <Bar dataKey="Entradas" fill="#16A66A" radius={[4, 4, 0, 0]} maxBarSize={32}>
+                      <LabelList
+                        dataKey="Entradas"
+                        position="top"
+                        formatter={(v: any) => {
+                          const val = Number(v) || 0;
+                          if (val <= 0) return '';
+                          return val >= 1000 ? `R$ ${(val / 1000).toFixed(1)}k` : `R$ ${val}`;
+                        }}
+                        style={{ fontSize: '9px', fontWeight: 'bold', fill: '#075C45' }}
+                      />
+                    </Bar>
+                    <Bar dataKey="Despesas" fill="#E11D48" radius={[4, 4, 0, 0]} maxBarSize={32}>
+                      <LabelList
+                        dataKey="Despesas"
+                        position="top"
+                        formatter={(v: any) => {
+                          const val = Number(v) || 0;
+                          if (val <= 0) return '';
+                          return val >= 1000 ? `R$ ${(val / 1000).toFixed(1)}k` : `R$ ${val}`;
+                        }}
+                        style={{ fontSize: '9px', fontWeight: 'bold', fill: '#E11D48' }}
+                      />
+                    </Bar>
+                    <Line type="monotone" dataKey="Saldo" stroke="#F2B807" strokeWidth={3} dot={{ r: 4, fill: '#F2B807' }}>
+                      <LabelList
+                        dataKey="Saldo"
+                        position="bottom"
+                        formatter={(v: any) => {
+                          const val = Number(v) || 0;
+                          if (val === 0) return '';
+                          return Math.abs(val) >= 1000 ? `R$ ${(val / 1000).toFixed(1)}k` : `R$ ${val}`;
+                        }}
+                        style={{ fontSize: '9px', fontWeight: 'bold', fill: '#D97706' }}
+                      />
+                    </Line>
                   </ComposedChart>
                 </ResponsiveContainer>
               )}
