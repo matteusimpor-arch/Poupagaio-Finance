@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
 import {
   FixedExpenseWithStatus,
   CreateFixedExpenseInput,
@@ -8,6 +7,7 @@ import {
 } from '../../types';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
+import { ModalPortal } from '../ui/ModalPortal';
 import { X, DollarSign, Calendar, Tag, FileText, Repeat, AlertCircle } from 'lucide-react';
 import { parseCurrencyInput } from '../../lib/formatters';
 
@@ -126,15 +126,6 @@ export function FixedExpenseModal({
     setDeleteOption('recurrent');
   }, [editingExpense, isOpen, targetYear, targetMonth, currentYear, currentMonth]);
 
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    }
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [isOpen]);
-
   if (!isOpen) return null;
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -241,15 +232,10 @@ export function FixedExpenseModal({
     }
   };
 
-  return createPortal(
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="fixed-expense-modal-title"
-      className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs overflow-hidden animate-in fade-in duration-150"
-    >
+  return (
+    <ModalPortal isOpen={isOpen} onClose={onClose}>
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-[10000] animate-in fade-in duration-200">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
           <div className="bg-white dark:bg-[#1C211E] border border-[#D2DDD6] dark:border-[#28322C] rounded-3xl p-5 max-w-sm w-full space-y-4 shadow-xl">
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 rounded-full bg-rose-100 dark:bg-rose-950/50 flex items-center justify-center text-rose-600 shrink-0">
@@ -324,7 +310,7 @@ export function FixedExpenseModal({
         </div>
       )}
       <div
-        className="w-[calc(100vw-24px)] sm:w-full max-w-lg mx-auto bg-white dark:bg-[#18211D] border border-[#E8E4D5] dark:border-[#24312B] rounded-3xl shadow-xl overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[85vh] box-border animate-in zoom-in-95 duration-150"
+        className="w-[calc(100vw-24px)] sm:w-full max-w-lg mx-auto bg-white dark:bg-[#18211D] border border-[#E8E4D5] dark:border-[#24312B] rounded-3xl shadow-xl overflow-hidden flex flex-col max-h-[92vh] box-border animate-in zoom-in-95 duration-150"
       >
         {/* Cabeçalho do Modal */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#E8E4D5] dark:border-[#24312B]">
@@ -563,7 +549,7 @@ export function FixedExpenseModal({
           </div>
 
           {/* Rodapé de Ações */}
-          <div className="pt-4 flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 sm:gap-2.5 border-t border-[#E8E4D5] dark:border-[#24312B] w-full mt-auto">
+          <div className="pt-4 flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 sm:gap-2.5 border-t border-[#E8E4D5] dark:border-[#24312B] w-full">
             {isEditing && (
               <button
                 type="button"
@@ -600,7 +586,6 @@ export function FixedExpenseModal({
           </div>
         </form>
       </div>
-    </div>,
-    document.body
+    </ModalPortal>
   );
 }

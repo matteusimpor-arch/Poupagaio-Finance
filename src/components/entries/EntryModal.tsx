@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
 import { Entry, EntryStatus, CreateEntryInput, UpdateEntryInput } from '../../types';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
+import { ModalPortal } from '../ui/ModalPortal';
 import { X, DollarSign, Calendar, Tag, FileText, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
 import { getISODateToday, parseCurrencyInput, formatCurrency, getDefaultDateForBillingCycle } from '../../lib/formatters';
 
@@ -83,15 +83,6 @@ export function EntryModal({
     setShowDeleteConfirm(false);
     setIsDeleting(false);
   }, [editingEntry, isOpen, selectedYear, selectedMonth]);
-
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    }
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -199,15 +190,10 @@ export function EntryModal({
     }
   };
 
-  return createPortal(
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="entry-modal-title"
-      className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-hidden animate-in fade-in duration-150"
-    >
+  return (
+    <ModalPortal isOpen={isOpen} onClose={onClose}>
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-[10000] animate-in fade-in duration-200">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
           <div className="bg-white dark:bg-[#1C211E] border border-[#D2DDD6] dark:border-[#28322C] rounded-3xl p-5 max-w-sm w-full space-y-4 shadow-xl">
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 rounded-full bg-rose-100 dark:bg-rose-950/50 flex items-center justify-center text-rose-600 shrink-0">
@@ -245,7 +231,7 @@ export function EntryModal({
           </div>
         </div>
       )}
-      <div className="w-[calc(100vw-24px)] sm:w-full max-w-lg max-h-[92vh] sm:max-h-[85vh] rounded-3xl bg-white dark:bg-[#18211D] border border-[#E8E4D5] dark:border-[#24312B] shadow-2xl overflow-hidden flex flex-col my-auto mx-auto box-border animate-in zoom-in-95 duration-150">
+      <div className="w-[calc(100vw-24px)] sm:w-full max-w-lg rounded-3xl bg-white dark:bg-[#18211D] border border-[#E8E4D5] dark:border-[#24312B] shadow-2xl overflow-hidden flex flex-col my-auto mx-auto box-border animate-in zoom-in-95 duration-150">
         {/* Header do Modal */}
         <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-[#E8E4D5] dark:border-[#24312B] bg-[#F7F4EA]/40 dark:bg-[#121915]">
           <div className="flex items-center gap-2.5">
@@ -274,7 +260,7 @@ export function EntryModal({
         </div>
 
         {/* Formulário */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-5 sm:p-6 space-y-4 max-h-[80vh] overflow-y-auto">
           {generalError && (
             <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 flex items-center gap-2 text-xs text-red-700 dark:text-red-300">
               <AlertCircle className="w-4 h-4 shrink-0" />
@@ -456,7 +442,7 @@ export function EntryModal({
           </div>
 
           {/* Rodapé / Ações */}
-          <div className="pt-4 flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 sm:gap-2.5 border-t border-[#E8E4D5] dark:border-[#24312B] w-full mt-auto">
+          <div className="pt-4 flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 sm:gap-2.5 border-t border-[#E8E4D5] dark:border-[#24312B] w-full">
             {isEditing && (
               <button
                 type="button"
@@ -493,7 +479,6 @@ export function EntryModal({
           </div>
         </form>
       </div>
-    </div>,
-    document.body
+    </ModalPortal>
   );
 }

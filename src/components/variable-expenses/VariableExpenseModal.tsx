@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
 import {
   VariableExpense,
   VariableExpenseStatus,
@@ -9,6 +8,7 @@ import {
 } from '../../types';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
+import { ModalPortal } from '../ui/ModalPortal';
 import { X, DollarSign, Calendar, Tag, FileText, CheckCircle2, Clock, AlertCircle, Wallet, Trash2 } from 'lucide-react';
 import { parseCurrencyInput, getDefaultDateForBillingCycle, formatCurrency } from '../../lib/formatters';
 import { reservesService } from '../../lib/services/reserves';
@@ -130,15 +130,6 @@ export function VariableExpenseModal({
       setIsDeleting(false);
     }
   }, [editingExpense, isOpen, selectedYear, selectedMonth, spaceId]);
-
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    }
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [isOpen]);
 
   // When category changes, auto suggest matching reserve
   const handleCategoryChange = (newCat: string) => {
@@ -271,16 +262,11 @@ export function VariableExpenseModal({
     }
   };
 
-  return createPortal(
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="variable-expense-modal-title"
-      className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs overflow-hidden animate-in fade-in duration-150"
-    >
+  return (
+    <ModalPortal isOpen={isOpen} onClose={onClose}>
       {/* Modal de Confirmação de Exclusão */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/70 animate-in fade-in">
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/70 animate-in fade-in">
           <div className="w-full max-w-sm bg-white dark:bg-[#18211D] border border-red-200 dark:border-red-900 rounded-3xl p-5 shadow-2xl space-y-4">
             <div className="flex items-center gap-3 text-red-600 dark:text-red-400">
               <div className="w-10 h-10 rounded-2xl bg-red-100 dark:bg-red-950/50 flex items-center justify-center shrink-0">
@@ -319,7 +305,7 @@ export function VariableExpenseModal({
         </div>
       )}
 
-      <div className="w-[calc(100vw-24px)] sm:w-full max-w-lg mx-auto bg-white dark:bg-[#18211D] border border-[#E8E4D5] dark:border-[#24312B] rounded-3xl shadow-xl overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[85vh] box-border animate-in zoom-in-95 duration-150">
+      <div className="w-[calc(100vw-24px)] sm:w-full max-w-lg mx-auto bg-white dark:bg-[#18211D] border border-[#E8E4D5] dark:border-[#24312B] rounded-3xl shadow-xl overflow-hidden flex flex-col max-h-[92vh] box-border animate-in zoom-in-95 duration-150">
         
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#E8E4D5] dark:border-[#24312B]">
@@ -617,7 +603,6 @@ export function VariableExpenseModal({
           </div>
         </form>
       </div>
-    </div>,
-    document.body
+    </ModalPortal>
   );
 }
