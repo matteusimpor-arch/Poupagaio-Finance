@@ -141,7 +141,7 @@ export function ModulePlaceholder({ tab, onSelectTab }: ModulePlaceholderProps) 
   const Icon = info.icon;
 
   return (
-    <div className="w-full max-w-4xl mx-auto space-y-3.5 sm:space-y-6 pb-4 animate-in fade-in duration-300">
+    <div className="w-full max-w-4xl mx-auto space-y-3.5 sm:space-y-6 pb-20 md:pb-8 animate-in fade-in duration-300">
       {/* Top Breadcrumb / Back Navigation */}
       <div className="flex items-center justify-between">
         <button

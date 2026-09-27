@@ -57,8 +57,6 @@ import { FixedExpenseModal } from '../fixed-expenses/FixedExpenseModal';
 import { VariableExpenseModal } from '../variable-expenses/VariableExpenseModal';
 import { InstallmentPurchaseModal } from '../installments/InstallmentPurchaseModal';
 import { GoalModal } from '../goals/GoalModal';
-import { EntryModal } from '../entries/EntryModal';
-import { CreateEntryInput, UpdateEntryInput } from '../../types';
 import { DashboardReservesSection } from './DashboardReservesSection';
 import { PaymentOriginConfirmModal } from '../reserves/PaymentOriginConfirmModal';
 import { fixedExpensesService } from '../../lib/services/fixedExpenses';
@@ -106,7 +104,7 @@ export function DashboardHome({
   onMonthChange,
 }: DashboardHomeProps) {
   const { profile, user, currentSpace } = useAuth();
-  const { isDark } = useTheme();
+  const { theme } = useTheme();
 
   const now = new Date();
   const [currentYear, setCurrentYear] = useState(initialYear || now.getFullYear());
@@ -151,7 +149,6 @@ export function DashboardHome({
   const [showAllChecklistMobile, setShowAllChecklistMobile] = useState<boolean>(false);
   const [isQuickAddMenuOpen, setIsQuickAddMenuOpen] = useState<boolean>(false);
   const [isGoalModalOpen, setIsGoalModalOpen] = useState<boolean>(false);
-  const [isEntryModalOpen, setIsEntryModalOpen] = useState<boolean>(false);
   const [quickAddModalType, setQuickAddModalType] = useState<
     'fixed_expenses' | 'variable_expenses' | 'installments' | null
   >(null);
@@ -243,22 +240,6 @@ export function DashboardHome({
   useEffect(() => {
     loadDashboardData();
   }, [currentSpace?.id, currentYear, currentMonth]);
-
-  const handleSaveEntry = async (data: CreateEntryInput | UpdateEntryInput): Promise<boolean> => {
-    if (!user || !currentSpace?.id) return false;
-    const res = await entriesService.createEntry(user.id, {
-      ...data,
-      space_id: currentSpace.id,
-    } as CreateEntryInput);
-
-    if (res.error) {
-      throw new Error(res.error);
-    }
-
-    setIsEntryModalOpen(false);
-    await loadDashboardData();
-    return true;
-  };
 
   const handleSaveFixedExpense = async (data: CreateFixedExpenseInput | UpdateFixedExpenseInput): Promise<boolean> => {
     if (!user) return false;
@@ -415,7 +396,7 @@ export function DashboardHome({
   const miniSelectedDayItems = itemsByDate[selectedMiniDateStr] || [];
 
   return (
-    <div className="w-full max-w-[1480px] mx-auto space-y-6 sm:space-y-8 pb-4 px-3 sm:px-6 animate-in fade-in duration-300">
+    <div className="w-full max-w-[1480px] mx-auto space-y-6 sm:space-y-8 pb-28 sm:pb-16 px-3 sm:px-6 animate-in fade-in duration-300">
       
       {/* Action error banner */}
       {actionError && (
@@ -509,19 +490,8 @@ export function DashboardHome({
               <span className="text-[10px] font-bold uppercase tracking-wider text-[#5E6963] dark:text-[#95A39B] font-display truncate">
                 ENTRADAS
               </span>
-              <div className="flex items-center gap-1 shrink-0">
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsEntryModalOpen(true);
-                  }}
-                  aria-label="Adicionar entrada"
-                  title="Adicionar entrada"
-                  className="w-6 h-6 rounded-md bg-[#16A66A] hover:bg-[#075C45] active:scale-95 text-white flex items-center justify-center font-bold text-xs shadow-2xs transition-all cursor-pointer"
-                >
-                  <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-                </button>
+              <div className="w-5 h-5 rounded-md bg-[#E6F6EF] dark:bg-[#16A66A]/20 flex items-center justify-center text-[#16A66A] shrink-0">
+                <ArrowUpRight className="w-3 h-3" />
               </div>
             </div>
             <div className="text-sm sm:text-base font-extrabold tracking-tight text-[#02402E] dark:text-[#78D9A6] font-display truncate">
@@ -1050,20 +1020,8 @@ export function DashboardHome({
               <span className="text-xs font-bold uppercase tracking-wider text-[#5E6963] dark:text-[#95A39B] font-display">
                 Entradas
               </span>
-              <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsEntryModalOpen(true);
-                  }}
-                  aria-label="Adicionar entrada"
-                  title="Adicionar entrada"
-                  className="px-2 py-1 rounded-lg bg-[#16A66A] hover:bg-[#075C45] active:scale-95 text-white flex items-center gap-1 font-bold text-xs shadow-2xs transition-all cursor-pointer"
-                >
-                  <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-                  <span className="hidden sm:inline">Nova</span>
-                </button>
+              <div className="w-8 h-8 rounded-xl bg-[#E6F6EF] dark:bg-[#16A66A]/20 flex items-center justify-center text-[#16A66A]">
+                <ArrowUpRight className="w-4 h-4" />
               </div>
             </div>
 
@@ -1509,8 +1467,8 @@ export function DashboardHome({
                         <RechartsTooltip
                           formatter={(val: number) => formatCurrency(val)}
                           contentStyle={{
-                            backgroundColor: isDark ? '#1C211E' : '#FFFFFF',
-                            borderColor: isDark ? '#28322C' : '#D2DDD6',
+                            backgroundColor: theme === 'dark' ? '#1C211E' : '#FFFFFF',
+                            borderColor: theme === 'dark' ? '#28322C' : '#D2DDD6',
                             borderRadius: '12px',
                             fontSize: '12px',
                           }}
@@ -1576,14 +1534,14 @@ export function DashboardHome({
               {isMounted && (
                 <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                   <ComposedChart data={evolutionData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? '#28322C' : '#E2ECE6'} />
-                    <XAxis dataKey="monthLabel" tick={{ fontSize: 11, fill: isDark ? '#95A39B' : '#5E6963' }} />
-                    <YAxis tick={{ fontSize: 10, fill: isDark ? '#95A39B' : '#5E6963' }} tickFormatter={(v) => `R$${v >= 1000 ? (v/1000).toFixed(0) + 'k' : v}`} />
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={theme === 'dark' ? '#28322C' : '#E2ECE6'} />
+                    <XAxis dataKey="monthLabel" tick={{ fontSize: 11, fill: theme === 'dark' ? '#95A39B' : '#5E6963' }} />
+                    <YAxis tick={{ fontSize: 10, fill: theme === 'dark' ? '#95A39B' : '#5E6963' }} tickFormatter={(v) => `R$${v >= 1000 ? (v/1000).toFixed(0) + 'k' : v}`} />
                     <RechartsTooltip
                       formatter={(val: number) => formatCurrency(val)}
                       contentStyle={{
-                        backgroundColor: isDark ? '#1C211E' : '#FFFFFF',
-                        borderColor: isDark ? '#28322C' : '#D2DDD6',
+                        backgroundColor: theme === 'dark' ? '#1C211E' : '#FFFFFF',
+                        borderColor: theme === 'dark' ? '#28322C' : '#D2DDD6',
                         borderRadius: '12px',
                         fontSize: '12px',
                       }}
@@ -1786,30 +1744,6 @@ export function DashboardHome({
                 type="button"
                 onClick={() => {
                   setIsQuickAddMenuOpen(false);
-                  setIsEntryModalOpen(true);
-                }}
-                className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-[#F4F7F5] dark:bg-[#222825] hover:bg-[#E8F2EC] dark:hover:bg-[#28322C] border border-transparent hover:border-[#16A66A]/40 text-left transition-all cursor-pointer group shadow-2xs hover:shadow-sm"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                    <ArrowUpRight className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-[#02402E] dark:text-[#78D9A6] group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
-                      Nova Entrada
-                    </p>
-                    <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B]">
-                      Receita, salário, rendimentos ou renda extra
-                    </p>
-                  </div>
-                </div>
-                <ChevronRight className="w-4 h-4 text-[#5E6963] group-hover:text-emerald-600 group-hover:translate-x-0.5 transition-transform" />
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setIsQuickAddMenuOpen(false);
                   setQuickAddModalType('fixed_expenses');
                 }}
                 className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-[#F4F7F5] dark:bg-[#222825] hover:bg-[#E8F2EC] dark:hover:bg-[#28322C] border border-transparent hover:border-[#8B5CF6]/40 text-left transition-all cursor-pointer group shadow-2xs hover:shadow-sm"
@@ -1885,15 +1819,6 @@ export function DashboardHome({
       {/* MODAIS REUTILIZADOS COM CONTEXTO DA COMPETÊNCIA ATUAL */}
       {(currentSpace?.id || user?.id) && (
         <>
-          <EntryModal
-            isOpen={isEntryModalOpen}
-            onClose={() => setIsEntryModalOpen(false)}
-            onSave={handleSaveEntry}
-            spaceId={currentSpace?.id || user?.id || ''}
-            selectedYear={currentYear}
-            selectedMonth={currentMonth}
-          />
-
           <FixedExpenseModal
             isOpen={quickAddModalType === 'fixed_expenses'}
             onClose={() => setQuickAddModalType(null)}

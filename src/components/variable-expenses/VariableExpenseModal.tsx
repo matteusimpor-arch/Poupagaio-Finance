@@ -8,7 +8,6 @@ import {
 } from '../../types';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
-import { ModalPortal } from '../ui/ModalPortal';
 import { X, DollarSign, Calendar, Tag, FileText, CheckCircle2, Clock, AlertCircle, Wallet, Trash2 } from 'lucide-react';
 import { parseCurrencyInput, getDefaultDateForBillingCycle, formatCurrency } from '../../lib/formatters';
 import { reservesService } from '../../lib/services/reserves';
@@ -263,7 +262,12 @@ export function VariableExpenseModal({
   };
 
   return (
-    <ModalPortal isOpen={isOpen} onClose={onClose}>
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="variable-expense-modal-title"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150"
+    >
       {/* Modal de Confirmação de Exclusão */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/70 animate-in fade-in">
@@ -603,6 +607,6 @@ export function VariableExpenseModal({
           </div>
         </form>
       </div>
-    </ModalPortal>
+    </div>
   );
 }

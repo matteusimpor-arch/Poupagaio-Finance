@@ -245,7 +245,7 @@ export function ClosingScreen() {
   };
 
   return (
-    <div className="w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 space-y-4 sm:space-y-6 pb-4 animate-in fade-in duration-300">
+    <div className="w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 space-y-4 sm:space-y-6 pb-24 md:pb-8 animate-in fade-in duration-300">
       {/* 1. Cabeçalho de Módulo */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-2 border-b border-[#E2E8E4] dark:border-[#2E3532]">
         <div className="space-y-0.5">

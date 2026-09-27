@@ -3,121 +3,61 @@
 @variant dark (&:where(.dark, .dark *));
 
 @layer base {
-  /* ==========================================================================
-     CENTRALIZED THEME DESIGN TOKENS
-     ========================================================================== */
-
-  /* 1. Default / Poupagaio Theme (🌿 Poupagaio) */
-  :root, [data-theme="poupagaio"] {
+  :root {
     --bg-page: #F3F4F4;
     --card-bg: #FFFFFF;
     --surface-secondary: #EBECEE;
     --surface-elevated: #FFFFFF;
-    --card-border: #D2DDD6;
-    --border-subtle: #E2ECE6;
-    
+    --card-border: #E2E5E4;
     --text-main: #1F2421;
-    --text-primary: #1F2421;
-    --text-secondary: #5E6963;
-    --text-muted: #8A9690;
-    
-    --brand-primary: #075C45;
-    --brand-secondary: #16A66A;
-    --brand-light: #78D9A6;
-    --brand-hover: #02402E;
-    
-    --header-bg: rgba(255, 255, 255, 0.88);
-    --modal-bg: #FFFFFF;
-    --input-bg: #FFFFFF;
-    --input-border: #D2DDD6;
-    
-    --leaf-color: #075C45;
-    --leaf-opacity: 0.14;
-
-    /* Financial Semantic Tokens (FIXED & UNTOUCHED) */
-    --finance-income: #16A66A;
-    --finance-variable-expense: #E11D48;
-    --finance-fixed-expense: #8B5CF6;
-    --finance-installment: #F59E0B;
+    --text-muted: #5D6661;
+    --color-emerald-deep: #075C45;
+    --color-emerald-main: #16A66A;
+    --color-emerald-light: #78D9A6;
+    --color-gold: #D6A84B;
+    --color-champagne: #F2D58A;
+    --color-cream: #EBECEE;
+    --color-graphite: #1F2421;
   }
 
-  /* 2. Oceano Theme (🌊 Oceano) */
-  [data-theme="ocean"] {
-    --bg-page: #F0F9FF;
-    --card-bg: #FFFFFF;
-    --surface-secondary: #E0F2FE;
-    --surface-elevated: #FFFFFF;
-    --card-border: #BAE6FD;
-    --border-subtle: #E0F2FE;
-    
-    --text-main: #0C4A6E;
-    --text-primary: #0C4A6E;
-    --text-secondary: #0369A1;
-    --text-muted: #38BDF8;
-    
-    --brand-primary: #0284C7;
-    --brand-secondary: #06B6D4;
-    --brand-light: #67E8F9;
-    --brand-hover: #0369A1;
-    
-    --header-bg: rgba(240, 249, 255, 0.88);
-    --modal-bg: #FFFFFF;
-    --input-bg: #FFFFFF;
-    --input-border: #BAE6FD;
-    
-    --leaf-color: #0284C7;
-    --leaf-opacity: 0.12;
-
-    --finance-income: #16A66A;
-    --finance-variable-expense: #E11D48;
-    --finance-fixed-expense: #8B5CF6;
-    --finance-installment: #F59E0B;
-  }
-
-  /* 3. Natureza Theme (🍃 Natureza - Organic & Earthy Forest Green) */
-  [data-theme="nature"] {
-    --bg-page: #F4F6F0;
-    --card-bg: #FFFFFF;
-    --surface-secondary: #E6ECDE;
-    --surface-elevated: #FFFFFF;
-    --card-border: #C8D6B9;
-    --border-subtle: #E2E9D8;
-    
-    --text-main: #1C2E19;
-    --text-primary: #1C2E19;
-    --text-secondary: #42573B;
-    --text-muted: #688060;
-    
-    --brand-primary: #2D5A27;
-    --brand-secondary: #558B2F;
-    --brand-light: #8BC34A;
-    --brand-hover: #1B3B18;
-    
-    --header-bg: rgba(244, 246, 240, 0.88);
-    --modal-bg: #FFFFFF;
-    --input-bg: #FFFFFF;
-    --input-border: #C8D6B9;
-    
-    --leaf-color: #2D5A27;
-    --leaf-opacity: 0.18;
-
-    --finance-income: #16A66A;
-    --finance-variable-expense: #E11D48;
-    --finance-fixed-expense: #8B5CF6;
-    --finance-installment: #F59E0B;
+  .dark {
+    --bg-page: #181B1A;
+    --card-bg: #232725;
+    --surface-secondary: #2B302E;
+    --surface-elevated: #323835;
+    --card-border: #2E3532;
+    --text-main: #F4F4F5;
+    --text-muted: #9BA5A0;
+    --color-emerald-deep: #0E744B;
+    --color-emerald-main: #10B981;
+    --color-emerald-light: #34D399;
+    --color-gold: #F59E0B;
+    --color-champagne: #FDE047;
+    --color-cream: #232725;
+    --color-graphite: #F4F4F5;
   }
 
   ::selection,
-  *::selection {
-    background-color: rgba(37, 99, 235, 0.22);
-    color: var(--brand-primary);
+  *::selection,
+  input::selection,
+  textarea::selection {
+    background-color: rgba(22, 166, 106, 0.22);
+    color: #075C45;
+  }
+
+  .dark ::selection,
+  .dark *::selection,
+  .dark input::selection,
+  .dark textarea::selection {
+    background-color: rgba(120, 217, 166, 0.25);
+    color: #FFFFFF;
   }
 
   body {
     font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
     background-color: var(--bg-page);
     color: var(--text-main);
-    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
 
   h1, h2, h3, .font-display {
@@ -127,38 +67,43 @@
 
 /* ==========================================================================
    GLOBAL PALETTE HARMONIZATION TOKENS
-   Converts hardcoded structural brand classes to active theme CSS tokens
+   Overrides legacy arbitrary colors to strictly enforce the new global theme:
+   - Light: Neutral cold light gray #F3F4F4 (no beige/yellowish cream), crisp #FFFFFF cards, #E2E5E4 borders
+   - Dark: Neutral graphite/dark gray #181B1A (no pure black), #232725 cards, #2E3532 borders
    ========================================================================== */
 
-/* Ocean Theme Overrides */
-[data-theme="ocean"] .bg-\[\#F3F4F4\],
-[data-theme="ocean"] .bg-\[\#F7F4EA\],
-[data-theme="ocean"] .bg-\[\#F7F9F7\] {
+.bg-\[\#F7F4EA\],
+.bg-\[\#F7F9F7\] {
   background-color: var(--bg-page) !important;
 }
 
-[data-theme="ocean"] .text-\[\#075C45\],
-[data-theme="ocean"] .text-\[\#02402E\] {
-  color: var(--brand-primary) !important;
+.bg-\[\#F2F5F3\] {
+  background-color: var(--surface-secondary) !important;
 }
 
-[data-theme="ocean"] .bg-\[\#075C45\],
-[data-theme="ocean"] .bg-\[\#02402E\] {
-  background-color: var(--brand-primary) !important;
+.border-\[\#E8E4D5\],
+.border-\[\#E2E8E4\] {
+  border-color: var(--card-border) !important;
 }
 
-[data-theme="ocean"] .bg-\[\#16A66A\] {
-  background-color: var(--brand-secondary) !important;
+.dark .dark\:bg-\[\#101614\],
+.dark .dark\:bg-\[\#121212\],
+.dark .dark\:bg-\[\#111614\],
+.dark .dark\:bg-\[\#141C18\],
+.dark .dark\:bg-\[\#121915\] {
+  background-color: var(--bg-page) !important;
 }
 
-[data-theme="ocean"] .border-\[\#075C45\],
-[data-theme="ocean"] .border-\[\#02402E\],
-[data-theme="ocean"] .border-\[\#16A66A\] {
-  border-color: var(--brand-secondary) !important;
+.dark .dark\:bg-\[\#18211D\],
+.dark .dark\:bg-\[\#1A1A1A\],
+.dark .dark\:bg-\[\#1E2220\],
+.dark .dark\:bg-\[\#222226\] {
+  background-color: var(--card-bg) !important;
 }
 
-/* Ensure Leaf SVG Color Matches Active Theme */
-.botanical-leaf-svg {
-  color: var(--leaf-color) !important;
-  opacity: var(--leaf-opacity) !important;
+.dark .dark\:border-\[\#24312B\] {
+  border-color: var(--card-border) !important;
 }
+
+
+

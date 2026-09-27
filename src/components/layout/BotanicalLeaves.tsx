@@ -5,7 +5,7 @@ export function BotanicalLeaves() {
     <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden select-none">
       {/* Top Left Leaf Cluster */}
       <svg
-        className="botanical-leaf-svg absolute -top-12 -left-12 w-80 h-80 hidden sm:block transition-all duration-300"
+        className="absolute -top-12 -left-12 w-80 h-80 text-[#02402E] opacity-[0.14] dark:opacity-[0.08] hidden sm:block"
         viewBox="0 0 200 200"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
@@ -30,7 +30,7 @@ export function BotanicalLeaves() {
 
       {/* Top Right Leaf Cluster */}
       <svg
-        className="botanical-leaf-svg absolute top-10 -right-16 w-96 h-96 transition-all duration-300"
+        className="absolute top-10 -right-16 w-96 h-96 text-[#02402E] opacity-[0.12] dark:opacity-[0.07]"
         viewBox="0 0 200 200"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
@@ -55,7 +55,7 @@ export function BotanicalLeaves() {
 
       {/* Middle Left Leaf */}
       <svg
-        className="botanical-leaf-svg absolute top-[45%] -left-20 w-88 h-88 hidden lg:block transition-all duration-300"
+        className="absolute top-[45%] -left-20 w-88 h-88 text-[#16A66A] opacity-[0.10] dark:opacity-[0.06] hidden lg:block"
         viewBox="0 0 200 200"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
@@ -74,7 +74,7 @@ export function BotanicalLeaves() {
 
       {/* Bottom Right Floating Leaf (near Poupagaio area) */}
       <svg
-        className="botanical-leaf-svg absolute bottom-12 -right-10 w-80 h-80 transition-all duration-300"
+        className="absolute bottom-12 -right-10 w-80 h-80 text-[#02402E] opacity-[0.15] dark:opacity-[0.08]"
         viewBox="0 0 200 200"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"

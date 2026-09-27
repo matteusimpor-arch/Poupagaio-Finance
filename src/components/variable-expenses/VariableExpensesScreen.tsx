@@ -224,7 +224,7 @@ export function VariableExpensesScreen({
   };
 
   return (
-    <div id="variable-expenses-screen" className="space-y-6 pb-4">
+    <div id="variable-expenses-screen" className="space-y-6 pb-12">
       {/* 1. CABEÇALHO DO MÓDULO */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="space-y-1">

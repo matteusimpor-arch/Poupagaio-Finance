@@ -38,10 +38,8 @@ import {
   MoreHorizontal,
   ChevronDown,
   PiggyBank,
-  Palette,
 } from 'lucide-react';
 import { ActiveTab } from '../../types';
-import { AppearanceModal } from '../preferences/AppearanceModal';
 import { EntryModal } from '../entries/EntryModal';
 import { VariableExpenseModal } from '../variable-expenses/VariableExpenseModal';
 import { FixedExpenseModal } from '../fixed-expenses/FixedExpenseModal';
@@ -83,9 +81,7 @@ export function Shell({
   const { showAssistant, toggleAssistant } = useAssistant();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const [isAppearanceModalOpen, setIsAppearanceModalOpen] = useState(false);
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
-  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [alerts, setAlerts] = useState<FinancialAlert[]>([]);
   const [isScrolled, setIsScrolled] = useState(false);
 
@@ -326,100 +322,46 @@ export function Shell({
               )}
             </div>
 
-            {/* Alternar Tema / Aparência */}
+            {/* Alternar Tema */}
             <button
               type="button"
               id="topbar-toggle-theme"
-              onClick={() => setIsAppearanceModalOpen(true)}
-              aria-label="Aparência e Temas"
-              className="flex items-center justify-center p-2 rounded-xl border border-[#D2DDD6] bg-white/70 dark:bg-[#1C211E]/70 dark:border-[#2B322F] hover:bg-[#16A66A]/10 text-xs font-bold text-[#02402E] dark:text-[#78D9A6] cursor-pointer transition-colors shadow-2xs shrink-0"
-              title="Personalizar Tema & Aparência"
+              onClick={toggleTheme}
+              aria-label="Alternar tema"
+              className="flex items-center gap-1.5 p-2 sm:px-2.5 sm:py-1.5 rounded-xl border border-[#DCE2DE] hover:bg-black/5 dark:border-[#2B322F] dark:hover:bg-white/5 text-xs text-[#5E6963] dark:text-[#95A39B] cursor-pointer transition-colors"
             >
-              <Palette className="w-4 h-4 text-[#16A66A] shrink-0" />
-              <span className="sr-only">Aparência</span>
-            </button>
-
-            {/* Perfil & Menu do Usuário */}
-            <div className="relative">
-              <button
-                type="button"
-                id="topbar-profile-btn"
-                onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                className={`flex items-center gap-2 px-2 py-1 sm:px-2.5 sm:py-1 rounded-xl border transition-colors cursor-pointer text-left ${
-                  currentTab === 'profile' || isUserMenuOpen
-                    ? 'bg-[#16A66A]/15 border-[#16A66A]/40 text-[#02402E] dark:bg-[#16A66A]/25 dark:text-[#78D9A6]'
-                    : 'border-[#DCE2DE] dark:border-[#2B322F] hover:bg-black/5 text-[#202724] dark:hover:bg-white/5 dark:text-[#F4F4F5]'
-                }`}
-              >
-                <Avatar
-                  name={profile?.full_name || user?.full_name || user?.email || 'U'}
-                  size="sm"
-                />
-                <span className="text-xs font-bold max-w-[90px] truncate hidden md:inline">
-                  {profile?.full_name?.split(' ')[0] || user?.full_name?.split(' ')[0] || 'Usuário'}
-                </span>
-                <ChevronDown className={`w-3.5 h-3.5 text-[#5E6963] transition-transform duration-200 hidden md:inline ${isUserMenuOpen ? 'rotate-180' : ''}`} />
-              </button>
-
-              {/* Dropdown Menu do Usuário */}
-              {isUserMenuOpen && (
+              {theme === 'light' ? (
                 <>
-                  <div
-                    className="fixed inset-0 z-40"
-                    onClick={() => setIsUserMenuOpen(false)}
-                  />
-                  <div className="absolute right-0 mt-2 w-60 rounded-2xl border border-[#D2DDD6] dark:border-[#28322C] bg-white dark:bg-[#1C211E] p-2 shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-150 space-y-1">
-                    <div className="px-3 py-2 border-b border-[#E2ECE6] dark:border-[#28322C]">
-                      <p className="text-xs font-bold text-[#02402E] dark:text-[#78D9A6] truncate">
-                        {profile?.full_name || user?.full_name || 'Usuário'}
-                      </p>
-                      <p className="text-[10px] text-[#5E6963] dark:text-[#95A39B] truncate">
-                        {user?.email}
-                      </p>
-                    </div>
-
-                    <button
-                      type="button"
-                      id="dropdown-appearance-btn"
-                      onClick={() => {
-                        setIsUserMenuOpen(false);
-                        setIsAppearanceModalOpen(true);
-                      }}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-left text-[#02402E] dark:text-[#78D9A6] bg-[#16A66A]/10 hover:bg-[#16A66A]/20 transition-colors cursor-pointer"
-                    >
-                      <Palette className="w-4 h-4 text-[#16A66A] shrink-0" />
-                      <span>🎨 Aparência (Temas)</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsUserMenuOpen(false);
-                        handleNavClick('profile');
-                      }}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-left text-[#202724] dark:text-[#F4F4F5] hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer"
-                    >
-                      <Home className="w-4 h-4 text-[#16A66A] shrink-0" />
-                      <span>Meu Perfil & Configurações</span>
-                    </button>
-
-                    <div className="pt-1 border-t border-[#E2ECE6] dark:border-[#28322C]">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsUserMenuOpen(false);
-                          signOut();
-                        }}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-left text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
-                      >
-                        <LogOut className="w-4 h-4 shrink-0" />
-                        <span>Sair da Conta</span>
-                      </button>
-                    </div>
-                  </div>
+                  <Moon className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+                  <span className="hidden lg:inline">Escuro</span>
+                </>
+              ) : (
+                <>
+                  <Sun className="w-4 h-4 sm:w-3.5 sm:h-3.5 text-[#F2B807]" />
+                  <span className="hidden lg:inline">Claro</span>
                 </>
               )}
-            </div>
+            </button>
+
+            {/* Perfil */}
+            <button
+              type="button"
+              id="topbar-profile-btn"
+              onClick={() => handleNavClick('profile')}
+              className={`flex items-center gap-2 px-2 py-1 sm:px-2.5 sm:py-1 rounded-xl border transition-colors cursor-pointer text-left ${
+                currentTab === 'profile'
+                  ? 'bg-[#16A66A]/15 border-[#16A66A]/40 text-[#02402E] dark:bg-[#16A66A]/25 dark:text-[#78D9A6]'
+                  : 'border-[#DCE2DE] dark:border-[#2B322F] hover:bg-black/5 text-[#202724] dark:hover:bg-white/5 dark:text-[#F4F4F5]'
+              }`}
+            >
+              <Avatar
+                name={profile?.full_name || user?.full_name || user?.email || 'U'}
+                size="sm"
+              />
+              <span className="text-xs font-bold max-w-[90px] truncate hidden md:inline">
+                {profile?.full_name?.split(' ')[0] || user?.full_name?.split(' ')[0] || 'Usuário'}
+              </span>
+            </button>
 
             {/* Mobile Menu Trigger */}
             <button
@@ -638,27 +580,6 @@ export function Shell({
               })}
             </div>
 
-            {/* Aparência & Temas */}
-            <div className="pt-3 border-t border-[#DCE2DE] dark:border-[#2B322F]">
-              <button
-                type="button"
-                id="mobile-drawer-appearance-btn"
-                onClick={() => {
-                  setIsMobileMenuOpen(false);
-                  setIsAppearanceModalOpen(true);
-                }}
-                className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-[#075C45]/10 dark:bg-[#16A66A]/15 border-2 border-[#16A66A]/40 text-xs font-bold text-[#02402E] dark:text-[#78D9A6] cursor-pointer hover:bg-[#16A66A]/20 transition-all shadow-xs"
-              >
-                <div className="flex items-center gap-2.5">
-                  <Palette className="w-5 h-5 text-[#16A66A]" />
-                  <span className="text-sm font-bold">🎨 Aparência (Temas)</span>
-                </div>
-                <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-[#16A66A] text-white shadow-2xs">
-                  Escolher Tema
-                </span>
-              </button>
-            </div>
-
             {/* Assistente Poupagaio Config Toggle */}
             <div className="pt-3 border-t border-[#DCE2DE] dark:border-[#2B322F]">
               <div className="flex flex-col gap-2 p-3 rounded-2xl bg-[#F4F7F5] dark:bg-[#181B1A] border border-[#E2ECE6] dark:border-[#2B322F]">
@@ -701,12 +622,6 @@ export function Shell({
           </div>
         </div>
       )}
-
-      {/* APPEARANCE & THEME CUSTOMIZATION MODAL */}
-      <AppearanceModal
-        isOpen={isAppearanceModalOpen}
-        onClose={() => setIsAppearanceModalOpen(false)}
-      />
 
       {/* SUPABASE SCHEMA NOTICE */}
       <SupabaseSchemaNotice />

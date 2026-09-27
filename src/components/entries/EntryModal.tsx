@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Entry, EntryStatus, CreateEntryInput, UpdateEntryInput } from '../../types';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
-import { ModalPortal } from '../ui/ModalPortal';
 import { X, DollarSign, Calendar, Tag, FileText, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
 import { getISODateToday, parseCurrencyInput, formatCurrency, getDefaultDateForBillingCycle } from '../../lib/formatters';
 
@@ -191,7 +190,12 @@ export function EntryModal({
   };
 
   return (
-    <ModalPortal isOpen={isOpen} onClose={onClose}>
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="entry-modal-title"
+      className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-150"
+    >
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
           <div className="bg-white dark:bg-[#1C211E] border border-[#D2DDD6] dark:border-[#28322C] rounded-3xl p-5 max-w-sm w-full space-y-4 shadow-xl">
@@ -479,6 +483,6 @@ export function EntryModal({
           </div>
         </form>
       </div>
-    </ModalPortal>
+    </div>
   );
 }

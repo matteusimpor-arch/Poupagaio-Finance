@@ -222,9 +222,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     setIsLoading(true);
     try {
-      if (typeof window !== 'undefined') {
-        sessionStorage.removeItem('poupagaio_theme_session');
-      }
       await authService.signOut();
       setUser(null);
       setProfile(null);

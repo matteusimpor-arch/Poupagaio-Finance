@@ -6,14 +6,13 @@ import { PoupagaioLogo } from '../branding/PoupagaioLogo';
 import { Card, CardContent } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
-import { Sun, Moon, ArrowRight, CheckCircle2, Lock, Mail, User, ShieldCheck, AlertTriangle, Palette } from 'lucide-react';
+import { Sun, Moon, ArrowRight, CheckCircle2, Lock, Mail, User, ShieldCheck, AlertTriangle } from 'lucide-react';
 import { isSupabaseConfigured } from '../../lib/supabase';
-import { AppearanceModal } from '../preferences/AppearanceModal';
+
 
 export function AuthScreen() {
   const { signIn, signUp, resetPassword, isLoading } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const [isAppearanceModalOpen, setIsAppearanceModalOpen] = useState(false);
 
   const [mode, setMode] = useState<'login' | 'register' | 'forgot'>('login');
   const [fullName, setFullName] = useState('');
@@ -94,19 +93,18 @@ export function AuthScreen() {
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col justify-between bg-[var(--bg-page)] text-[var(--text-main)] p-4 md:p-6 transition-colors duration-200">
+    <div className="min-h-screen w-full flex flex-col justify-between bg-[#F7F4EA] dark:bg-[#121212] text-[#202724] dark:text-[#F4F4F5] p-4 md:p-6 transition-colors duration-200">
       {/* Top Bar with Theme Toggle */}
       <div className="w-full max-w-5xl mx-auto flex items-center justify-between py-2">
         <PoupagaioLogo showText className="h-10 sm:h-11" />
 
         <button
           type="button"
-          onClick={() => setIsAppearanceModalOpen(true)}
-          aria-label="Aparência e Temas"
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[#D2DDD6] dark:border-[#28322C] hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer text-xs font-bold text-[#075C45] dark:text-[#78D9A6]"
+          onClick={toggleTheme}
+          aria-label="Alternar tema"
+          className="p-2.5 rounded-xl border border-[#E8E4D5] hover:bg-black/5 dark:border-white/15 dark:hover:bg-white/5 transition-colors cursor-pointer text-[#5E6963] dark:text-zinc-300"
         >
-          <Palette className="w-4 h-4 text-[#16A66A]" />
-          <span>Aparência</span>
+          {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4 text-amber-400" />}
         </button>
       </div>
 
@@ -356,11 +354,6 @@ export function AuthScreen() {
       <div className="w-full max-w-5xl mx-auto py-2 text-center text-xs text-[#5E6963] dark:text-[#95A39B]">
         <span>Poupagaio Finance © {new Date().getFullYear()} — Todos os direitos reservados.</span>
       </div>
-
-      <AppearanceModal
-        isOpen={isAppearanceModalOpen}
-        onClose={() => setIsAppearanceModalOpen(false)}
-      />
     </div>
   );
 }
