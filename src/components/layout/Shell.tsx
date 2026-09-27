@@ -38,6 +38,7 @@ import {
   MoreHorizontal,
   ChevronDown,
   PiggyBank,
+  Plus,
 } from 'lucide-react';
 import { ActiveTab } from '../../types';
 import { EntryModal } from '../entries/EntryModal';
@@ -92,8 +93,12 @@ export function Shell({
 
   // Save handlers for Poupagaio direct modals
   const handleSaveEntryPoupagaio = async (data: CreateEntryInput | UpdateEntryInput): Promise<boolean> => {
-    if (!user || !currentSpace?.id) return false;
-    const res = await entriesService.createEntry(user.id, data as CreateEntryInput);
+    if (!user) return false;
+    const targetSpaceId = ('space_id' in data && data.space_id) ? data.space_id : (currentSpace?.id || user.id);
+    const res = await entriesService.createEntry(user.id, {
+      ...data,
+      space_id: targetSpaceId,
+    } as CreateEntryInput);
     if (res.error) {
       throw new Error(res.error);
     }
@@ -180,11 +185,11 @@ export function Shell({
   ];
 
   const mainNavItems = navItems.filter((item) =>
-    ['home', 'movements', 'planning', 'reports', 'closing'].includes(item.id)
+    ['home', 'entries', 'movements', 'planning', 'reports', 'closing'].includes(item.id)
   );
 
   const secondaryNavItems = navItems.filter(
-    (item) => !['home', 'movements', 'planning', 'reports', 'closing'].includes(item.id)
+    (item) => !['home', 'entries', 'movements', 'planning', 'reports', 'closing'].includes(item.id)
   );
 
   const isSecondaryActive = secondaryNavItems.some((item) => item.id === currentTab);
@@ -426,8 +431,21 @@ export function Shell({
             })}
           </div>
 
-          {/* 3 Pontinhos no canto para selecionar mais opções */}
-          <div className="relative shrink-0 ml-auto">
+          {/* Actions & More options */}
+          <div className="flex items-center gap-2 shrink-0 ml-auto">
+            {/* Quick Add Entry Button */}
+            <button
+              type="button"
+              id="nav-add-entry-btn"
+              onClick={() => setPoupagaioModal('entries')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-[#16A66A]/15 text-[#02402E] dark:bg-[#16A66A]/25 dark:text-[#78D9A6] hover:bg-[#16A66A] hover:text-white dark:hover:bg-[#16A66A] dark:hover:text-[#101614] transition-all cursor-pointer shadow-2xs active:scale-95 shrink-0"
+              title="Adicionar nova receita / entrada"
+            >
+              <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+              <span>+ Entrada</span>
+            </button>
+
+            {/* 3 Pontinhos no canto para selecionar mais opções */}
             <button
               type="button"
               id="nav-more-options-btn"
@@ -677,13 +695,13 @@ export function Shell({
       />
 
       {/* POUPAGAIO DIRECT CREATION MODALS */}
-      {currentSpace?.id && (
+      {(currentSpace?.id || user?.id) && (
         <>
           <EntryModal
             isOpen={poupagaioModal === 'entries'}
             onClose={() => setPoupagaioModal(null)}
             onSave={handleSaveEntryPoupagaio}
-            spaceId={currentSpace.id}
+            spaceId={currentSpace?.id || user?.id || ''}
             selectedYear={selectedYear}
             selectedMonth={selectedMonth}
           />
@@ -692,7 +710,7 @@ export function Shell({
             isOpen={poupagaioModal === 'variable_expenses'}
             onClose={() => setPoupagaioModal(null)}
             onSave={handleSaveVariableExpensePoupagaio}
-            spaceId={currentSpace.id}
+            spaceId={currentSpace?.id || user?.id || ''}
             selectedYear={selectedYear}
             selectedMonth={selectedMonth}
           />
@@ -701,7 +719,7 @@ export function Shell({
             isOpen={poupagaioModal === 'fixed_expenses'}
             onClose={() => setPoupagaioModal(null)}
             onSave={handleSaveFixedExpensePoupagaio}
-            spaceId={currentSpace.id}
+            spaceId={currentSpace?.id || user?.id || ''}
             selectedYear={selectedYear}
             selectedMonth={selectedMonth}
           />
@@ -710,7 +728,7 @@ export function Shell({
             isOpen={poupagaioModal === 'installments'}
             onClose={() => setPoupagaioModal(null)}
             onSave={handleSaveInstallmentPoupagaio}
-            spaceId={currentSpace.id}
+            spaceId={currentSpace?.id || user?.id || ''}
             selectedYear={selectedYear}
             selectedMonth={selectedMonth}
           />
