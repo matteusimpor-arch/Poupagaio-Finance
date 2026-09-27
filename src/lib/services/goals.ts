@@ -10,6 +10,8 @@ import {
 } from '../../types';
 import { isTableMissingError } from './profile';
 
+import { reservesService } from './reserves';
+
 export const emptyGoalsSummary: GoalsSummary = {
   totalTarget: 0,
   totalAccumulated: 0,
@@ -132,17 +134,36 @@ export const goalsService = {
         updated_at: g.updated_at,
       }));
 
-      const rawContributions: GoalContribution[] = (contributionsData || []).map((c: any) => ({
-        id: c.id,
-        goal_id: c.goal_id,
-        space_id: c.space_id,
-        created_by: c.created_by,
-        amount: Number(c.amount) || 0,
-        contribution_date: c.contribution_date,
-        notes: c.notes || null,
-        created_at: c.created_at,
-        updated_at: c.updated_at,
-      }));
+      const rawContributions: GoalContribution[] = (contributionsData || []).map((c: any) => {
+        let originType: 'free_balance' | 'reserve' = c.origin_type || 'free_balance';
+        let reserveId: string | null = c.reserve_id || null;
+        let reserveName: string | null = c.reserve_name || null;
+
+        if (c.notes && c.notes.includes('[Origem: Reserva')) {
+          originType = 'reserve';
+          const match = c.notes.match(/\[Origem:\s*Reserva\s*-\s*([^\]]+)\]/);
+          if (match && match[1]) {
+            reserveName = match[1].trim();
+          }
+        } else if (c.notes && c.notes.includes('[Origem: Saldo Livre]')) {
+          originType = 'free_balance';
+        }
+
+        return {
+          id: c.id,
+          goal_id: c.goal_id,
+          space_id: c.space_id,
+          created_by: c.created_by,
+          amount: Number(c.amount) || 0,
+          contribution_date: c.contribution_date,
+          origin_type: originType,
+          reserve_id: reserveId,
+          reserve_name: reserveName,
+          notes: c.notes || null,
+          created_at: c.created_at,
+          updated_at: c.updated_at,
+        };
+      });
 
       // Agrupa aportes por goal_id
       const contributionsByGoal = new Map<string, GoalContribution[]>();
@@ -402,6 +423,7 @@ export const goalsService = {
 
   /**
    * Registra um aporte financeiro em uma meta.
+   * Suporta origem do dinheiro (Saldo Livre ou Reserva/Caixinha).
    * O valor acumulado da meta é derivado pela soma de todos os aportes.
    */
   async addContribution(
@@ -423,26 +445,88 @@ export const goalsService = {
         data: { user },
       } = await supabase.auth.getUser();
 
-      const insertPayload: any = {
+      const originType = input.origin_type || 'free_balance';
+      const reserveId = input.reserve_id || null;
+      const reserveName = input.reserve_name || null;
+
+      // Se a origem for uma reserva específica, debita o valor da reserva via reservesService
+      if (originType === 'reserve' && reserveId) {
+        const withdrawRes = await reservesService.withdrawMoney(user?.id || '', {
+          reserve_id: reserveId,
+          space_id: input.space_id,
+          amount: normalizedAmount,
+          date: input.contribution_date,
+          notes: `Aporte em meta financeira`,
+        });
+
+        if (!withdrawRes.reserve && withdrawRes.error) {
+          return { success: false, error: withdrawRes.error };
+        }
+      }
+
+      // Constrói tag de origem amigável no notes para compatibilidade total
+      const originTag = originType === 'reserve'
+        ? `[Origem: Reserva - ${reserveName || 'Caixinha'}]`
+        : `[Origem: Saldo Livre]`;
+      const userNotes = input.notes?.trim() || '';
+      const finalNotes = userNotes ? `${originTag} ${userNotes}` : originTag;
+
+      const basePayload: any = {
         goal_id: input.goal_id,
         space_id: input.space_id,
         created_by: user?.id || null,
         amount: normalizedAmount,
         contribution_date: input.contribution_date,
-        notes: input.notes?.trim() || null,
+        notes: finalNotes,
+      };
+
+      // Tenta inserir com as colunas estruturadas caso existam no schema
+      let insertedData: any = null;
+      const fullPayload = {
+        ...basePayload,
+        origin_type: originType,
+        reserve_id: reserveId,
+        reserve_name: reserveName,
       };
 
       const { data, error } = await supabase
         .from('goal_contributions')
-        .insert([insertPayload])
+        .insert([fullPayload])
         .select()
         .single();
 
-      if (error) {
-        return { success: false, error: error.message || 'Erro ao registrar aporte.' };
+      if (!error && data) {
+        insertedData = data;
+      } else {
+        // Fallback para inserir apenas payload base se as colunas origin_* não existirem no Supabase
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('goal_contributions')
+          .insert([basePayload])
+          .select()
+          .single();
+
+        if (fallbackError) {
+          return { success: false, error: fallbackError.message || 'Erro ao registrar aporte.' };
+        }
+        insertedData = fallbackData;
       }
 
-      return { success: true, contribution: data as GoalContribution };
+      const contribution: GoalContribution = {
+        id: insertedData.id,
+        goal_id: insertedData.goal_id,
+        space_id: insertedData.space_id,
+        created_by: insertedData.created_by,
+        amount: Number(insertedData.amount) || normalizedAmount,
+        contribution_date: insertedData.contribution_date,
+        origin_type: originType,
+        reserve_id: reserveId,
+        reserve_name: reserveName,
+        notes: insertedData.notes || finalNotes,
+        created_at: insertedData.created_at,
+        updated_at: insertedData.updated_at,
+      };
+
+      return { success: true, contribution };
     } catch (err: any) {
       return { success: false, error: err.message || 'Falha ao processar aporte.' };
     }
@@ -450,6 +534,7 @@ export const goalsService = {
 
   /**
    * Remove/estorna um aporte registrado.
+   * Caso o aporte tenha vindo de uma Reserva, devolve o saldo para a reserva de origem.
    * O acumulado da meta é recalculado automaticamente pela soma dos aportes restantes.
    */
   async deleteContribution(
@@ -459,6 +544,34 @@ export const goalsService = {
     if (!supabase) return { success: false, error: 'Supabase não inicializado.' };
 
     try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      // Busca dados do aporte antes da exclusão para estornar para a reserva se aplicável
+      const { data: contribData } = await supabase
+        .from('goal_contributions')
+        .select('*')
+        .eq('id', contributionId)
+        .eq('space_id', spaceId)
+        .maybeSingle();
+
+      if (contribData) {
+        const isReserve =
+          contribData.origin_type === 'reserve' ||
+          (contribData.notes && contribData.notes.includes('[Origem: Reserva'));
+        
+        if (isReserve && contribData.reserve_id) {
+          await reservesService.addMoney(user?.id || '', {
+            reserve_id: contribData.reserve_id,
+            space_id: spaceId,
+            amount: Number(contribData.amount) || 0,
+            date: new Date().toISOString().split('T')[0],
+            notes: 'Estorno de aporte de meta devolvido para a reserva',
+          });
+        }
+      }
+
       const { error } = await supabase
         .from('goal_contributions')
         .delete()
@@ -496,7 +609,38 @@ export const goalsService = {
         return { contributions: [], error: error.message || 'Erro ao carregar aportes.' };
       }
 
-      return { contributions: (data || []) as GoalContribution[] };
+      const list: GoalContribution[] = (data || []).map((c: any) => {
+        let originType: 'free_balance' | 'reserve' = c.origin_type || 'free_balance';
+        let reserveId: string | null = c.reserve_id || null;
+        let reserveName: string | null = c.reserve_name || null;
+
+        if (c.notes && c.notes.includes('[Origem: Reserva')) {
+          originType = 'reserve';
+          const match = c.notes.match(/\[Origem:\s*Reserva\s*-\s*([^\]]+)\]/);
+          if (match && match[1]) {
+            reserveName = match[1].trim();
+          }
+        } else if (c.notes && c.notes.includes('[Origem: Saldo Livre]')) {
+          originType = 'free_balance';
+        }
+
+        return {
+          id: c.id,
+          goal_id: c.goal_id,
+          space_id: c.space_id,
+          created_by: c.created_by,
+          amount: Number(c.amount) || 0,
+          contribution_date: c.contribution_date,
+          origin_type: originType,
+          reserve_id: reserveId,
+          reserve_name: reserveName,
+          notes: c.notes || null,
+          created_at: c.created_at,
+          updated_at: c.updated_at,
+        };
+      });
+
+      return { contributions: list };
     } catch (err: any) {
       return { contributions: [], error: err.message || 'Falha ao buscar aportes.' };
     }

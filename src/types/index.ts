@@ -337,6 +337,9 @@ export interface GoalContribution {
   created_by?: string | null;
   amount: number;
   contribution_date: string; // YYYY-MM-DD
+  origin_type?: 'free_balance' | 'reserve';
+  reserve_id?: string | null;
+  reserve_name?: string | null;
   notes?: string | null;
   created_at: string;
   updated_at: string;
@@ -386,6 +389,9 @@ export interface CreateGoalContributionInput {
   space_id: string;
   amount: number;
   contribution_date: string; // YYYY-MM-DD
+  origin_type?: 'free_balance' | 'reserve';
+  reserve_id?: string | null;
+  reserve_name?: string | null;
   notes?: string | null;
 }
 
@@ -636,9 +642,10 @@ export interface ExpensePaymentSource {
 export interface ReservesSummary {
   totalBalance: number;              // Saldo Total do usuário (Entradas - Despesas Pagas)
   totalReserved: number;             // Total acumulado disponível nas reservas
-  freeBalance: number;               // Saldo Livre = Saldo Total - Total Reservado
+  freeBalance: number;               // Saldo Livre = Saldo Total - Total Reservado - Total Aportado em Metas
   totalAllocated: number;            // Total inicialmente alocado nas reservas da competência
   totalSpentFromReserves: number;    // Total gasto a partir das reservas
+  totalGoalsAllocated?: number;      // Total aportado em metas a partir do Saldo Livre
   count: number;
 }
 

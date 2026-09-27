@@ -158,6 +158,10 @@ export function GoalHistoryModal({
                 {contributions.map((c) => {
                   const isConfirming = confirmDeleteId === c.id;
                   const isBusy = deletingId === c.id;
+                  const isReserve =
+                    c.origin_type === 'reserve' ||
+                    (c.notes && c.notes.includes('[Origem: Reserva'));
+                  const cleanNotes = c.notes ? c.notes.replace(/\[Origem:[^\]]+\]\s*/, '').trim() : '';
 
                   return (
                     <div
@@ -165,7 +169,7 @@ export function GoalHistoryModal({
                       className="p-3 bg-white dark:bg-[#1E2220] hover:bg-[#F9FAF9] dark:hover:bg-[#232725] transition-colors flex items-center justify-between gap-3"
                     >
                       <div className="space-y-1 min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-sm font-bold text-[#075C45] dark:text-[#78D9A6]">
                             +{formatCurrency(c.amount)}
                           </span>
@@ -173,10 +177,21 @@ export function GoalHistoryModal({
                             <Calendar className="w-3 h-3 text-[#5E6963]/70" />
                             {formatDateBR(c.contribution_date)}
                           </span>
+
+                          {/* Badge de Origem do Dinheiro */}
+                          {isReserve ? (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                              🏛️ {c.reserve_name || 'Reserva'}
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                              💰 Saldo Livre
+                            </span>
+                          )}
                         </div>
-                        {c.notes && (
+                        {cleanNotes && (
                           <p className="text-xs text-[#5E6963] dark:text-[#95A39B] truncate">
-                            {c.notes}
+                            {cleanNotes}
                           </p>
                         )}
                       </div>
@@ -186,7 +201,7 @@ export function GoalHistoryModal({
                         {isConfirming ? (
                           <div className="flex items-center gap-1.5 animate-in fade-in duration-150">
                             <span className="text-[11px] text-rose-600 dark:text-rose-400 font-medium">
-                              Estornar?
+                              {isReserve ? 'Devolver à reserva?' : 'Estornar?'}
                             </span>
                             <button
                               type="button"
