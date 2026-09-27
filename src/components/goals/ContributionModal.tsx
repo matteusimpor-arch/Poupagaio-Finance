@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { GoalWithProgress, CreateGoalContributionInput, Reserve } from '../../types';
+import { GoalWithProgress, CreateGoalContributionInput } from '../../types';
 import { formatCurrency } from '../../lib/formatters';
-import { reservesService } from '../../lib/services/reserves';
 import { Button } from '../ui/button';
-import { X, PlusCircle, AlertCircle, Calendar, FileText, CheckCircle2, Wallet, PiggyBank } from 'lucide-react';
+import { X, PlusCircle, AlertCircle, Calendar, FileText, CheckCircle2 } from 'lucide-react';
 
 interface ContributionModalProps {
   isOpen: boolean;
@@ -23,40 +22,17 @@ export function ContributionModal({
   const [amount, setAmount] = useState('');
   const [contributionDate, setContributionDate] = useState('');
   const [notes, setNotes] = useState('');
-  const [sourceType, setSourceType] = useState<'free_balance' | 'reserve'>('free_balance');
-  const [selectedReserveId, setSelectedReserveId] = useState<string>('');
-  const [reserves, setReserves] = useState<Reserve[]>([]);
-  const [freeBalance, setFreeBalance] = useState<number>(0);
-  const [isLoadingData, setIsLoadingData] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // Inicializa a data atual no formato YYYY-MM-DD
   useEffect(() => {
-    if (isOpen && goal) {
+    if (isOpen) {
       const today = new Date().toISOString().split('T')[0];
       setContributionDate(today);
       setAmount('');
       setNotes('');
-      setSourceType('free_balance');
-      setSelectedReserveId('');
       setErrorMessage(null);
-
-      // Carregar reservas e saldo livre do mês/espaço
-      const loadReservesAndBalance = async () => {
-        setIsLoadingData(true);
-        try {
-          const [year, month] = today.split('-').map(Number);
-          const res = await reservesService.getReservesWithSummary(goal.space_id, year, month);
-          setReserves(res.reserves || []);
-          setFreeBalance(res.summary.freeBalance || 0);
-        } catch (err) {
-          console.warn('Erro ao carregar reservas para aporte:', err);
-        } finally {
-          setIsLoadingData(false);
-        }
-      };
-
-      loadReservesAndBalance();
     }
   }, [isOpen, goal]);
 
@@ -77,41 +53,14 @@ export function ContributionModal({
       return;
     }
 
-    // Validação de saldo insuficiente
-    if (sourceType === 'free_balance') {
-      if (numericAmount > freeBalance) {
-        setErrorMessage(`Saldo livre insuficiente. Disponível: ${formatCurrency(freeBalance)}`);
-        return;
-      }
-    } else if (sourceType === 'reserve') {
-      if (!selectedReserveId) {
-        setErrorMessage('Selecione uma reserva ou caixinha de origem.');
-        return;
-      }
-      const selectedRes = reserves.find((r) => r.id === selectedReserveId);
-      if (!selectedRes) {
-        setErrorMessage('Reserva selecionada não encontrada.');
-        return;
-      }
-      const availableReserveBal = Number(selectedRes.current_balance) || 0;
-      if (numericAmount > availableReserveBal) {
-        setErrorMessage(`Saldo insuficiente nesta reserva. Disponível: ${formatCurrency(availableReserveBal)}`);
-        return;
-      }
-    }
-
     setIsSubmitting(true);
 
     try {
-      const selectedRes = sourceType === 'reserve' ? reserves.find((r) => r.id === selectedReserveId) : null;
       const payload: CreateGoalContributionInput = {
         goal_id: goal.id,
         space_id: goal.space_id,
         amount: numericAmount,
         contribution_date: contributionDate,
-        source_type: sourceType,
-        source_id: sourceType === 'reserve' ? selectedReserveId : null,
-        source_name: sourceType === 'reserve' ? (selectedRes?.name || 'Reserva') : 'Saldo Livre',
         notes: notes.trim() ? notes.trim() : null,
       };
 
@@ -175,6 +124,12 @@ export function ContributionModal({
                 {formatCurrency(goal.accumulatedAmount)} / {formatCurrency(goal.target_amount)}
               </span>
             </div>
+            <div className="flex justify-between items-center pt-1 border-t border-[#E2E8E4]/60 dark:border-[#2E3532]/60">
+              <span className="text-[#5E6963] dark:text-[#95A39B]">Falta alcançar</span>
+              <span className="font-medium text-[#202724] dark:text-[#F4F4F5]">
+                {remainingBefore > 0 ? formatCurrency(remainingBefore) : 'Meta atingida! 🎉'}
+              </span>
+            </div>
           </div>
 
           {errorMessage && (
@@ -216,92 +171,6 @@ export function ContributionModal({
             </div>
           </div>
 
-          {/* Origem do Dinheiro */}
-          <div className="space-y-2">
-            <label className="text-xs font-semibold text-[#202724] dark:text-[#F4F4F5] block">
-              Origem do dinheiro <span className="text-rose-500">*</span>
-            </label>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => setSourceType('free_balance')}
-                className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col gap-1 ${
-                  sourceType === 'free_balance'
-                    ? 'border-[#16A66A] bg-[#16A66A]/5 dark:bg-[#16A66A]/10 text-[#075C45] dark:text-[#78D9A6]'
-                    : 'border-[#E2E8E4] dark:border-[#2E3532] bg-white dark:bg-[#232725] text-[#5E6963] dark:text-[#95A39B]'
-                }`}
-              >
-                <div className="flex items-center gap-1.5 font-bold text-xs">
-                  <Wallet className="w-3.5 h-3.5" />
-                  <span>Saldo Livre</span>
-                </div>
-                <span className="text-[11px] opacity-80">
-                  Disponível: {formatCurrency(freeBalance)}
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setSourceType('reserve')}
-                className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col gap-1 ${
-                  sourceType === 'reserve'
-                    ? 'border-[#16A66A] bg-[#16A66A]/5 dark:bg-[#16A66A]/10 text-[#075C45] dark:text-[#78D9A6]'
-                    : 'border-[#E2E8E4] dark:border-[#2E3532] bg-white dark:bg-[#232725] text-[#5E6963] dark:text-[#95A39B]'
-                }`}
-              >
-                <div className="flex items-center gap-1.5 font-bold text-xs">
-                  <PiggyBank className="w-3.5 h-3.5" />
-                  <span>Reserva / Caixinha</span>
-                </div>
-                <span className="text-[11px] opacity-80">
-                  {reserves.length} {reserves.length === 1 ? 'reserva real' : 'reservas reais'}
-                </span>
-              </button>
-            </div>
-
-            {/* Seleção de Reserva Específica */}
-            {sourceType === 'reserve' && (
-              <div className="space-y-2 pt-1 animate-in fade-in duration-150">
-                <span className="text-[11px] font-semibold text-[#5E6963] dark:text-[#95A39B] block">
-                  Selecione a Reserva de Origem:
-                </span>
-                {isLoadingData ? (
-                  <p className="text-xs text-[#5E6963] py-2">Carregando reservas...</p>
-                ) : reserves.length === 0 ? (
-                  <p className="text-xs text-amber-600 dark:text-amber-400 p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50">
-                    Nenhuma reserva/caixinha encontrada neste mês. Cadastre uma reserva antes de usá-la como origem.
-                  </p>
-                ) : (
-                  <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
-                    {reserves.map((res) => {
-                      const isSelected = selectedReserveId === res.id;
-                      const resBal = Number(res.current_balance) || 0;
-                      return (
-                        <div
-                          key={res.id}
-                          onClick={() => setSelectedReserveId(res.id)}
-                          className={`p-2.5 rounded-xl border flex items-center justify-between cursor-pointer transition-colors ${
-                            isSelected
-                              ? 'border-[#16A66A] bg-[#16A66A]/10 text-[#075C45] dark:text-[#78D9A6]'
-                              : 'border-[#E2E8E4] dark:border-[#2E3532] bg-white dark:bg-[#232725] hover:bg-black/5 dark:hover:bg-white/5 text-[#202724] dark:text-[#F4F4F5]'
-                          }`}
-                        >
-                          <div className="flex items-center gap-2">
-                            <span className="text-base">{res.icon || '💰'}</span>
-                            <span className="text-xs font-semibold">{res.name}</span>
-                          </div>
-                          <span className="text-xs font-bold">
-                            Disponível: {formatCurrency(resBal)}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
           {/* Data do Aporte */}
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-[#202724] dark:text-[#F4F4F5] flex items-center gap-1">
@@ -321,13 +190,13 @@ export function ContributionModal({
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-[#202724] dark:text-[#F4F4F5] flex items-center gap-1">
               <FileText className="w-3.5 h-3.5 text-[#5E6963]" />
-              <span>Observação (opcional)</span>
+              <span>Observação / Origem (opcional)</span>
             </label>
             <input
               type="text"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Ex: Reserva extra, bônus..."
+              placeholder="Ex: Sobra do mês, 13º salário, Rendimento..."
               className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-[#E2E8E4] dark:border-[#2E3532] bg-white dark:bg-[#232725] text-[#202724] dark:text-[#F4F4F5] placeholder:text-[#5E6963]/50 focus:outline-hidden focus:ring-2 focus:ring-[#16A66A]/40"
             />
           </div>
@@ -335,7 +204,7 @@ export function ContributionModal({
           {/* Dica */}
           <div className="flex items-center gap-2 p-2.5 rounded-xl bg-[#16A66A]/10 text-[#075C45] dark:text-[#78D9A6] text-xs">
             <CheckCircle2 className="w-4 h-4 shrink-0" />
-            <span>O aporte movimenta o saldo existente sem registrar nova receita.</span>
+            <span>O progresso da meta e o saldo acumulado serão atualizados instantaneamente.</span>
           </div>
 
           {/* Footer Actions */}

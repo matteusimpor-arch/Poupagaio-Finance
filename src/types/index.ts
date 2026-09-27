@@ -334,9 +334,6 @@ export interface GoalContribution {
   created_by?: string | null;
   amount: number;
   contribution_date: string; // YYYY-MM-DD
-  source_type?: 'free_balance' | 'reserve';
-  source_id?: string | null;
-  source_name?: string | null;
   notes?: string | null;
   created_at: string;
   updated_at: string;
@@ -386,9 +383,6 @@ export interface CreateGoalContributionInput {
   space_id: string;
   amount: number;
   contribution_date: string; // YYYY-MM-DD
-  source_type?: 'free_balance' | 'reserve';
-  source_id?: string | null;
-  source_name?: string | null;
   notes?: string | null;
 }
 

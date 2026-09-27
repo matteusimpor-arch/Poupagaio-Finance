@@ -51,9 +51,6 @@ export const entriesService = {
     }
 
     try {
-      // Processa baixas automáticas pendentes no servidor para este espaço se a RPC estiver disponível
-      await this.processSpaceAutoReceive(spaceId).catch(() => {});
-
       const { startDate, endDate } = getMonthDateRange(year, month);
 
       const { data, error } = await supabase
@@ -151,7 +148,7 @@ export const entriesService = {
 
     try {
       const now = new Date().toISOString();
-      const payload: Record<string, any> = {
+      const payload = {
         space_id: input.space_id,
         created_by: userId || null,
         description: desc,
@@ -160,24 +157,15 @@ export const entriesService = {
         category: input.category?.trim() || 'Outros',
         status: input.status || 'pending',
         notes: input.notes?.trim() || null,
-        auto_receive: Boolean(input.auto_receive),
         created_at: now,
         updated_at: now,
       };
 
-      let { data, error } = await supabase
+      const { data, error } = await supabase
         .from('entries')
         .insert(payload)
         .select('*')
         .single();
-
-      if (error && (error.code === '42703' || error.message?.includes('auto_receive'))) {
-        console.warn('Aviso: coluna auto_receive pendente de migração no Supabase. Inserindo sem este campo.');
-        delete payload.auto_receive;
-        const retry = await supabase.from('entries').insert(payload).select('*').single();
-        data = retry.data;
-        error = retry.error;
-      }
 
       if (error) {
         if (isTableMissingError(error)) {
@@ -243,30 +231,13 @@ export const entriesService = {
       updatePayload.notes = input.notes?.trim() || null;
     }
 
-    if (input.auto_receive !== undefined) {
-      updatePayload.auto_receive = Boolean(input.auto_receive);
-    }
-
     try {
-      let { data, error } = await supabase
+      const { data, error } = await supabase
         .from('entries')
         .update(updatePayload)
         .eq('id', entryId)
         .select('*')
         .single();
-
-      if (error && (error.code === '42703' || error.message?.includes('auto_receive'))) {
-        console.warn('Aviso: coluna auto_receive pendente de migração no Supabase. Atualizando sem este campo.');
-        delete updatePayload.auto_receive;
-        const retry = await supabase
-          .from('entries')
-          .update(updatePayload)
-          .eq('id', entryId)
-          .select('*')
-          .single();
-        data = retry.data;
-        error = retry.error;
-      }
 
       if (error) {
         console.warn('Erro ao atualizar entrada:', error.message || error);
@@ -282,38 +253,13 @@ export const entriesService = {
 
   /**
    * Alterna o status da entrada entre 'pending' e 'received'
-   * Se disableAutoReceive for true, desativa o auto_receive para não reprocessar entradas vencidas
    */
   async toggleStatus(
     entryId: string,
-    currentStatus: EntryStatus,
-    disableAutoReceive: boolean = false
+    currentStatus: EntryStatus
   ): Promise<{ entry: Entry | null; error?: string }> {
     const nextStatus: EntryStatus = currentStatus === 'received' ? 'pending' : 'received';
-    const payload: UpdateEntryInput = { status: nextStatus };
-    if (nextStatus === 'pending' && disableAutoReceive) {
-      payload.auto_receive = false;
-    }
-    return this.updateEntry(entryId, payload);
-  },
-
-  /**
-   * Executa a RPC server-side autoritativa para dar baixa automática nas entradas do espaço cuja data chegou
-   */
-  async processSpaceAutoReceive(spaceId: string): Promise<number> {
-    if (!supabase || !spaceId) return 0;
-    try {
-      const { data, error } = await supabase.rpc('fn_process_space_auto_receive_entries', {
-        p_space_id: spaceId,
-      });
-      if (error) {
-        // Silencioso se RPC ainda não foi instalada no Supabase
-        return 0;
-      }
-      return Number(data) || 0;
-    } catch {
-      return 0;
-    }
+    return this.updateEntry(entryId, { status: nextStatus });
   },
 
   /**

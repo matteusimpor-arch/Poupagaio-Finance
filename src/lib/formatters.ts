@@ -15,33 +15,6 @@ export function formatCurrency(value: number | undefined | null): string {
 }
 
 /**
- * Formatação amigável e compacta para labels internos de gráficos
- * Exemplos:
- * 862.85 -> R$ 863
- * 1298.79 -> R$ 1,3k
- * 2301.15 -> R$ 2,3k
- * 7600 -> R$ 7,6k
- * Nunca exibe floating point bruto
- */
-export function formatCompactCurrency(value: number | undefined | null): string {
-  if (value === undefined || value === null || isNaN(value)) {
-    return 'R$ 0';
-  }
-  const rounded = Math.round(value * 100) / 100;
-  const abs = Math.abs(rounded);
-  const sign = rounded < 0 ? '-' : '';
-
-  if (abs >= 1000) {
-    const kVal = (abs / 1000).toLocaleString('pt-BR', {
-      minimumFractionDigits: 1,
-      maximumFractionDigits: 1,
-    });
-    return `${sign}R$ ${kVal}k`;
-  }
-  return `${sign}R$ ${Math.round(abs).toLocaleString('pt-BR')}`;
-}
-
-/**
  * Converte string digitada para valor numérico positivo.
  * Suporta formatos: "1500,50", "1.500,50", "1500.50", "R$ 1.500,50"
  */

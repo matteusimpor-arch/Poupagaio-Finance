@@ -9,7 +9,6 @@ import {
   CreateGoalContributionInput,
 } from '../../types';
 import { isTableMissingError } from './profile';
-import { reservesService } from './reserves';
 
 export const emptyGoalsSummary: GoalsSummary = {
   totalTarget: 0,
@@ -405,9 +404,8 @@ export const goalsService = {
    * Registra um aporte financeiro em uma meta.
    * O valor acumulado da meta é derivado pela soma de todos os aportes.
    */
-   async addContribution(
-    input: CreateGoalContributionInput,
-    operationId: string = crypto.randomUUID()
+  async addContribution(
+    input: CreateGoalContributionInput
   ): Promise<{ success: boolean; contribution?: GoalContribution; error?: string }> {
     if (!supabase) return { success: false, error: 'Supabase não inicializado.' };
 
@@ -425,59 +423,20 @@ export const goalsService = {
         data: { user },
       } = await supabase.auth.getUser();
 
-      // Se origem for reserva, debitar a reserva de forma atômica
-      if (input.source_type === 'reserve' && input.source_id) {
-        const withdrawRes = await reservesService.withdrawMoney(
-          user?.id || '',
-          {
-            reserve_id: input.source_id,
-            space_id: input.space_id,
-            amount: normalizedAmount,
-            date: input.contribution_date,
-            notes: `Aporte na Meta`,
-          },
-          operationId
-        );
-        if (withdrawRes.error) {
-          return { success: false, error: withdrawRes.error };
-        }
-      }
-
       const insertPayload: any = {
         goal_id: input.goal_id,
         space_id: input.space_id,
         created_by: user?.id || null,
         amount: normalizedAmount,
         contribution_date: input.contribution_date,
-        source_type: input.source_type || 'free_balance',
-        source_id: input.source_id || null,
-        source_name: input.source_name || 'Saldo Livre',
         notes: input.notes?.trim() || null,
       };
 
-      let { data, error } = await supabase
+      const { data, error } = await supabase
         .from('goal_contributions')
         .insert([insertPayload])
         .select()
         .single();
-
-      if (error && error.message && (error.message.includes('column') || error.message.includes('source_type'))) {
-        const fallbackPayload = {
-          goal_id: input.goal_id,
-          space_id: input.space_id,
-          created_by: user?.id || null,
-          amount: normalizedAmount,
-          contribution_date: input.contribution_date,
-          notes: [input.notes?.trim(), `Origem: ${input.source_name || 'Saldo Livre'}`].filter(Boolean).join(' - '),
-        };
-        const res2 = await supabase
-          .from('goal_contributions')
-          .insert([fallbackPayload])
-          .select()
-          .single();
-        data = res2.data;
-        error = res2.error;
-      }
 
       if (error) {
         return { success: false, error: error.message || 'Erro ao registrar aporte.' };
