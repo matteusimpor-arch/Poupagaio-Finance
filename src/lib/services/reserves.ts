@@ -134,32 +134,8 @@ export const reservesService = {
         totalSpentFromReserves += Math.max(0, alloc - currentBal);
       }
 
-      // 2. Busca aportes em metas no ciclo para deduzir do Saldo Livre caso a origem seja Saldo Livre
-      let totalGoalsFromFreeBalance = 0;
-      if (supabase) {
-        try {
-          const { data: contribs, error: contribsError } = await supabase
-            .from('goal_contributions')
-            .select('amount, origin_type, notes, contribution_date')
-            .eq('space_id', spaceId)
-            .gte('contribution_date', `${billingCycle}-01`)
-            .lte('contribution_date', `${billingCycle}-31`);
-
-          if (!contribsError && contribs) {
-            for (const c of contribs) {
-              const isReserve = c.origin_type === 'reserve' || (c.notes && c.notes.includes('[Origem: Reserva'));
-              if (!isReserve) {
-                totalGoalsFromFreeBalance += Number(c.amount) || 0;
-              }
-            }
-          }
-        } catch {
-          // fallback silencioso se tabela de metas não existir
-        }
-      }
-
-      // Saldo Livre oficial = Saldo Total - Total Reservado - Total Aportado em Metas via Saldo Livre
-      const freeBalance = Math.max(0, totalBalance - totalReserved - totalGoalsFromFreeBalance);
+      // Saldo Livre oficial = Saldo Total - Total Reservado
+      const freeBalance = Math.max(0, totalBalance - totalReserved);
 
       return {
         reserves,
@@ -169,7 +145,6 @@ export const reservesService = {
           freeBalance,
           totalAllocated,
           totalSpentFromReserves,
-          totalGoalsAllocated: totalGoalsFromFreeBalance,
           count: reserves.length,
         },
         isTableMissing,

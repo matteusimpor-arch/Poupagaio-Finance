@@ -44,14 +44,12 @@ export function EntryModal({
   const [category, setCategory] = useState('Salário');
   const [customCategory, setCustomCategory] = useState('');
   const [status, setStatus] = useState<EntryStatus>('received');
-  const [autoReceive, setAutoReceive] = useState(false);
   const [notes, setNotes] = useState('');
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [showUndoAutoReceiveModal, setShowUndoAutoReceiveModal] = useState(false);
   const [generalError, setGeneralError] = useState<string | null>(null);
 
   const isEditing = Boolean(editingEntry);
@@ -70,7 +68,6 @@ export function EntryModal({
         setCustomCategory(editingEntry.category);
       }
       setStatus(editingEntry.status);
-      setAutoReceive(Boolean(editingEntry.auto_receive));
       setNotes(editingEntry.notes || '');
     } else {
       setDescription('');
@@ -79,13 +76,11 @@ export function EntryModal({
       setCategory('Salário');
       setCustomCategory('');
       setStatus('received');
-      setAutoReceive(false);
       setNotes('');
     }
     setErrors({});
     setGeneralError(null);
     setShowDeleteConfirm(false);
-    setShowUndoAutoReceiveModal(false);
     setIsDeleting(false);
   }, [editingEntry, isOpen, selectedYear, selectedMonth]);
 
@@ -158,7 +153,6 @@ export function EntryModal({
           category: finalCategory,
           status,
           notes: notes.trim() || null,
-          auto_receive: status === 'pending' ? autoReceive : false,
         };
         const success = await onSave(payload);
         if (success) {
@@ -173,7 +167,6 @@ export function EntryModal({
           category: finalCategory,
           status,
           notes: notes.trim() || null,
-          auto_receive: status === 'pending' ? autoReceive : false,
         };
         const success = await onSave(payload);
         if (success) {
@@ -185,26 +178,6 @@ export function EntryModal({
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const handleSelectPending = () => {
-    // Se estiver editando uma entrada que estava como 'received' e tinha auto_receive=true e a data já passou ou é hoje:
-    if (
-      isEditing &&
-      editingEntry?.status === 'received' &&
-      editingEntry?.auto_receive &&
-      date <= getISODateToday()
-    ) {
-      setShowUndoAutoReceiveModal(true);
-      return;
-    }
-    setStatus('pending');
-  };
-
-  const handleConfirmUndoAutoReceive = () => {
-    setStatus('pending');
-    setAutoReceive(false);
-    setShowUndoAutoReceiveModal(false);
   };
 
   const handleDeleteConfirm = async () => {
@@ -267,45 +240,6 @@ export function EntryModal({
                 className="px-3 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold cursor-pointer text-xs transition-colors flex items-center justify-center min-w-[70px] disabled:opacity-50"
               >
                 {isDeleting ? 'Excluindo...' : 'Excluir'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showUndoAutoReceiveModal && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-[10000] animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-[#1C211E] border border-[#D2DDD6] dark:border-[#28322C] rounded-3xl p-5 max-w-sm w-full space-y-4 shadow-xl">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-950/50 flex items-center justify-center text-amber-600 shrink-0">
-                <AlertCircle className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-[#02402E] dark:text-[#78D9A6]">
-                  Desfazer baixa automática?
-                </h3>
-                <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B] mt-1 leading-relaxed">
-                  Esta entrada possui baixa automática. Deseja desativar a baixa automática e retornar para &quot;A receber&quot;?
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-2 pt-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setShowUndoAutoReceiveModal(false)}
-                className="cursor-pointer text-xs"
-              >
-                Cancelar
-              </Button>
-              <button
-                type="button"
-                onClick={handleConfirmUndoAutoReceive}
-                className="px-3 py-2 rounded-xl bg-[#075C45] hover:bg-[#075C45]/90 text-white font-bold cursor-pointer text-xs transition-colors flex items-center justify-center"
-              >
-                Confirmar e Desativar
               </button>
             </div>
           </div>
@@ -488,7 +422,7 @@ export function EntryModal({
               <button
                 type="button"
                 id="status-pending-btn"
-                onClick={handleSelectPending}
+                onClick={() => setStatus('pending')}
                 disabled={isSubmitting}
                 className={`p-3 rounded-2xl border flex items-center justify-center gap-2 text-xs font-bold transition-all cursor-pointer ${
                   status === 'pending'
@@ -501,33 +435,6 @@ export function EntryModal({
               </button>
             </div>
           </div>
-
-          {/* Opção de Baixa Automática (Apenas se status 'A receber') */}
-          {status === 'pending' && (
-            <div className="pt-1 animate-in fade-in duration-150">
-              <label
-                htmlFor="entry-auto-receive-checkbox"
-                className="flex items-start gap-3 p-3.5 rounded-2xl bg-[#F7F4EA]/80 dark:bg-[#1C2320] border border-[#E8E4D5] dark:border-[#28322C] hover:border-[#16A66A]/40 transition-colors cursor-pointer select-none"
-              >
-                <input
-                  id="entry-auto-receive-checkbox"
-                  type="checkbox"
-                  checked={autoReceive}
-                  onChange={(e) => setAutoReceive(e.target.checked)}
-                  disabled={isSubmitting}
-                  className="mt-0.5 w-4 h-4 rounded border-[#D2DDD6] text-[#075C45] focus:ring-[#16A66A] dark:bg-[#222226] dark:border-white/20 cursor-pointer shrink-0"
-                />
-                <div className="space-y-0.5">
-                  <span className="text-xs font-bold text-[#202724] dark:text-[#F7F4EA] block">
-                    Baixa automática na data
-                  </span>
-                  <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B] leading-tight">
-                    Quando ativado, esta entrada será marcada automaticamente como recebida na data informada.
-                  </p>
-                </div>
-              </label>
-            </div>
-          )}
 
           {/* Observação (Opcional) */}
           <div className="space-y-1.5">

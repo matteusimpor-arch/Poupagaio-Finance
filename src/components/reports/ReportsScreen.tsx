@@ -611,14 +611,14 @@ export function ReportsScreen() {
         maxVal = highest;
       }
     }
-    // Adiciona margem de respiro de 20% no topo do gráfico para rótulos diretos
-    maxVal = Math.ceil(maxVal * 1.2);
+    // Adiciona margem de respiro de 15% no topo do gráfico
+    maxVal = Math.ceil(maxVal * 1.15);
 
     const width = 800;
-    const height = 300;
+    const height = 280;
     const paddingLeft = 60;
     const paddingRight = 30;
-    const paddingTop = 30;
+    const paddingTop = 20;
     const paddingBottom = 40;
 
     const chartWidth = width - paddingLeft - paddingRight;
@@ -1167,18 +1167,6 @@ export function ReportsScreen() {
                                 className="transition-all duration-150"
                               />
 
-                              {/* Valor Direto acima da Barra de Receitas */}
-                              {p.data.income > 0 && (
-                                <text
-                                  x={xOffsetIncome + barWidth / 2}
-                                  y={p.yIncome - 4}
-                                  textAnchor="middle"
-                                  className="text-[8px] font-extrabold fill-[#075C45] dark:fill-[#78D9A6] select-none pointer-events-none"
-                                >
-                                  {p.data.income >= 1000 ? `${(p.data.income / 1000).toFixed(1)}k` : `${p.data.income}`}
-                                </text>
-                              )}
-
                               {/* Barra de Despesas (Rose) */}
                               <rect
                                 x={xOffsetExpense}
@@ -1190,18 +1178,6 @@ export function ReportsScreen() {
                                 opacity={isHovered || hoveredTrendIndex === null ? 1 : 0.4}
                                 className="transition-all duration-150"
                               />
-
-                              {/* Valor Direto acima da Barra de Despesas */}
-                              {p.data.expenses > 0 && (
-                                <text
-                                  x={xOffsetExpense + barWidth / 2}
-                                  y={p.yExpense - 4}
-                                  textAnchor="middle"
-                                  className="text-[8px] font-extrabold fill-[#E11D48] dark:fill-[#FB7185] select-none pointer-events-none"
-                                >
-                                  {p.data.expenses >= 1000 ? `${(p.data.expenses / 1000).toFixed(1)}k` : `${p.data.expenses}`}
-                                </text>
-                              )}
 
                               {/* Área/Interação Vertical de Fundo */}
                               <rect
@@ -1260,29 +1236,20 @@ export function ReportsScreen() {
                           className="opacity-90 pointer-events-none"
                         />
 
-                        {/* Pontos sobre a linha de saldo com rótulo direto */}
+                        {/* Pontos sobre a linha de saldo */}
                         {trendChartMetrics.points.map((p, idx) => {
                           const isHovered = hoveredTrendIndex === idx;
                           return (
-                            <g key={`dot-group-${idx}`} className="pointer-events-none">
-                              <circle
-                                cx={p.x}
-                                cy={p.yBalance}
-                                r={isHovered ? 6 : 4}
-                                fill="#3B82F6"
-                                stroke={p.data.isClosed ? '#E2E8E4' : '#F7F4EA'}
-                                strokeWidth="2"
-                                className="transition-all duration-150"
-                              />
-                              <text
-                                x={p.x}
-                                y={p.yBalance - 7}
-                                textAnchor="middle"
-                                className="text-[8px] font-black fill-[#2563EB] dark:fill-[#60A5FA] select-none"
-                              >
-                                {Math.abs(p.data.balance) >= 1000 ? `${(p.data.balance / 1000).toFixed(1)}k` : `${p.data.balance}`}
-                              </text>
-                            </g>
+                            <circle
+                              key={`dot-${idx}`}
+                              cx={p.x}
+                              cy={p.yBalance}
+                              r={isHovered ? 6 : 4}
+                              fill="#3B82F6"
+                              stroke={p.data.isClosed ? '#E2E8E4' : '#F7F4EA'}
+                              strokeWidth="2"
+                              className="pointer-events-none transition-all duration-150"
+                            />
                           );
                         })}
                       </svg>

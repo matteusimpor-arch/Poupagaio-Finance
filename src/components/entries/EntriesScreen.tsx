@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { createPortal } from 'react-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { Entry, EntryStatus, CreateEntryInput, UpdateEntryInput, EntriesSummary } from '../../types';
 import { entriesService } from '../../lib/services/entries';
@@ -8,9 +7,9 @@ import { EntryModal } from './EntryModal';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
 import { Button } from '../ui/button';
 import { Skeleton } from '../ui/skeleton';
-import { SUPABASE_ENTRIES_MIGRATION_SQL } from '../../lib/entries-sql';
-import { formatCurrency, formatDateBR, getMonthYearLabel, getISODateToday } from '../../lib/formatters';
 import { POUPAGAIO_MASCOT_URL } from '../../assets/mascot';
+import { SUPABASE_ENTRIES_MIGRATION_SQL } from '../../lib/entries-sql';
+import { formatCurrency, formatDateBR, getMonthYearLabel } from '../../lib/formatters';
 import {
   Plus,
   ArrowUpRight,
@@ -77,7 +76,6 @@ export function EntriesScreen({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<Entry | null>(null);
   const [entryToDelete, setEntryToDelete] = useState<Entry | null>(null);
-  const [entryToUndoAutoReceive, setEntryToUndoAutoReceive] = useState<Entry | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
   // Estado de cópia do SQL de migração
@@ -173,12 +171,6 @@ export function EntriesScreen({
 
   // Alternar Status rápido
   const handleToggleStatus = async (entry: Entry) => {
-    // Se a entrada está 'received' e possui auto_receive ativado e a data é hoje ou já passou:
-    if (entry.status === 'received' && entry.auto_receive && entry.date <= getISODateToday()) {
-      setEntryToUndoAutoReceive(entry);
-      return;
-    }
-
     const res = await entriesService.toggleStatus(entry.id, entry.status);
     if (!res.error) {
       // Atualização otimista na lista
@@ -189,23 +181,6 @@ export function EntriesScreen({
         )
       );
       // Recarrega para manter totais perfeitamente sincronizados
-      loadEntries();
-    }
-  };
-
-  // Confirmar desativação de baixa automática ao desfazer para 'A receber'
-  const handleConfirmUndoAutoReceive = async () => {
-    if (!entryToUndoAutoReceive) return;
-    const entry = entryToUndoAutoReceive;
-    setEntryToUndoAutoReceive(null);
-    const res = await entriesService.toggleStatus(entry.id, entry.status, true);
-    if (!res.error) {
-      setEntries((prev) =>
-        prev.map((item) =>
-          item.id === entry.id ? { ...item, status: 'pending', auto_receive: false } : item
-        )
-      );
-      setFeedbackMessage('Baixa desfeita e baixa automática desativada.');
       loadEntries();
     }
   };
@@ -252,7 +227,7 @@ export function EntriesScreen({
   };
 
   return (
-    <div id="entries-screen" className="space-y-6 pb-12">
+    <div id="entries-screen" className="space-y-6 pb-4">
       {/* 1. CABEÇALHO DO MÓDULO */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="space-y-1">
@@ -527,11 +502,6 @@ export function EntriesScreen({
                         <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-[#F7F4EA] dark:bg-[#24312B] text-[#5E6963] dark:text-[#95A39B]">
                           {entry.category}
                         </span>
-                        {!isReceived && entry.auto_receive && (
-                          <span className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-[#075C45]/10 text-[#075C45] dark:bg-[#16A66A]/20 dark:text-[#78D9A6] border border-[#075C45]/20 dark:border-[#16A66A]/30 shrink-0">
-                            Baixa automática
-                          </span>
-                        )}
                       </div>
 
                       <div className="flex items-center gap-2 text-xs text-[#5E6963] dark:text-[#95A39B]">
@@ -618,47 +588,6 @@ export function EntriesScreen({
         entry={entryToDelete}
         isLoading={isDeleting}
       />
-
-      {entryToUndoAutoReceive &&
-        createPortal(
-          <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-[10000] animate-in fade-in duration-200">
-            <div className="bg-white dark:bg-[#1C211E] border border-[#D2DDD6] dark:border-[#28322C] rounded-3xl p-5 max-w-sm w-full space-y-4 shadow-xl">
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-950/50 flex items-center justify-center text-amber-600 shrink-0">
-                  <AlertCircle className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-[#02402E] dark:text-[#78D9A6]">
-                    Desfazer baixa automática?
-                  </h3>
-                  <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B] mt-1 leading-relaxed">
-                    Esta entrada possui baixa automática. Deseja desativar a baixa automática e retornar para &quot;A receber&quot;?
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setEntryToUndoAutoReceive(null)}
-                  className="cursor-pointer text-xs"
-                >
-                  Cancelar
-                </Button>
-                <button
-                  type="button"
-                  onClick={handleConfirmUndoAutoReceive}
-                  className="px-3 py-2 rounded-xl bg-[#075C45] hover:bg-[#075C45]/90 text-white font-bold cursor-pointer text-xs transition-colors flex items-center justify-center"
-                >
-                  Confirmar e Desativar
-                </button>
-              </div>
-            </div>
-          </div>,
-          document.body
-        )}
     </div>
   );
 }
