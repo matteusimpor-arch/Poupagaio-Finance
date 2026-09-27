@@ -65,6 +65,7 @@ export interface Entry {
   category: string;
   status: EntryStatus;
   notes?: string | null;
+  auto_receive?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -77,6 +78,7 @@ export interface CreateEntryInput {
   category?: string;
   status?: EntryStatus;
   notes?: string | null;
+  auto_receive?: boolean;
 }
 
 export interface UpdateEntryInput {
@@ -86,6 +88,7 @@ export interface UpdateEntryInput {
   category?: string;
   status?: EntryStatus;
   notes?: string | null;
+  auto_receive?: boolean;
 }
 
 export interface EntriesSummary {
