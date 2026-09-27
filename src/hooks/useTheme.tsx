@@ -15,22 +15,25 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'poupagaio_theme_mode';
-
+const SESSION_KEY = 'poupagaio_theme_session';
 const VALID_THEMES: ThemeMode[] = ['poupagaio', 'ocean', 'nature'];
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [themeMode, setThemeModeState] = useState<ThemeMode>(() => {
     if (typeof window !== 'undefined') {
-      const savedMode = localStorage.getItem(STORAGE_KEY) as ThemeMode | null;
-      if (savedMode && VALID_THEMES.includes(savedMode)) {
-        return savedMode;
+      try {
+        // Force cleanup of legacy localStorage theme values to prevent persistence across sessions
+        localStorage.removeItem('poupagaio_theme');
+        localStorage.removeItem('poupagaio_theme_mode');
+        
+        // Choice is stored only in sessionStorage (lasts during session/tab, resets on close)
+        const savedMode = sessionStorage.getItem(SESSION_KEY) as ThemeMode | null;
+        if (savedMode && VALID_THEMES.includes(savedMode)) {
+          return savedMode;
+        }
+      } catch (e) {
+        console.warn('sessionStorage is not accessible:', e);
       }
-      
-      // Legacy theme migration
-      const legacyTheme = localStorage.getItem('poupagaio_theme');
-      if (legacyTheme === 'light') return 'poupagaio';
-      // Any other theme (like blue-dark, dark, high-contrast, automatic) migrates to 'poupagaio' (Oficial)
     }
     return 'poupagaio';
   });
@@ -41,20 +44,22 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     setActiveTheme(themeMode);
   }, [themeMode]);
 
-  // Sync document attribute, dark class, and localStorage
+  // Sync document attribute and sessionStorage
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
     const root = document.documentElement;
     
-    // In our simplified theme system, all three authorized themes (poupagaio, ocean, nature) are light backgrounds.
-    // Therefore, we do not add 'dark' class, and data-theme matches the active theme.
+    // Set theme parameters on html element
     root.setAttribute('data-theme', activeTheme);
     root.dataset.theme = activeTheme;
     root.classList.remove('dark');
 
-    localStorage.setItem(STORAGE_KEY, themeMode);
-    localStorage.setItem('poupagaio_theme', 'light');
+    try {
+      sessionStorage.setItem(SESSION_KEY, themeMode);
+    } catch (e) {
+      console.warn('Failed to set sessionStorage theme:', e);
+    }
   }, [themeMode, activeTheme]);
 
   const setThemeMode = (newMode: ThemeMode) => {

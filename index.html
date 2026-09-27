@@ -21,12 +21,41 @@
     <script>
       (function() {
         try {
-          var mode = localStorage.getItem('poupagaio_theme_mode') || 'poupagaio';
-          var valid = ['automatic', 'poupagaio', 'blue-light', 'ocean', 'nature'];
-          if (valid.indexOf(mode) === -1) mode = 'poupagaio';
-          var active = mode === 'automatic' ? 'poupagaio' : mode;
-          document.documentElement.setAttribute('data-theme', active);
-          document.documentElement.dataset.theme = active;
+          // Clear any legacy localStorage theme settings to avoid conflicts
+          localStorage.removeItem('poupagaio_theme');
+          localStorage.removeItem('poupagaio_theme_mode');
+          localStorage.removeItem('poupagaio_theme_session');
+          
+          // Clear all cache storage and unregister service workers immediately
+          if ('caches' in window) {
+            caches.keys().then(function(names) {
+              names.forEach(function(name) {
+                caches.delete(name);
+              });
+            });
+          }
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+              var unregisterPromiseAll = registrations.map(function(reg) {
+                return reg.unregister();
+              });
+              Promise.all(unregisterPromiseAll).then(function(results) {
+                if (results.some(Boolean)) {
+                  window.location.reload(true);
+                }
+              });
+            });
+          }
+
+          // Only read from sessionStorage to maintain choice within active session/tab
+          var mode = sessionStorage.getItem('poupagaio_theme_session') || 'poupagaio';
+          if (mode !== 'poupagaio' && mode !== 'ocean' && mode !== 'nature') {
+            mode = 'poupagaio';
+          }
+          
+          document.documentElement.setAttribute('data-theme', mode);
+          document.documentElement.dataset.theme = mode;
+          document.documentElement.classList.remove('dark');
         } catch (e) {}
       })();
     </script>
