@@ -7,6 +7,7 @@ import {
 } from '../../types';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
+import { ModalPortal } from '../ui/ModalPortal';
 import { X, DollarSign, Calendar, Tag, FileText, Repeat, AlertCircle } from 'lucide-react';
 import { parseCurrencyInput } from '../../lib/formatters';
 
@@ -232,12 +233,7 @@ export function FixedExpenseModal({
   };
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="fixed-expense-modal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150"
-    >
+    <ModalPortal isOpen={isOpen} onClose={onClose}>
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
           <div className="bg-white dark:bg-[#1C211E] border border-[#D2DDD6] dark:border-[#28322C] rounded-3xl p-5 max-w-sm w-full space-y-4 shadow-xl">
@@ -590,6 +586,6 @@ export function FixedExpenseModal({
           </div>
         </form>
       </div>
-    </div>
+    </ModalPortal>
   );
 }

@@ -1,44 +1,124 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
-type Theme = 'light' | 'dark';
+export type ThemeMode =
+  | 'automatic'
+  | 'poupagaio'
+  | 'blue-light'
+  | 'ocean'
+  | 'nature';
+
+export type ActiveTheme =
+  | 'poupagaio'
+  | 'blue-light'
+  | 'ocean'
+  | 'nature';
 
 interface ThemeContextType {
-  theme: Theme;
+  themeMode: ThemeMode;
+  activeTheme: ActiveTheme;
+  isDark: boolean;
+  setThemeMode: (mode: ThemeMode) => void;
+  // Backward compatibility
+  theme: 'light' | 'dark';
   toggleTheme: () => void;
-  setTheme: (theme: Theme) => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+const STORAGE_KEY = 'poupagaio_theme_mode';
+
+const VALID_THEMES: ThemeMode[] = [
+  'automatic',
+  'poupagaio',
+  'blue-light',
+  'ocean',
+  'nature',
+];
+
+function resolveSystemTheme(): ActiveTheme {
+  return 'poupagaio';
+}
+
+function resolveActiveTheme(mode: ThemeMode): ActiveTheme {
+  if (mode === 'automatic') {
+    return resolveSystemTheme();
+  }
+  return mode;
+}
+
+function isDarkTheme(_theme: ActiveTheme): boolean {
+  return false;
+}
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>(() => {
+  const [themeMode, setThemeModeState] = useState<ThemeMode>(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('poupagaio_theme') as Theme | null;
-      if (saved === 'light' || saved === 'dark') return saved;
+      const savedMode = localStorage.getItem(STORAGE_KEY) as ThemeMode | null;
+      if (savedMode && VALID_THEMES.includes(savedMode)) {
+        return savedMode;
+      }
     }
-    return 'light';
+    return 'poupagaio';
   });
 
-  useEffect(() => {
-    const root = document.documentElement;
-    if (theme === 'dark') {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
-    }
-    localStorage.setItem('poupagaio_theme', theme);
-  }, [theme]);
+  const [activeTheme, setActiveTheme] = useState<ActiveTheme>(() => resolveActiveTheme(themeMode));
 
-  const toggleTheme = () => {
-    setThemeState((prev) => (prev === 'light' ? 'dark' : 'light'));
+  // Handle system preference changes when in 'automatic' mode
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    if (themeMode === 'automatic') {
+      setActiveTheme(resolveSystemTheme());
+    } else {
+      setActiveTheme(themeMode);
+    }
+  }, [themeMode]);
+
+  // Sync document attribute and localStorage
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const root = document.documentElement;
+
+    root.setAttribute('data-theme', activeTheme);
+    root.dataset.theme = activeTheme;
+
+    root.classList.remove('dark');
+
+    localStorage.setItem(STORAGE_KEY, themeMode);
+    localStorage.setItem('poupagaio_theme', 'light');
+  }, [themeMode, activeTheme]);
+
+  const setThemeMode = (newMode: ThemeMode) => {
+    setThemeModeState(newMode);
   };
 
-  const setTheme = (newTheme: Theme) => {
-    setThemeState(newTheme);
+  const isDark = isDarkTheme(activeTheme);
+  const legacyTheme = 'light';
+
+  const toggleTheme = () => {
+    if (themeMode === 'poupagaio') {
+      setThemeModeState('nature');
+    } else if (themeMode === 'nature') {
+      setThemeModeState('ocean');
+    } else if (themeMode === 'ocean') {
+      setThemeModeState('blue-light');
+    } else {
+      setThemeModeState('poupagaio');
+    }
   };
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme, setTheme }}>
+    <ThemeContext.Provider
+      value={{
+        themeMode,
+        activeTheme,
+        isDark,
+        setThemeMode,
+        theme: legacyTheme,
+        toggleTheme,
+      }}
+    >
       {children}
     </ThemeContext.Provider>
   );

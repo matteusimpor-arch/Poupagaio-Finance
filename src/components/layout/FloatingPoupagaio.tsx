@@ -2,6 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { POUPAGAIO_ASSISTANTE_URL } from '../../assets/mascot';
 import { ActiveTab } from '../../types';
 import { useAssistant } from '../../hooks/useAssistant';
+import { useAuth } from '../../hooks/useAuth';
+import { entriesService } from '../../lib/services/entries';
+import { checklistService } from '../../lib/services/checklist';
+import { formatCurrency } from '../../lib/formatters';
 import {
   Plus,
   CreditCard,
@@ -16,6 +20,63 @@ import {
   Heart,
   Sparkles,
 } from 'lucide-react';
+
+export type PoupagaioEmotion = 'happy' | 'sad' | 'alert' | 'proud' | 'neutral';
+
+export interface PoupagaioFinancialStats {
+  income: number;
+  expenses: number;
+  balance: number;
+  overdueCount: number;
+  todayCount: number;
+  pendingCount: number;
+}
+
+const getEmotionStyles = (emo: PoupagaioEmotion) => {
+  switch (emo) {
+    case 'happy':
+      return {
+        glowClass: 'ring-2 ring-emerald-500/40 shadow-[0_0_20px_rgba(16,185,129,0.35)]',
+        badge: '🥳',
+        badgeBg: 'bg-emerald-500',
+        badgeBorder: 'border-emerald-200 dark:border-emerald-800',
+        textColor: 'text-emerald-700 dark:text-emerald-300',
+      };
+    case 'sad':
+      return {
+        glowClass: 'ring-2 ring-rose-500/40 shadow-[0_0_20px_rgba(244,63,94,0.35)]',
+        badge: '😰',
+        badgeBg: 'bg-rose-500',
+        badgeBorder: 'border-rose-200 dark:border-rose-800',
+        textColor: 'text-rose-700 dark:text-rose-300',
+      };
+    case 'alert':
+      return {
+        glowClass: 'ring-2 ring-amber-500/40 animate-pulse shadow-[0_0_20px_rgba(245,158,11,0.5)]',
+        badge: '⏰',
+        badgeBg: 'bg-amber-500',
+        badgeBorder: 'border-amber-200 dark:border-amber-800',
+        textColor: 'text-amber-700 dark:text-amber-300',
+      };
+    case 'proud':
+      return {
+        glowClass: 'ring-2 ring-yellow-400/40 shadow-[0_0_25px_rgba(234,179,8,0.45)]',
+        badge: '👑',
+        badgeBg: 'bg-yellow-500',
+        badgeBorder: 'border-yellow-200 dark:border-yellow-800',
+        textColor: 'text-yellow-700 dark:text-yellow-300',
+      };
+    case 'neutral':
+    default:
+      return {
+        glowClass: 'shadow-md border border-[#D2DDD6] dark:border-[#28322C]',
+        badge: '🦜',
+        badgeBg: 'bg-[#02402E] dark:bg-[#78D9A6]',
+        badgeBorder: 'border-[#D2DDD6] dark:border-[#28322C]',
+        textColor: 'text-[#02402E] dark:text-[#78D9A6]',
+      };
+  }
+};
 
 interface FloatingPoupagaioProps {
   onSelectTab: (tab: ActiveTab) => void;
@@ -32,9 +93,16 @@ interface QuickActionItem {
   category: 'CADASTRAR' | 'ORGANIZAR' | 'ANALISAR' | 'AJUDA';
 }
 
-export function FloatingPoupagaio({ onSelectTab, onOpenCreateModal }: FloatingPoupagaioProps) {
+export function FloatingPoupagaio({ onSelectTab, currentTab, onOpenCreateModal }: FloatingPoupagaioProps) {
   const { showAssistant } = useAssistant();
+  const { user, currentSpace } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
+
+  // Emotions & Speech States
+  const [stats, setStats] = useState<PoupagaioFinancialStats | null>(null);
+  const [emotion, setEmotion] = useState<PoupagaioEmotion>('neutral');
+  const [speechText, setSpeechText] = useState<string>('');
+  const [showBubble, setShowBubble] = useState<boolean>(true);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -70,6 +138,110 @@ export function FloatingPoupagaio({ onSelectTab, onOpenCreateModal }: FloatingPo
   });
 
   const wasDraggingRef = useRef(false);
+
+  // Determine emotion and choose speech text
+  const determineEmotionAndSpeech = (s: PoupagaioFinancialStats) => {
+    let emp: PoupagaioEmotion = 'neutral';
+    let text = '';
+
+    if (s.overdueCount > 0 || s.todayCount > 0) {
+      emp = 'alert';
+      const options = [
+        `Ei, psiu! Temos ${s.overdueCount + s.todayCount} contas vencendo hoje ou em atraso. Não deixe os juros voarem alto! 🦜⏰`,
+        `Fique de olho! Temos compromissos pendentes hoje na lista. Vamos dar baixa nisso? 🦜👀`,
+        `Alerta de boleto! 🔔 Vamos organizar esses pagamentos pendentes antes que o prazo expire!`
+      ];
+      text = options[Math.floor(Math.random() * options.length)];
+    } else if (s.balance < 0) {
+      emp = 'sad';
+      const absBal = formatCurrency(Math.abs(s.balance));
+      const options = [
+        `Eita... nosso saldo está negativo em ${absBal}! Vamos dar uma segurada nos gastos variáveis para voltar ao azul? 🦜💔`,
+        `Estamos no vermelho neste mês! Que tal uma folguinha nas comprinhas supérfluas hoje? Eu te ajudo! 🦜📉`,
+        `As despesas voaram mais alto que as receitas. Vamos equilibrar as contas juntos? 🦜`
+      ];
+      text = options[Math.floor(Math.random() * options.length)];
+    } else if (s.income > 0 && s.balance > s.income * 0.4) {
+      emp = 'proud';
+      const options = [
+        `Uau! Você economizou mais de 40% das suas entradas! Que orgulho nível master! 🦜👑✨`,
+        `Poupança decolando! Sobrou um ótimo saldo livre neste mês. Que tal mandar um pouquinho pras suas Reservas? 🦜💎`,
+        `Você é mestre das finanças! Saldo super saudável e contas organizadas. Parabéns! 🦜🚀`
+      ];
+      text = options[Math.floor(Math.random() * options.length)];
+    } else if (s.balance >= 0) {
+      emp = 'happy';
+      const balStr = formatCurrency(s.balance);
+      const options = [
+        `Tudo sob controle! Estamos no azul com saldo de ${balStr}. Vamos manter esse voo firme! 🦜🥳`,
+        `Que dia lindo para economizar! Nosso saldo está verdinho e as contas em dia. Parabéns! 🦜🍃`,
+        `Nenhum boleto atrasado e saldo positivo! Você está mandando super bem nas finanças! 🦜✨`
+      ];
+      text = options[Math.floor(Math.random() * options.length)];
+    } else {
+      emp = 'neutral';
+      const options = [
+        "Olá! Sou o Poupagaio, seu parceiro de finanças. Pronto para organizar as contas de hoje? 🦜🚀",
+        "Que tal fazer um lançamento rápido? É só clicar em mim para escolher o tipo de transação! 🦜",
+        "Organize hoje, decole amanhã! Vamos construir sua liberdade financeira juntos?"
+      ];
+      text = options[Math.floor(Math.random() * options.length)];
+    }
+
+    setEmotion(emp);
+    setSpeechText(text);
+  };
+
+  const fetchStats = async () => {
+    if (!currentSpace?.id) return;
+    try {
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = now.getMonth() + 1;
+      const [chk, ent] = await Promise.all([
+        checklistService.getMonthlyChecklist(currentSpace.id, y, m),
+        entriesService.getMonthSummary(currentSpace.id, y, m),
+      ]);
+
+      const income = ent.totalPlanned || 0;
+      const expenses = chk.stats.totalAmount || 0;
+      const balance = income - expenses;
+      const overdueCount = chk.stats.overdueCount || 0;
+      const todayCount = chk.stats.todayCount || 0;
+      const pendingCount = chk.stats.pendingCount || 0;
+
+      const newStats = {
+        income,
+        expenses,
+        balance,
+        overdueCount,
+        todayCount,
+        pendingCount,
+      };
+
+      setStats(newStats);
+      determineEmotionAndSpeech(newStats);
+    } catch (err) {
+      console.warn('Erro ao carregar dados do assistente Poupagaio:', err);
+    }
+  };
+
+  // Fetch financial statistics on load & when currentSpace changes
+  useEffect(() => {
+    fetchStats();
+
+    // Small interval to keep the stats in sync
+    const interval = setInterval(fetchStats, 20000);
+    return () => clearInterval(interval);
+  }, [currentSpace?.id]);
+
+  // Trigger bubble on settings or tab changes, or reset visibility
+  useEffect(() => {
+    if (currentSpace?.id) {
+      setShowBubble(true);
+      fetchStats();
+    }
+  }, [currentSpace?.id, currentTab]);
 
   // Close on Click Outside or Escape key
   useEffect(() => {
@@ -333,9 +505,14 @@ export function FloatingPoupagaio({ onSelectTab, onOpenCreateModal }: FloatingPo
                   <h3 className="text-sm font-black text-[#02402E] dark:text-[#78D9A6] tracking-wider uppercase font-display truncate">
                     POUPAGAIO
                   </h3>
-                  <p className="text-xs text-[#5E6963] dark:text-[#95A39B] truncate font-medium">
-                    Acesso rápido
-                  </p>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] text-[#5E6963] dark:text-[#95A39B] font-semibold truncate">
+                      Humor: {getEmotionStyles(emotion).badge}
+                    </span>
+                    <span className={`text-[9px] font-extrabold px-1.5 py-0.2 rounded-full ${getEmotionStyles(emotion).badgeBg} text-white uppercase tracking-wider scale-90 origin-left`}>
+                      {emotion === 'happy' ? 'Feliz' : emotion === 'sad' ? 'Triste' : emotion === 'alert' ? 'Alerta' : emotion === 'proud' ? 'Orgulhoso' : 'Neutro'}
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -398,27 +575,94 @@ export function FloatingPoupagaio({ onSelectTab, onOpenCreateModal }: FloatingPo
       )}
 
       {/* ==================================================
-          FLOATING MASCOT BUTTON (NEW ASSISTANT MASCOT)
+          FLOATING MASCOT BUTTON (NEW ASSISTANT MASCOT WITH EMOTIONS)
           ================================================== */}
+      {/* Speech Bubble */}
+      {showBubble && speechText && (
+        <div
+          onClick={() => {
+            // Cycle through random messages when clicked
+            if (stats) determineEmotionAndSpeech(stats);
+          }}
+          className={`
+            absolute bottom-2 sm:bottom-4
+            w-[240px] sm:w-[285px]
+            p-3.5 sm:p-4 rounded-2xl bg-[#F2EFDC] dark:bg-[#181C1A]
+            border-2 border-[#D9D4B8] dark:border-[#28322C]
+            shadow-xl text-xs font-semibold leading-relaxed
+            text-[#02402E] dark:text-[#E2EFDC]
+            animate-in fade-in zoom-in-90 duration-200
+            cursor-pointer select-none group/bubble z-50
+            ${pos.side === 'right' ? 'right-full mr-3.5 origin-bottom-right' : 'left-full ml-3.5 origin-bottom-left'}
+          `}
+        >
+          {/* Close button for the speech bubble */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowBubble(false);
+            }}
+            className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-rose-600 text-white flex items-center justify-center text-[10px] shadow-xs border border-white hover:bg-rose-700 transition-colors cursor-pointer"
+          >
+            ✕
+          </button>
+
+          {/* Bubble Tail */}
+          <div
+            className={`
+              absolute bottom-4 w-3.5 h-3.5 bg-[#F2EFDC] dark:bg-[#181C1A]
+              border-r-2 border-b-2 border-[#D9D4B8] dark:border-[#28322C]
+              transform rotate-45
+              ${pos.side === 'right' ? '-right-[8px]' : '-left-[8px]'}
+            `}
+          />
+
+          <div className="space-y-1 relative">
+            <p className="pr-2 text-[11.5px] font-semibold text-[#02402E] dark:text-[#E6ECE8]">{speechText}</p>
+            <div className="flex items-center justify-between pt-2 mt-1.5 border-t border-[#E2DCBE] dark:border-[#28322C] text-[9.5px] text-[#5E6963] dark:text-[#95A39B] font-bold">
+              <span>Mascote Poupagaio</span>
+              <span className="text-[10px] text-[#16A66A] dark:text-[#78D9A6] group-hover/bubble:translate-x-0.5 transition-transform flex items-center gap-0.5">
+                Outra dica ↻
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
       <button
         ref={buttonRef}
         type="button"
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
-        onClick={handleButtonClick}
+        onClick={(e) => {
+          handleButtonClick(e);
+          // Auto trigger speech update and visibility when clicked
+          if (stats) {
+            determineEmotionAndSpeech(stats);
+            setShowBubble(true);
+          }
+        }}
         aria-label="Abrir acessos rápidos do Poupagaio"
         title="Poupagaio - Pressione e arraste para reposicionar"
-        className={`relative group focus:outline-none focus-visible:ring-4 focus-visible:ring-[#F2B807] rounded-full transition-transform duration-200 ${
+        className={`relative group focus:outline-none focus-visible:ring-4 focus-visible:ring-[#F2B807] rounded-full transition-all duration-200 ${
           isDragging ? 'cursor-grabbing scale-95' : 'cursor-grab active:cursor-grabbing hover:scale-105'
         }`}
       >
-        <div className="w-[52px] h-[52px] sm:w-[72px] sm:h-[72px] relative flex items-center justify-center filter drop-shadow-md group-hover:drop-shadow-xl transition-all duration-200">
+        {/* Dynamic Glowing Aura based on financial health */}
+        <div className={`w-[52px] h-[52px] sm:w-[72px] sm:h-[72px] rounded-full relative flex items-center justify-center filter drop-shadow-md group-hover:drop-shadow-xl transition-all duration-300 ${getEmotionStyles(emotion).glowClass}`}>
+          
+          {/* Dynamic Emotion Emoji Badge */}
+          <div className={`absolute -top-1 -right-1 sm:top-0 sm:right-0 w-5 h-5 sm:w-6 sm:h-6 rounded-full ${getEmotionStyles(emotion).badgeBg} border border-white dark:border-gray-800 flex items-center justify-center text-[10px] sm:text-xs shadow-md z-10 animate-bounce`}>
+            {getEmotionStyles(emotion).badge}
+          </div>
+
           <img
             src={POUPAGAIO_ASSISTANTE_URL}
             alt="Poupagaio Assistente - Acesso Rápido"
             referrerPolicy="no-referrer"
-            className="w-full h-full object-contain pointer-events-none"
+            className="w-[85%] h-[85%] object-contain pointer-events-none"
           />
         </div>
       </button>

@@ -7,6 +7,7 @@ import {
 import { INSTALLMENT_CATEGORIES, calculateInstallmentsSchedule } from '../../lib/services/installments';
 import { formatCurrency, getDefaultDateForBillingCycle } from '../../lib/formatters';
 import { Button } from '../ui/button';
+import { ModalPortal } from '../ui/ModalPortal';
 import { X, Calendar, AlertCircle, Info, Calculator, CheckCircle2 } from 'lucide-react';
 
 interface InstallmentPurchaseModalProps {
@@ -190,12 +191,7 @@ export function InstallmentPurchaseModal({
   const quickCounts = [2, 3, 4, 6, 10, 12, 18, 24, 36, 48];
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="modal-installment-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-3.5 sm:p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-200"
-    >
+    <ModalPortal isOpen={isOpen} onClose={onClose}>
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
           <div className="bg-white dark:bg-[#1C211E] border border-[#D2DDD6] dark:border-[#28322C] rounded-3xl p-5 max-w-sm w-full space-y-4 shadow-xl text-left">
@@ -544,6 +540,6 @@ export function InstallmentPurchaseModal({
           </div>
         </form>
       </div>
-    </div>
+    </ModalPortal>
   );
 }

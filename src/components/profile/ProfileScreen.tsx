@@ -7,6 +7,7 @@ import { LogOut, Users, ChevronRight } from 'lucide-react';
 import { Space, SpaceType, SpaceRole, SpaceMember } from '../../types';
 import { ProfileCard, SecurityCard } from './ProfileTab';
 import { SpacesTab } from './SpacesTab';
+import { ThemeSelector } from '../preferences/ThemeSelector';
 import { Card } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
@@ -195,6 +196,11 @@ export function ProfileScreen() {
         <div className="bg-green-50 border border-green-200 p-3 rounded-xl text-sm text-green-800">
             <strong>💡 Dica:</strong> Você pode ter múltiplos espaços para separar suas finanças por objetivo. O espaço Pessoal não pode ser excluído.
         </div>
+      </div>
+
+      {/* LINHA DE APARÊNCIA & TEMAS */}
+      <div className="bg-white dark:bg-[#18211D] p-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-2xs">
+        <ThemeSelector />
       </div>
 
       {/* LINHA 3: Preferências de Exibição */}
