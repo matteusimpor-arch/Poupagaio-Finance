@@ -199,7 +199,7 @@ export function PlanningScreen({ onSelectTab }: PlanningScreenProps) {
   };
 
   return (
-    <div className="space-y-4 pb-24 sm:pb-12 max-w-[1280px] mx-auto px-3 sm:px-6">
+    <div className="space-y-4 pb-4 max-w-[1280px] mx-auto px-3 sm:px-6">
       {/* HEADER */}
       <div className="pb-2 border-b border-[#D2DDD6] dark:border-[#28322C] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2">

@@ -204,7 +204,7 @@ export function CalendarScreen({ onSelectTab }: CalendarScreenProps) {
   };
 
   return (
-    <div className="space-y-4 max-w-7xl mx-auto pb-10">
+    <div className="space-y-4 max-w-7xl mx-auto pb-4">
       {/* Header Bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-[#1E2220] p-4 rounded-2xl border border-[#E2E8E4] dark:border-[#2E3532] shadow-2xs">
         <div className="flex items-center gap-3">

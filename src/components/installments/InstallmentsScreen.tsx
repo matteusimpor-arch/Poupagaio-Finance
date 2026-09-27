@@ -238,7 +238,7 @@ export function InstallmentsScreen({
   };
 
   return (
-    <div className="w-full max-w-5xl mx-auto space-y-3.5 sm:space-y-6 pb-20 md:pb-8 animate-in fade-in duration-300">
+    <div className="w-full max-w-5xl mx-auto space-y-3.5 sm:space-y-6 pb-4 animate-in fade-in duration-300">
       {/* ==================================================
           1. CABEÇALHO DO MÓDULO PARCELADOS
           ================================================== */}

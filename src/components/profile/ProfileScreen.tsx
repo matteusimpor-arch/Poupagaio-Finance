@@ -145,7 +145,7 @@ export function ProfileScreen() {
   };
 
   return (
-    <div className="w-full max-w-6xl mx-auto space-y-8 pb-20 animate-in fade-in duration-300">
+    <div className="w-full max-w-6xl mx-auto space-y-8 pb-4 animate-in fade-in duration-300">
       <div>
         <h1 className="text-2xl font-bold text-[#075C45] dark:text-[#78D9A6]">Meu Perfil & Configurações</h1>
         <p className="text-gray-500">Gerencie suas informações, espaços e a segurança da sua conta.</p>

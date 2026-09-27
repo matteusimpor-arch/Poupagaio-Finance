@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@variant dark (&:where(.dark, .dark *));
+
 @layer base {
   /* ==========================================================================
      CENTRALIZED THEME DESIGN TOKENS
@@ -24,7 +26,7 @@
     --brand-light: #78D9A6;
     --brand-hover: #02402E;
     
-    --header-bg: rgba(255, 255, 255, 0.92);
+    --header-bg: rgba(255, 255, 255, 0.88);
     --modal-bg: #FFFFFF;
     --input-bg: #FFFFFF;
     --input-border: #D2DDD6;
@@ -39,40 +41,7 @@
     --finance-installment: #F59E0B;
   }
 
-  /* 2. Natureza Theme (🍃 Natureza - Organic & Earthy Forest Green) */
-  [data-theme="nature"] {
-    --bg-page: #F4F6F0;
-    --card-bg: #FFFFFF;
-    --surface-secondary: #E6ECDE;
-    --surface-elevated: #FFFFFF;
-    --card-border: #C8D6B9;
-    --border-subtle: #E2E9D8;
-    
-    --text-main: #1C2E19;
-    --text-primary: #1C2E19;
-    --text-secondary: #42573B;
-    --text-muted: #688060;
-    
-    --brand-primary: #2D5A27;
-    --brand-secondary: #558B2F;
-    --brand-light: #8BC34A;
-    --brand-hover: #1B3B18;
-    
-    --header-bg: rgba(244, 246, 240, 0.92);
-    --modal-bg: #FFFFFF;
-    --input-bg: #FFFFFF;
-    --input-border: #C8D6B9;
-    
-    --leaf-color: #2D5A27;
-    --leaf-opacity: 0.18;
-
-    --finance-income: #2D5A27;
-    --finance-variable-expense: #E11D48;
-    --finance-fixed-expense: #8B5CF6;
-    --finance-installment: #F59E0B;
-  }
-
-  /* 3. Oceano Theme (🌊 Oceano) */
+  /* 2. Oceano Theme (🌊 Oceano) */
   [data-theme="ocean"] {
     --bg-page: #F0F9FF;
     --card-bg: #FFFFFF;
@@ -91,7 +60,7 @@
     --brand-light: #67E8F9;
     --brand-hover: #0369A1;
     
-    --header-bg: rgba(240, 249, 255, 0.92);
+    --header-bg: rgba(240, 249, 255, 0.88);
     --modal-bg: #FFFFFF;
     --input-bg: #FFFFFF;
     --input-border: #BAE6FD;
@@ -105,32 +74,32 @@
     --finance-installment: #F59E0B;
   }
 
-  /* 4. Azul Claro Theme (🩵 Azul Claro) */
-  [data-theme="blue-light"] {
-    --bg-page: #F0F4F8;
+  /* 3. Natureza Theme (🍃 Natureza - Organic & Earthy Forest Green) */
+  [data-theme="nature"] {
+    --bg-page: #F4F6F0;
     --card-bg: #FFFFFF;
-    --surface-secondary: #E2E8F0;
+    --surface-secondary: #E6ECDE;
     --surface-elevated: #FFFFFF;
-    --card-border: #CBD5E1;
-    --border-subtle: #E2E8F0;
+    --card-border: #C8D6B9;
+    --border-subtle: #E2E9D8;
     
-    --text-main: #0F172A;
-    --text-primary: #0F172A;
-    --text-secondary: #475569;
-    --text-muted: #64748B;
+    --text-main: #1C2E19;
+    --text-primary: #1C2E19;
+    --text-secondary: #42573B;
+    --text-muted: #688060;
     
-    --brand-primary: #1D4ED8;
-    --brand-secondary: #2563EB;
-    --brand-light: #60A5FA;
-    --brand-hover: #1E40AF;
+    --brand-primary: #2D5A27;
+    --brand-secondary: #558B2F;
+    --brand-light: #8BC34A;
+    --brand-hover: #1B3B18;
     
-    --header-bg: rgba(240, 244, 248, 0.92);
+    --header-bg: rgba(244, 246, 240, 0.88);
     --modal-bg: #FFFFFF;
     --input-bg: #FFFFFF;
-    --input-border: #CBD5E1;
+    --input-border: #C8D6B9;
     
-    --leaf-color: #2563EB;
-    --leaf-opacity: 0.12;
+    --leaf-color: #2D5A27;
+    --leaf-opacity: 0.18;
 
     --finance-income: #16A66A;
     --finance-variable-expense: #E11D48;
@@ -157,128 +126,38 @@
 }
 
 /* ==========================================================================
-   DYNAMIC HARMONIZATION OF HARDCODED BRAND CLASSES PER THEME
-   Replaces dark green (#075C45, #02402E, #16A66A) with active theme colors
+   GLOBAL PALETTE HARMONIZATION TOKENS
+   Converts hardcoded structural brand classes to active theme CSS tokens
    ========================================================================== */
 
-/* --- 1. OCEANO THEME OVERRIDES --- */
-[data-theme="ocean"] .bg-\[\#075C45\],
-[data-theme="ocean"] .bg-\[\#02402E\],
-[data-theme="ocean"] .bg-\[\#0E744B\] {
-  background-color: #0284C7 !important;
-}
-
-[data-theme="ocean"] .bg-\[\#16A66A\] {
-  background-color: #06B6D4 !important;
+/* Ocean Theme Overrides */
+[data-theme="ocean"] .bg-\[\#F3F4F4\],
+[data-theme="ocean"] .bg-\[\#F7F4EA\],
+[data-theme="ocean"] .bg-\[\#F7F9F7\] {
+  background-color: var(--bg-page) !important;
 }
 
 [data-theme="ocean"] .text-\[\#075C45\],
-[data-theme="ocean"] .text-\[\#02402E\],
-[data-theme="ocean"] .text-\[\#0E744B\],
-[data-theme="ocean"] .text-\[\#16A66A\] {
-  color: #0284C7 !important;
+[data-theme="ocean"] .text-\[\#02402E\] {
+  color: var(--brand-primary) !important;
+}
+
+[data-theme="ocean"] .bg-\[\#075C45\],
+[data-theme="ocean"] .bg-\[\#02402E\] {
+  background-color: var(--brand-primary) !important;
+}
+
+[data-theme="ocean"] .bg-\[\#16A66A\] {
+  background-color: var(--brand-secondary) !important;
 }
 
 [data-theme="ocean"] .border-\[\#075C45\],
 [data-theme="ocean"] .border-\[\#02402E\],
 [data-theme="ocean"] .border-\[\#16A66A\] {
-  border-color: #0284C7 !important;
+  border-color: var(--brand-secondary) !important;
 }
 
-[data-theme="ocean"] .bg-\[\#EAEDEB\],
-[data-theme="ocean"] .bg-\[\#EBF0EC\],
-[data-theme="ocean"] .bg-\[\#F3F4F4\],
-[data-theme="ocean"] .bg-\[\#F7F4EA\],
-[data-theme="ocean"] .bg-\[\#F7F9F7\],
-[data-theme="ocean"] .bg-\[\#F4F7F5\] {
-  background-color: #F0F9FF !important;
-}
-
-[data-theme="ocean"] .border-\[\#D2DDD6\],
-[data-theme="ocean"] .border-\[\#DCE2DE\],
-[data-theme="ocean"] .border-\[\#E2ECE6\] {
-  border-color: #BAE6FD !important;
-}
-
-/* --- 2. AZUL CLARO THEME OVERRIDES --- */
-[data-theme="blue-light"] .bg-\[\#075C45\],
-[data-theme="blue-light"] .bg-\[\#02402E\],
-[data-theme="blue-light"] .bg-\[\#0E744B\] {
-  background-color: #1D4ED8 !important;
-}
-
-[data-theme="blue-light"] .bg-\[\#16A66A\] {
-  background-color: #2563EB !important;
-}
-
-[data-theme="blue-light"] .text-\[\#075C45\],
-[data-theme="blue-light"] .text-\[\#02402E\],
-[data-theme="blue-light"] .text-\[\#0E744B\],
-[data-theme="blue-light"] .text-\[\#16A66A\] {
-  color: #1D4ED8 !important;
-}
-
-[data-theme="blue-light"] .border-\[\#075C45\],
-[data-theme="blue-light"] .border-\[\#02402E\],
-[data-theme="blue-light"] .border-\[\#16A66A\] {
-  border-color: #1D4ED8 !important;
-}
-
-[data-theme="blue-light"] .bg-\[\#EAEDEB\],
-[data-theme="blue-light"] .bg-\[\#EBF0EC\],
-[data-theme="blue-light"] .bg-\[\#F3F4F4\],
-[data-theme="blue-light"] .bg-\[\#F7F4EA\],
-[data-theme="blue-light"] .bg-\[\#F7F9F7\],
-[data-theme="blue-light"] .bg-\[\#F4F7F5\] {
-  background-color: #F0F4F8 !important;
-}
-
-[data-theme="blue-light"] .border-\[\#D2DDD6\],
-[data-theme="blue-light"] .border-\[\#DCE2DE\],
-[data-theme="blue-light"] .border-\[\#E2ECE6\] {
-  border-color: #CBD5E1 !important;
-}
-
-/* --- 3. NATUREZA THEME OVERRIDES --- */
-[data-theme="nature"] .bg-\[\#075C45\],
-[data-theme="nature"] .bg-\[\#02402E\],
-[data-theme="nature"] .bg-\[\#0E744B\] {
-  background-color: #2D5A27 !important;
-}
-
-[data-theme="nature"] .bg-\[\#16A66A\] {
-  background-color: #558B2F !important;
-}
-
-[data-theme="nature"] .text-\[\#075C45\],
-[data-theme="nature"] .text-\[\#02402E\],
-[data-theme="nature"] .text-\[\#0E744B\],
-[data-theme="nature"] .text-\[\#16A66A\] {
-  color: #2D5A27 !important;
-}
-
-[data-theme="nature"] .border-\[\#075C45\],
-[data-theme="nature"] .border-\[\#02402E\],
-[data-theme="nature"] .border-\[\#16A66A\] {
-  border-color: #2D5A27 !important;
-}
-
-[data-theme="nature"] .bg-\[\#EAEDEB\],
-[data-theme="nature"] .bg-\[\#EBF0EC\],
-[data-theme="nature"] .bg-\[\#F3F4F4\],
-[data-theme="nature"] .bg-\[\#F7F4EA\],
-[data-theme="nature"] .bg-\[\#F7F9F7\],
-[data-theme="nature"] .bg-\[\#F4F7F5\] {
-  background-color: #F4F6F0 !important;
-}
-
-[data-theme="nature"] .border-\[\#D2DDD6\],
-[data-theme="nature"] .border-\[\#DCE2DE\],
-[data-theme="nature"] .border-\[\#E2ECE6\] {
-  border-color: #C8D6B9 !important;
-}
-
-/* Botanical SVG Icon Color Matches Theme */
+/* Ensure Leaf SVG Color Matches Active Theme */
 .botanical-leaf-svg {
   color: var(--leaf-color) !important;
   opacity: var(--leaf-opacity) !important;

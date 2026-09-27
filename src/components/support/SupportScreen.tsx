@@ -6,7 +6,7 @@ export function SupportScreen() {
   const supportEmail = 'poupagaiofinance@gmail.com';
 
   return (
-    <div className="w-full max-w-4xl mx-auto space-y-6 pb-12 animate-in fade-in duration-200">
+    <div className="w-full max-w-4xl mx-auto space-y-6 pb-4 animate-in fade-in duration-200">
       {/* Header Banner */}
       <div className="bg-white dark:bg-[#1E2220] border border-[#DCE2DE] dark:border-[#2B322F] rounded-2xl p-6 shadow-3xs relative overflow-hidden">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 relative z-10">

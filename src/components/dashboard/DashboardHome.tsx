@@ -415,7 +415,7 @@ export function DashboardHome({
   const miniSelectedDayItems = itemsByDate[selectedMiniDateStr] || [];
 
   return (
-    <div className="w-full max-w-[1480px] mx-auto space-y-6 sm:space-y-8 pb-28 sm:pb-16 px-3 sm:px-6 animate-in fade-in duration-300">
+    <div className="w-full max-w-[1480px] mx-auto space-y-6 sm:space-y-8 pb-4 px-3 sm:px-6 animate-in fade-in duration-300">
       
       {/* Action error banner */}
       {actionError && (
