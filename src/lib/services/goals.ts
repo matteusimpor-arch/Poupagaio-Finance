@@ -455,11 +455,29 @@ export const goalsService = {
         notes: input.notes?.trim() || null,
       };
 
-      const { data, error } = await supabase
+      let { data, error } = await supabase
         .from('goal_contributions')
         .insert([insertPayload])
         .select()
         .single();
+
+      if (error && error.message && (error.message.includes('column') || error.message.includes('source_type'))) {
+        const fallbackPayload = {
+          goal_id: input.goal_id,
+          space_id: input.space_id,
+          created_by: user?.id || null,
+          amount: normalizedAmount,
+          contribution_date: input.contribution_date,
+          notes: [input.notes?.trim(), `Origem: ${input.source_name || 'Saldo Livre'}`].filter(Boolean).join(' - '),
+        };
+        const res2 = await supabase
+          .from('goal_contributions')
+          .insert([fallbackPayload])
+          .select()
+          .single();
+        data = res2.data;
+        error = res2.error;
+      }
 
       if (error) {
         return { success: false, error: error.message || 'Erro ao registrar aporte.' };
