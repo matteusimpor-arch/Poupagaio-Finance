@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Goal, GoalStatus, CreateGoalInput, UpdateGoalInput } from '../../types';
 import { GOAL_CATEGORIES } from '../../lib/services/goals';
 import { Button } from '../ui/button';
+import { ModalPortal } from '../ui/ModalPortal';
 import { X, Target, AlertCircle, Calendar, Tag, FileText } from 'lucide-react';
 
 interface GoalModalProps {
@@ -112,7 +113,7 @@ export function GoalModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-200">
+    <ModalPortal isOpen={isOpen} onClose={onClose}>
       <div className="w-full max-w-lg rounded-2xl bg-white dark:bg-[#1E2220] border border-[#E2E8E4] dark:border-[#2E3532] shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#E2E8E4] dark:border-[#2E3532]">
@@ -295,6 +296,6 @@ export function GoalModal({
           </div>
         </form>
       </div>
-    </div>
+    </ModalPortal>
   );
 }

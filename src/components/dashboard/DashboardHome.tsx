@@ -57,6 +57,7 @@ import { FixedExpenseModal } from '../fixed-expenses/FixedExpenseModal';
 import { VariableExpenseModal } from '../variable-expenses/VariableExpenseModal';
 import { InstallmentPurchaseModal } from '../installments/InstallmentPurchaseModal';
 import { GoalModal } from '../goals/GoalModal';
+import { EntryModal } from '../entries/EntryModal';
 import { DashboardReservesSection } from './DashboardReservesSection';
 import { PaymentOriginConfirmModal } from '../reserves/PaymentOriginConfirmModal';
 import { fixedExpensesService } from '../../lib/services/fixedExpenses';
@@ -72,6 +73,8 @@ import {
   CreateGoalInput,
   UpdateGoalInput,
   ReservesSummary,
+  CreateEntryInput,
+  UpdateEntryInput,
 } from '../../types';
 
 interface DashboardHomeProps {
@@ -149,6 +152,7 @@ export function DashboardHome({
   const [showAllChecklistMobile, setShowAllChecklistMobile] = useState<boolean>(false);
   const [isQuickAddMenuOpen, setIsQuickAddMenuOpen] = useState<boolean>(false);
   const [isGoalModalOpen, setIsGoalModalOpen] = useState<boolean>(false);
+  const [isEntryModalOpen, setIsEntryModalOpen] = useState<boolean>(false);
   const [quickAddModalType, setQuickAddModalType] = useState<
     'fixed_expenses' | 'variable_expenses' | 'installments' | null
   >(null);
@@ -294,6 +298,15 @@ export function DashboardHome({
       return { success: true };
     }
     return { success: false, error: res.error || 'Erro ao criar meta' };
+  };
+
+  const handleSaveEntry = async (data: CreateEntryInput | UpdateEntryInput): Promise<boolean> => {
+    if (!user || !currentSpace?.id) return false;
+    const res = await entriesService.createEntry(user.id, data as CreateEntryInput);
+    if (res.error) throw new Error(res.error);
+    setIsEntryModalOpen(false);
+    loadDashboardData();
+    return true;
   };
 
   // Navigate months
@@ -490,9 +503,14 @@ export function DashboardHome({
               <span className="text-[10px] font-bold uppercase tracking-wider text-[#5E6963] dark:text-[#95A39B] font-display truncate">
                 ENTRADAS
               </span>
-              <div className="w-5 h-5 rounded-md bg-[#E6F6EF] dark:bg-[#16A66A]/20 flex items-center justify-center text-[#16A66A] shrink-0">
-                <ArrowUpRight className="w-3 h-3" />
-              </div>
+              <button
+                type="button"
+                onClick={() => setIsEntryModalOpen(true)}
+                title="Adicionar Entrada"
+                className="w-5 h-5 rounded-md bg-[#E6F6EF] hover:bg-[#d0ecdf] dark:bg-[#16A66A]/20 dark:hover:bg-[#16A66A]/30 flex items-center justify-center text-[#16A66A] shrink-0 cursor-pointer active:scale-90 transition-transform"
+              >
+                <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+              </button>
             </div>
             <div className="text-sm sm:text-base font-extrabold tracking-tight text-[#02402E] dark:text-[#78D9A6] font-display truncate">
               {formatCurrency(totalReceitas)}
@@ -1020,9 +1038,14 @@ export function DashboardHome({
               <span className="text-xs font-bold uppercase tracking-wider text-[#5E6963] dark:text-[#95A39B] font-display">
                 Entradas
               </span>
-              <div className="w-8 h-8 rounded-xl bg-[#E6F6EF] dark:bg-[#16A66A]/20 flex items-center justify-center text-[#16A66A]">
-                <ArrowUpRight className="w-4 h-4" />
-              </div>
+              <button
+                type="button"
+                onClick={() => setIsEntryModalOpen(true)}
+                title="Adicionar Entrada"
+                className="w-8 h-8 rounded-xl bg-[#E6F6EF] hover:bg-[#d0ecdf] dark:bg-[#16A66A]/20 dark:hover:bg-[#16A66A]/30 flex items-center justify-center text-[#16A66A] cursor-pointer active:scale-95 transition-transform"
+              >
+                <Plus className="w-4 h-4 stroke-[2.5]" />
+              </button>
             </div>
 
             <div>
@@ -1851,6 +1874,15 @@ export function DashboardHome({
             onClose={() => setIsGoalModalOpen(false)}
             onSave={handleSaveGoal}
             spaceId={currentSpace?.id || user?.id || ''}
+          />
+
+          <EntryModal
+            isOpen={isEntryModalOpen}
+            onClose={() => setIsEntryModalOpen(false)}
+            onSave={handleSaveEntry}
+            spaceId={currentSpace?.id || user?.id || ''}
+            selectedYear={currentYear}
+            selectedMonth={currentMonth}
           />
         </>
       )}

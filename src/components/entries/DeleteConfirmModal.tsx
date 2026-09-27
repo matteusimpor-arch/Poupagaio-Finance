@@ -1,6 +1,7 @@
 import React from 'react';
 import { Entry } from '../../types';
 import { Button } from '../ui/button';
+import { ModalPortal } from '../ui/ModalPortal';
 import { Trash2, AlertTriangle, X } from 'lucide-react';
 import { formatCurrency, formatDateBR } from '../../lib/formatters';
 
@@ -22,12 +23,7 @@ export function DeleteConfirmModal({
   if (!isOpen || !entry) return null;
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="delete-modal-title"
-      className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150"
-    >
+    <ModalPortal isOpen={isOpen} onClose={onClose}>
       <div className="w-full max-w-md rounded-3xl bg-white dark:bg-[#18211D] border border-[#E8E4D5] dark:border-[#24312B] shadow-2xl p-6 space-y-4 my-auto animate-in zoom-in-95 duration-150">
         <div className="flex items-start justify-between gap-3">
           <div className="w-10 h-10 rounded-2xl bg-red-100 dark:bg-red-950/50 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0">
@@ -91,6 +87,6 @@ export function DeleteConfirmModal({
           </Button>
         </div>
       </div>
-    </div>
+    </ModalPortal>
   );
 }

@@ -7,6 +7,7 @@ import { LogOut, Users, ChevronRight } from 'lucide-react';
 import { Space, SpaceType, SpaceRole, SpaceMember } from '../../types';
 import { ProfileCard, SecurityCard } from './ProfileTab';
 import { SpacesTab } from './SpacesTab';
+import { ThemeSelector } from '../preferences/ThemeSelector';
 import { Card } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
@@ -144,7 +145,7 @@ export function ProfileScreen() {
   };
 
   return (
-    <div className="w-full max-w-6xl mx-auto space-y-8 pb-20 animate-in fade-in duration-300">
+    <div className="w-full max-w-6xl mx-auto space-y-8 pb-4 animate-in fade-in duration-300">
       <div>
         <h1 className="text-2xl font-bold text-[#075C45] dark:text-[#78D9A6]">Meu Perfil & Configurações</h1>
         <p className="text-gray-500">Gerencie suas informações, espaços e a segurança da sua conta.</p>
@@ -195,6 +196,11 @@ export function ProfileScreen() {
         <div className="bg-green-50 border border-green-200 p-3 rounded-xl text-sm text-green-800">
             <strong>💡 Dica:</strong> Você pode ter múltiplos espaços para separar suas finanças por objetivo. O espaço Pessoal não pode ser excluído.
         </div>
+      </div>
+
+      {/* LINHA DE APARÊNCIA & TEMAS */}
+      <div className="bg-white dark:bg-[#18211D] p-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-2xs">
+        <ThemeSelector />
       </div>
 
       {/* LINHA 3: Preferências de Exibição */}

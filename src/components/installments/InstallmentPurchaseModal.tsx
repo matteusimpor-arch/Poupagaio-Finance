@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import {
   InstallmentPurchaseWithInstallments,
   CreateInstallmentPurchaseInput,
@@ -71,6 +72,15 @@ export function InstallmentPurchaseModal({
     setIsDeleting(false);
     setDeleteOption('only_installment');
   }, [purchaseToEdit, isOpen, selectedYear, selectedMonth]);
+
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
 
   // Cálculo da simulação de parcelas em tempo real
   const schedulePreview = useMemo(() => {
@@ -189,15 +199,15 @@ export function InstallmentPurchaseModal({
 
   const quickCounts = [2, 3, 4, 6, 10, 12, 18, 24, 36, 48];
 
-  return (
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-installment-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-3.5 sm:p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-200"
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs overflow-hidden animate-in fade-in duration-200"
     >
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-[10000] animate-in fade-in duration-200">
           <div className="bg-white dark:bg-[#1C211E] border border-[#D2DDD6] dark:border-[#28322C] rounded-3xl p-5 max-w-sm w-full space-y-4 shadow-xl text-left">
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 rounded-full bg-rose-100 dark:bg-rose-950/50 flex items-center justify-center text-rose-600 shrink-0">
@@ -269,7 +279,7 @@ export function InstallmentPurchaseModal({
           </div>
         </div>
       )}
-      <div className="relative w-[calc(100vw-24px)] sm:w-full max-w-lg mx-auto rounded-2xl sm:rounded-3xl bg-white dark:bg-[#18211D] border border-[#E2E8E4] dark:border-[#24312B] shadow-2xl p-4 sm:p-7 max-h-[90vh] overflow-y-auto box-border">
+      <div className="relative w-[calc(100vw-24px)] sm:w-full max-w-lg mx-auto rounded-2xl sm:rounded-3xl bg-white dark:bg-[#18211D] border border-[#E2E8E4] dark:border-[#24312B] shadow-2xl p-4 sm:p-7 max-h-[92vh] sm:max-h-[85vh] flex flex-col box-border overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between pb-3.5 sm:pb-4 border-b border-[#E2E8E4] dark:border-[#24312B]">
           <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
@@ -324,7 +334,7 @@ export function InstallmentPurchaseModal({
         )}
 
         {/* Formulário */}
-        <form onSubmit={handleSubmit} className="mt-5 space-y-4">
+        <form onSubmit={handleSubmit} className="mt-5 space-y-4 flex-1 overflow-y-auto">
           {/* Descrição */}
           <div>
             <label
@@ -544,6 +554,7 @@ export function InstallmentPurchaseModal({
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

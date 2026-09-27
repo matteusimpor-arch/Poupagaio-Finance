@@ -3,6 +3,7 @@ import { X, CheckCircle2, AlertTriangle, Wallet, ShieldCheck } from 'lucide-reac
 import { Reserve, PaymentOriginType } from '../../types';
 import { reservesService } from '../../lib/services/reserves';
 import { formatCurrency } from '../../lib/formatters';
+import { ModalPortal } from '../ui/ModalPortal';
 
 interface PaymentOriginConfirmModalProps {
   isOpen: boolean;
@@ -136,12 +137,7 @@ export function PaymentOriginConfirmModal({
   };
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="confirm-payment-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
-    >
+    <ModalPortal isOpen={isOpen} onClose={onClose}>
       <div className="w-[calc(100vw-24px)] max-w-lg bg-white dark:bg-[#18211D] border border-[#E2ECE6] dark:border-[#28322C] rounded-2xl sm:rounded-3xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
         
         {/* Header */}
@@ -374,6 +370,6 @@ export function PaymentOriginConfirmModal({
         </div>
 
       </div>
-    </div>
+    </ModalPortal>
   );
 }

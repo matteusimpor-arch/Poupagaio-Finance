@@ -15,7 +15,7 @@ export function EmptyDashboard() {
   const userName = profile?.full_name || user?.full_name || 'Amigo(a)';
 
   return (
-    <div className="w-full max-w-4xl mx-auto space-y-6 pb-20 md:pb-6 animate-in fade-in duration-300">
+    <div className="w-full max-w-4xl mx-auto space-y-6 pb-4 animate-in fade-in duration-300">
       {/* Top Banner / System Status Pill */}
       <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 rounded-2xl bg-[#075C45]/5 border border-[#16A66A]/20 dark:bg-[#16A66A]/10 dark:border-[#16A66A]/30">
         <div className="flex items-center gap-2 text-xs font-medium text-[#075C45] dark:text-[#78D9A6]">

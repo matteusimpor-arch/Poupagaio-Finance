@@ -165,7 +165,7 @@ export function ReservesScreen({
   }, [reserves, categoryFilter, searchQuery]);
 
   return (
-    <div className="w-full max-w-5xl mx-auto space-y-4 sm:space-y-6 pb-20 md:pb-8 animate-in fade-in duration-300">
+    <div className="w-full max-w-5xl mx-auto space-y-4 sm:space-y-6 pb-4 animate-in fade-in duration-300">
       
       {/* 1. CABEÇALHO DO MÓDULO */}
       <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 sm:gap-4 p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-white dark:bg-[#18211D] border border-[#E2E8E4] dark:border-[#24312B] shadow-xs">

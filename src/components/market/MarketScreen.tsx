@@ -361,7 +361,7 @@ export function MarketScreen() {
   );
 
   return (
-    <div className="w-full max-w-5xl mx-auto space-y-6 pb-20 sm:pb-12">
+    <div className="w-full max-w-5xl mx-auto space-y-6 pb-4">
       {/* Cabeçalho da Página */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
