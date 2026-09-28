@@ -468,29 +468,31 @@ export function DashboardHome({
           </div>
         </div>
 
-        {/* 2. Resumo Financeiro COMPACTO (Saldo Total, Reservas, Saldo Livre) */}
-        <div className="bg-[#02402E] text-white rounded-2xl p-3.5 shadow-2xs space-y-2">
+        {/* 2. Resumo Financeiro COMPACTO (Dinheiro Disponível, Reservas, Saldo Livre, Compromissos) */}
+        <div className="bg-[#02402E] text-white rounded-2xl p-3 shadow-2xs space-y-1.5 border border-[#02402E]">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold uppercase tracking-wider text-[#A1D9BD]">
-              Saldo Total do Mês
+              DINHEIRO DISPONÍVEL
             </span>
             <span className="text-sm font-extrabold font-display">
-              {formatCurrency(saldoConsolidado)}
+              {formatCurrency(reservesSummary.totalBalance)}
             </span>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 pt-1 border-t border-white/10 text-xs">
-            <div className="bg-white/10 rounded-xl p-2">
-              <span className="text-[10px] text-[#C0E3D3] block font-medium">Saldo Livre</span>
-              <span className="text-xs font-bold text-[#78D9A6]">
-                {formatCurrency(reservesSummary.freeBalance)}
-              </span>
+          <div className="flex flex-wrap items-center gap-x-2 pt-1 border-t border-white/10 text-[10px]">
+            <span className="text-[#C0E3D3]">Livre: <strong className="text-white font-bold">{formatCurrency(reservesSummary.freeBalance)}</strong></span>
+            <span className="text-[#C0E3D3]/50">•</span>
+            <span className="text-[#C0E3D3]">Reservado: <strong className="text-[#F2D58A] font-bold">{formatCurrency(reservesSummary.totalReserved)}</strong></span>
+          </div>
+
+          <div className="pt-1 border-t border-white/10 space-y-0.5 text-[10px]">
+            <div className="flex justify-between items-center text-[#C0E3D3]">
+              <span>Contas a pagar</span>
+              <span className="font-bold text-rose-300">{formatCurrency(reservesSummary.contasAPagar)}</span>
             </div>
-            <div className="bg-white/10 rounded-xl p-2">
-              <span className="text-[10px] text-[#C0E3D3] block font-medium">Reservado</span>
-              <span className="text-xs font-bold text-[#F2D58A]">
-                {formatCurrency(reservesSummary.totalReserved)}
-              </span>
+            <div className="flex justify-between items-center text-[#C0E3D3]">
+              <span>Após compromissos</span>
+              <span className="font-bold text-[#78D9A6]">{formatCurrency(Math.max(0, reservesSummary.totalBalance - reservesSummary.contasAPagar))}</span>
             </div>
           </div>
         </div>
@@ -954,206 +956,193 @@ export function DashboardHome({
           SEÇÃO 1: CABEÇALHO & 4 CARDS DE RESUMO FINANCEIRO
           ================================================== */}
       <section className="space-y-4">
-        {/* Welcome Banner & Month Control */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/80 dark:bg-[#1C211E]/80 backdrop-blur-md border border-[#D2DDD6] dark:border-[#28322C] rounded-2xl p-4 sm:p-5 shadow-2xs">
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl sm:text-2xl font-bold font-display text-[#02402E] dark:text-[#78D9A6]">
-                Olá, {firstName}! 👋
-              </h1>
-              {currentSpace?.name && (
-                <span className="text-[10px] font-extrabold uppercase bg-[#02402E] text-white dark:bg-[#78D9A6] dark:text-[#101614] px-2 py-0.5 rounded-md">
-                  {currentSpace.name}
-                </span>
-              )}
-            </div>
-            <p className="text-xs text-[#5E6963] dark:text-[#95A39B] mt-0.5">
-              Acompanhe seu balanço, próximos vencimentos e saúde financeira.
-            </p>
-          </div>
+        {/* 1. Header Compacto Desktop (RESUMO FINANCEIRO + Month Selector) */}
+        <div className="flex items-center justify-between">
+          <h1 className="text-sm font-bold uppercase tracking-widest text-[#5E6963] dark:text-[#95A39B] font-display flex items-center gap-2">
+            <BarChart3 className="w-4 h-4 text-[#16A66A]" />
+            Resumo Financeiro
+          </h1>
 
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-            <p className="text-xs italic text-[#02402E]/70 dark:text-[#78D9A6]/80 font-medium hidden lg:block">
-              "Disciplina hoje, conquistas amanhã." 🍃
-            </p>
-
-            {/* Month/Year Navigation Control */}
-            <div className="flex items-center gap-1.5 bg-[#EAF3EE] dark:bg-[#181B1A] p-1 rounded-xl border border-[#CDE0D5] dark:border-[#2B322F]">
-              <button
-                type="button"
-                onClick={handlePrevMonth}
-                className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-[#5E6963] dark:text-[#95A39B] cursor-pointer transition-colors"
-                aria-label="Mês anterior"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <span className="text-xs font-bold min-w-[100px] text-center font-display text-[#02402E] dark:text-[#78D9A6]">
-                {MONTH_NAMES[currentMonth - 1]} {currentYear}
-              </span>
-              <button
-                type="button"
-                onClick={handleNextMonth}
-                className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-[#5E6963] dark:text-[#95A39B] cursor-pointer transition-colors"
-                aria-label="Próximo mês"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
+          <div className="flex items-center gap-1.5 bg-[#EAF3EE] dark:bg-[#181B1A] p-1 rounded-xl border border-[#CDE0D5] dark:border-[#2B322F] shadow-2xs">
+            <button
+              type="button"
+              onClick={handlePrevMonth}
+              className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-[#5E6963] dark:text-[#95A39B] cursor-pointer transition-colors"
+              aria-label="Mês anterior"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <span className="text-xs font-bold min-w-[110px] text-center font-display text-[#02402E] dark:text-[#78D9A6]">
+              {MONTH_NAMES[currentMonth - 1]} {currentYear}
+            </span>
+            <button
+              type="button"
+              onClick={handleNextMonth}
+              className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-[#5E6963] dark:text-[#95A39B] cursor-pointer transition-colors"
+              aria-label="Próximo mês"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
           </div>
         </div>
 
-        {/* 4 Summary Cards Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          
-          {/* Card 1: Dinheiro Disponível */}
-          <div className="col-span-2 lg:col-span-1 bg-[#02402E] text-white rounded-2xl p-4 shadow-sm space-y-2 border border-[#02402E]">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[#A1D9BD] font-display">
+        {/* 2. Painel Principal (Opção A) */}
+        <div className="bg-[#02402E] text-white rounded-2xl p-6 shadow-sm border border-[#02402E] space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <span className="text-xs font-bold uppercase tracking-[0.2em] text-[#A1D9BD] font-display">
                 Dinheiro Disponível
               </span>
-              <Wallet className="w-3.5 h-3.5 text-[#F2B807]" />
-            </div>
-            <div className="text-xl font-extrabold font-display">
-              {formatCurrency(reservesSummary.totalBalance)}
-            </div>
-            <div className="flex items-center gap-2 pt-2 border-t border-white/10 text-[10px]">
-              <span className="text-[#C0E3D3]">Livre: <strong className="text-white">{formatCurrency(reservesSummary.freeBalance)}</strong></span>
-              <span className="text-[#C0E3D3]/50">•</span>
-              <span className="text-[#C0E3D3]">Res: <strong className="text-[#F2D58A]">{formatCurrency(reservesSummary.totalReserved)}</strong></span>
-            </div>
-            <div className="pt-2 border-t border-white/10 space-y-0.5 text-[10px]">
-              <div className="flex justify-between text-[#C0E3D3]">
-                <span>Contas a pagar</span>
-                <span className="font-bold text-rose-300">{formatCurrency(reservesSummary.contasAPagar)}</span>
-              </div>
-              <div className="flex justify-between text-[#C0E3D3]">
-                <span>Após compromissos</span>
-                <span className="font-bold text-[#78D9A6]">{formatCurrency(Math.max(0, reservesSummary.totalBalance - reservesSummary.contasAPagar))}</span>
+              <div className="text-4xl font-extrabold font-display tracking-tight">
+                {formatCurrency(reservesSummary.totalBalance)}
               </div>
             </div>
-          </div>
-
-          {/* Card 2: Entradas */}
-          <div className="bg-white/90 dark:bg-[#1C211E]/90 border border-[#D2DDD6] dark:border-[#28322C] rounded-2xl p-4 shadow-2xs space-y-2 flex flex-col justify-between">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[#5E6963] dark:text-[#95A39B] font-display">
-                Entradas
-              </span>
-              <button onClick={() => setIsEntryModalOpen(true)} className="p-1 rounded-lg bg-[#E6F6EF] text-[#16A66A] cursor-pointer"><Plus className="w-3.5 h-3.5" /></button>
-            </div>
-            <div className="text-lg font-bold text-[#02402E] dark:text-[#78D9A6] font-display">
-              {formatCurrency(totalReceitas)}
-            </div>
-            <p className="text-[10px] text-[#5E6963] dark:text-[#95A39B]">{entriesSummary.count} reg.</p>
-          </div>
-
-          {/* Card 3: Despesas */}
-          <div className="bg-white/90 dark:bg-[#1C211E]/90 border border-[#D2DDD6] dark:border-[#28322C] rounded-2xl p-4 shadow-2xs space-y-2 flex flex-col justify-between">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[#5E6963] dark:text-[#95A39B] font-display">
-                Despesas
-              </span>
-              <ArrowDownRight className="w-3.5 h-3.5 text-rose-600" />
-            </div>
-            <div className="text-lg font-bold text-rose-600 dark:text-rose-400 font-display">
-              {formatCurrency(totalDespesas)}
-            </div>
-            <p className="text-[10px] text-[#5E6963] dark:text-[#95A39B]">{checklistResult?.stats.totalCount || 0} lanç.</p>
-          </div>
-
-          {/* Card 4: Situação do Mês */}
-          <div className="bg-white/90 dark:bg-[#1C211E]/90 border border-[#D2DDD6] dark:border-[#28322C] rounded-2xl p-4 shadow-2xs space-y-2 flex flex-col justify-between">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[#5E6963] dark:text-[#95A39B] font-display">
-                Situação
-              </span>
-              <Clock className="w-3.5 h-3.5 text-amber-600" />
-            </div>
-            <div className="space-y-0.5 text-[10px]">
-              <div className="flex justify-between"><span className="text-[#5E6963]">Quitado:</span><span className="font-bold text-[#16A66A]">{formatCurrency(totalPago)}</span></div>
-              <div className="flex justify-between"><span className="text-[#5E6963]">Próximos:</span><span className="font-bold text-amber-600">{formatCurrency(totalProximo)}</span></div>
-              <div className="flex justify-between"><span className="text-[#5E6963]">Atrasado:</span><span className="font-bold text-rose-600">{formatCurrency(totalAtrasado)}</span></div>
+            <div className="p-3 bg-white/10 rounded-2xl">
+              <Wallet className="w-8 h-8 text-[#F2B807]" />
             </div>
           </div>
-
+          
+          <div className="grid grid-cols-3 gap-8 pt-6 border-t border-white/10">
+            <div className="space-y-1">
+              <span className="text-[11px] uppercase tracking-wider text-[#A1D9BD] font-bold">Livre</span>
+              <div className="text-xl font-bold">{formatCurrency(reservesSummary.freeBalance)}</div>
+            </div>
+            <div className="space-y-1">
+              <span className="text-[11px] uppercase tracking-wider text-[#A1D9BD] font-bold">Reservado</span>
+              <div className="text-xl font-bold text-[#F2D58A]">{formatCurrency(reservesSummary.totalReserved)}</div>
+            </div>
+            <div className="space-y-1">
+              <span className="text-[11px] uppercase tracking-wider text-[#A1D9BD] font-bold">Após compromissos</span>
+              <div className="text-xl font-bold text-[#78D9A6]">{formatCurrency(Math.max(0, reservesSummary.totalBalance - reservesSummary.contasAPagar))}</div>
+            </div>
+          </div>
         </div>
+
+        {/* 3. Faixa de Indicadores Secundários */}
+        <div className="grid grid-cols-3 gap-8 px-2 py-1">
+          <div className="flex flex-col">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-[#5E6963] dark:text-[#95A39B]">Entradas</span>
+              <div className="h-px flex-1 bg-[#D2DDD6] dark:bg-[#28322C] opacity-50" />
+              <button 
+                onClick={() => setIsEntryModalOpen(true)}
+                className="p-1 rounded-md bg-[#E6F6EF] text-[#16A66A] hover:bg-[#16A66A] hover:text-white transition-all cursor-pointer"
+              >
+                <Plus className="w-3 h-3" />
+              </button>
+            </div>
+            <div className="flex items-baseline gap-3">
+              <span className="text-2xl font-bold text-[#16A66A] font-display">{formatCurrency(totalReceitas)}</span>
+              <span className="text-[11px] font-bold text-[#5E6963] dark:text-[#95A39B] bg-[#EAF3EE] dark:bg-[#181B1A] px-2 py-0.5 rounded-md">
+                {entriesSummary.count} receitas
+              </span>
+            </div>
+          </div>
+          
+          <div className="flex flex-col">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-[#5E6963] dark:text-[#95A39B]">Despesas</span>
+              <div className="h-px flex-1 bg-[#D2DDD6] dark:bg-[#28322C] opacity-50" />
+              <div className="p-1 text-rose-500">
+                <ArrowDownRight className="w-3 h-3" />
+              </div>
+            </div>
+            <div className="flex items-baseline gap-3">
+              <span className="text-2xl font-bold text-rose-600 dark:text-rose-400 font-display">{formatCurrency(totalDespesas)}</span>
+              <span className="text-[11px] font-bold text-[#5E6963] dark:text-[#95A39B] bg-[#FEE2E2] dark:bg-rose-950/30 px-2 py-0.5 rounded-md text-rose-600 dark:text-rose-400">
+                {checklistResult?.stats.totalCount || 0} lançamentos
+              </span>
+            </div>
+          </div>
+          
+          <div className="flex flex-col">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-[#5E6963] dark:text-[#95A39B]">A Pagar</span>
+              <div className="h-px flex-1 bg-[#D2DDD6] dark:bg-[#28322C] opacity-50" />
+              <div className="p-1 text-amber-500">
+                <Clock className="w-3 h-3" />
+              </div>
+            </div>
+            <div className="flex items-baseline gap-3">
+              <span className="text-2xl font-bold text-amber-600 font-display">{formatCurrency(totalPendente)}</span>
+              <span className="text-[11px] font-bold text-[#5E6963] dark:text-[#95A39B] bg-amber-50 dark:bg-amber-950/30 px-2 py-0.5 rounded-md text-amber-600">
+                {checklistResult?.stats.pendingCount || 0} pendentes
+              </span>
+            </div>
+          </div>
+        </div>
+
       </section>
 
       {/* ==================================================
           SEÇÃO 2: CONTAS PREVISTAS (CHECKLIST COMPACTO)
           ================================================== */}
       <section className="space-y-4">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-          <div className="flex items-center justify-between w-full md:w-auto">
-            <div>
-              <h2 className="text-lg font-bold font-display text-[#02402E] dark:text-[#78D9A6] flex items-center gap-2">
-                <CalendarCheck className="w-5 h-5 text-[#16A66A]" />
-                Contas Previstas
-              </h2>
-              <p className="text-xs text-[#5E6963] dark:text-[#95A39B]">
-                Compromissos financeiros do mês (gastos fixos, variáveis e parcelamentos).
-              </p>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-[#D2DDD6] dark:border-[#28322C]">
+          <div className="flex items-center gap-4">
+            <h2 className="text-xl font-bold font-display text-[#02402E] dark:text-[#78D9A6] flex items-center gap-2.5">
+              <CalendarCheck className="w-6 h-6 text-[#16A66A]" />
+              Contas Previstas
+            </h2>
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-[#EAF3EE] dark:bg-[#181B1A] rounded-full border border-[#CDE0D5] dark:border-[#2B322F] shadow-2xs">
+              <span className="text-[11px] font-bold text-[#02402E] dark:text-[#78D9A6]">
+                {checklistResult?.stats.pendingCount || 0} pendentes
+              </span>
+              <span className="text-[#D2DDD6] dark:text-[#28322C]">•</span>
+              <span className="text-[11px] font-extrabold text-[#16A66A]">
+                {formatCurrency(totalPendente)}
+              </span>
             </div>
-
-            {/* Mobile-only + button */}
-            <button
-              type="button"
-              onClick={() => setIsQuickAddMenuOpen(true)}
-              aria-label="Adicionar conta"
-              className="md:hidden w-10 h-10 rounded-full bg-[#02402E] dark:bg-[#16A66A] text-white dark:text-[#101614] flex items-center justify-center shadow-md hover:scale-105 active:scale-95 transition-all shrink-0 cursor-pointer ml-2"
-            >
-              <Plus className="w-5 h-5 stroke-[2.5]" />
-            </button>
           </div>
 
-          {/* Filter Pills & Add Button */}
-          <div className="flex items-center gap-2.5 shrink-0 self-start sm:self-auto">
+          <div className="flex flex-wrap items-center gap-3">
             <button
               type="button"
               onClick={() => setIsQuickAddMenuOpen(true)}
-              className="px-3.5 py-1.5 rounded-xl bg-[#02402E] text-white dark:bg-[#78D9A6] dark:text-[#101614] text-xs font-bold hover:bg-[#16A66A] dark:hover:bg-[#5ECB93] transition-all cursor-pointer flex items-center gap-1.5 shrink-0 shadow-2xs active:scale-95"
+              className="px-4 py-2 rounded-xl bg-[#02402E] text-white dark:bg-[#78D9A6] dark:text-[#101614] text-sm font-bold hover:bg-[#16A66A] dark:hover:bg-[#5ECB93] transition-all cursor-pointer flex items-center gap-2 shadow-sm active:scale-95"
             >
-              <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+              <Plus className="w-4 h-4 stroke-[2.5]" />
               <span>Nova Conta</span>
             </button>
 
-            <div className="flex items-center gap-1 bg-white/80 dark:bg-[#1C211E]/80 border border-[#D2DDD6] dark:border-[#28322C] p-1 rounded-xl shrink-0">
+            <div className="flex items-center gap-1 bg-[#EAF3EE] dark:bg-[#181B1A] p-1 rounded-xl border border-[#CDE0D5] dark:border-[#2B322F] shadow-2xs">
               <button
                 type="button"
                 onClick={() => setChecklistFilter('pending')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                   checklistFilter === 'pending'
-                    ? 'bg-[#02402E] text-white dark:bg-[#16A66A] dark:text-[#101614]'
-                    : 'text-[#5E6963] dark:text-[#95A39B] hover:text-[#02402E]'
+                    ? 'bg-[#02402E] text-white dark:bg-[#16A66A] dark:text-[#101614] shadow-sm'
+                    : 'text-[#5E6963] dark:text-[#95A39B] hover:bg-black/5 dark:hover:bg-white/5'
                 }`}
               >
-                Pendentes ({checklistResult?.stats.pendingCount || 0})
+                Pendentes
               </button>
               <button
                 type="button"
                 onClick={() => setChecklistFilter('paid')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                   checklistFilter === 'paid'
-                    ? 'bg-[#02402E] text-white dark:bg-[#16A66A] dark:text-[#101614]'
-                    : 'text-[#5E6963] dark:text-[#95A39B] hover:text-[#02402E]'
+                    ? 'bg-[#02402E] text-white dark:bg-[#16A66A] dark:text-[#101614] shadow-sm'
+                    : 'text-[#5E6963] dark:text-[#95A39B] hover:bg-black/5 dark:hover:bg-white/5'
                 }`}
               >
-                Pagas ({checklistResult?.stats.paidCount || 0})
+                Pagas
               </button>
               <button
                 type="button"
                 onClick={() => setChecklistFilter('all')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                   checklistFilter === 'all'
-                    ? 'bg-[#02402E] text-white dark:bg-[#16A66A] dark:text-[#101614]'
-                    : 'text-[#5E6963] dark:text-[#95A39B] hover:text-[#02402E]'
+                    ? 'bg-[#02402E] text-white dark:bg-[#16A66A] dark:text-[#101614] shadow-sm'
+                    : 'text-[#5E6963] dark:text-[#95A39B] hover:bg-black/5 dark:hover:bg-white/5'
                 }`}
               >
-                Todas ({checklistResult?.stats.totalCount || 0})
+                Todas
               </button>
             </div>
           </div>
         </div>
+
 
         {/* List items */}
         <div className="bg-white/90 dark:bg-[#1C211E]/90 backdrop-blur-md border border-[#D2DDD6] dark:border-[#28322C] rounded-2xl p-4 sm:p-5 shadow-2xs divide-y divide-[#E2ECE6] dark:divide-[#28322C]">
