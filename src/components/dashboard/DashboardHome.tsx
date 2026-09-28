@@ -956,18 +956,17 @@ export function DashboardHome({
           SEÇÃO 1: CABEÇALHO & 4 CARDS DE RESUMO FINANCEIRO
           ================================================== */}
       <section className="space-y-4">
-        {/* 1. Header Compacto Desktop (RESUMO FINANCEIRO + Month Selector) */}
-        <div className="flex items-center justify-between">
-          <h1 className="text-sm font-bold uppercase tracking-widest text-[#5E6963] dark:text-[#95A39B] font-display flex items-center gap-2">
-            <BarChart3 className="w-4 h-4 text-[#16A66A]" />
+        <div className="flex items-center justify-between mb-2">
+          <h1 className="text-[10px] font-bold uppercase tracking-[0.25em] text-[#5E6963] dark:text-[#95A39B] font-display flex items-center gap-2">
+            <BarChart3 className="w-3.5 h-3.5 text-[#16A66A]" />
             Resumo Financeiro
           </h1>
 
-          <div className="flex items-center gap-1.5 bg-[#EAF3EE] dark:bg-[#181B1A] p-1 rounded-xl border border-[#CDE0D5] dark:border-[#2B322F] shadow-2xs">
+          <div className="flex items-center gap-1.5 bg-[#EAF3EE] dark:bg-[#181B1A] p-1 rounded-xl border border-[#CDE0D5] dark:border-[#2B322F] shadow-2xs scale-90 origin-right">
             <button
               type="button"
               onClick={handlePrevMonth}
-              className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-[#5E6963] dark:text-[#95A39B] cursor-pointer transition-colors"
+              className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-[#5E6963] dark:text-[#95A39B] cursor-pointer transition-colors"
               aria-label="Mês anterior"
             >
               <ChevronLeft className="w-4 h-4" />
@@ -978,7 +977,7 @@ export function DashboardHome({
             <button
               type="button"
               onClick={handleNextMonth}
-              className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-[#5E6963] dark:text-[#95A39B] cursor-pointer transition-colors"
+              className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-[#5E6963] dark:text-[#95A39B] cursor-pointer transition-colors"
               aria-label="Próximo mês"
             >
               <ChevronRight className="w-4 h-4" />
@@ -986,91 +985,96 @@ export function DashboardHome({
           </div>
         </div>
 
-        {/* 2. Painel Principal (Opção A) */}
-        <div className="bg-[#02402E] text-white rounded-2xl p-6 shadow-sm border border-[#02402E] space-y-6">
+
+        {/* 2. Painel Principal Refinado (Horizontal e Compacto) */}
+        <div className="bg-white/40 dark:bg-[#1C211E]/40 border border-[#D2DDD6] dark:border-[#28322C] rounded-2xl p-5 px-8 shadow-2xs">
           <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <span className="text-xs font-bold uppercase tracking-[0.2em] text-[#A1D9BD] font-display">
-                Dinheiro Disponível
-              </span>
-              <div className="text-4xl font-extrabold font-display tracking-tight">
+            {/* Dinheiro Disponível */}
+            <div className="flex-1">
+              <span className="text-[9px] font-bold uppercase tracking-[0.15em] text-[#5E6963] dark:text-[#95A39B] block mb-0.5">Dinheiro Disponível</span>
+              <div className="text-2xl font-extrabold text-[#02402E] dark:text-[#78D9A6] font-display tracking-tight">
                 {formatCurrency(reservesSummary.totalBalance)}
               </div>
             </div>
-            <div className="p-3 bg-white/10 rounded-2xl">
-              <Wallet className="w-8 h-8 text-[#F2B807]" />
-            </div>
-          </div>
           
-          <div className="grid grid-cols-3 gap-8 pt-6 border-t border-white/10">
-            <div className="space-y-1">
-              <span className="text-[11px] uppercase tracking-wider text-[#A1D9BD] font-bold">Livre</span>
-              <div className="text-xl font-bold">{formatCurrency(reservesSummary.freeBalance)}</div>
+            <div className="h-8 w-px bg-[#D2DDD6] dark:bg-[#28322C] mx-8 opacity-40" />
+
+            {/* Livre */}
+            <div className="flex-1">
+              <span className="text-[9px] font-bold uppercase tracking-[0.15em] text-[#5E6963] dark:text-[#95A39B] block mb-0.5">Livre</span>
+              <div className="text-lg font-bold text-[#02402E] dark:text-[#78D9A6] font-display">
+                {formatCurrency(reservesSummary.freeBalance)}
+              </div>
             </div>
-            <div className="space-y-1">
-              <span className="text-[11px] uppercase tracking-wider text-[#A1D9BD] font-bold">Reservado</span>
-              <div className="text-xl font-bold text-[#F2D58A]">{formatCurrency(reservesSummary.totalReserved)}</div>
+
+            <div className="h-8 w-px bg-[#D2DDD6] dark:bg-[#28322C] mx-8 opacity-40" />
+
+            {/* Reservado */}
+            <div className="flex-1">
+              <span className="text-[9px] font-bold uppercase tracking-[0.15em] text-[#5E6963] dark:text-[#95A39B] block mb-0.5">Reservado</span>
+              <div className="text-lg font-bold text-[#F2B807] font-display">
+                {formatCurrency(reservesSummary.totalReserved)}
+              </div>
             </div>
-            <div className="space-y-1">
-              <span className="text-[11px] uppercase tracking-wider text-[#A1D9BD] font-bold">Após compromissos</span>
-              <div className="text-xl font-bold text-[#78D9A6]">{formatCurrency(Math.max(0, reservesSummary.totalBalance - reservesSummary.contasAPagar))}</div>
+
+            <div className="h-8 w-px bg-[#D2DDD6] dark:bg-[#28322C] mx-8 opacity-40" />
+
+            {/* Após compromissos */}
+            <div className="flex-1">
+              <span className="text-[9px] font-bold uppercase tracking-[0.15em] text-[#5E6963] dark:text-[#95A39B] block mb-0.5">Após compromissos</span>
+              <div className="text-lg font-bold text-[#16A66A] font-display">
+                {formatCurrency(Math.max(0, reservesSummary.totalBalance - reservesSummary.contasAPagar))}
+              </div>
             </div>
           </div>
         </div>
 
-        {/* 3. Faixa de Indicadores Secundários */}
-        <div className="grid grid-cols-3 gap-8 px-2 py-1">
+
+        {/* 3. Faixa de Indicadores Secundários (Ajustada para proximidade) */}
+        <div className="grid grid-cols-3 gap-8 px-4 pt-2 pb-1 border-b border-[#D2DDD6]/30 dark:border-[#28322C]/30">
           <div className="flex flex-col">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-[#5E6963] dark:text-[#95A39B]">Entradas</span>
-              <div className="h-px flex-1 bg-[#D2DDD6] dark:bg-[#28322C] opacity-50" />
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-[9px] font-bold uppercase tracking-widest text-[#5E6963] dark:text-[#95A39B]">Entradas</span>
               <button 
                 onClick={() => setIsEntryModalOpen(true)}
-                className="p-1 rounded-md bg-[#E6F6EF] text-[#16A66A] hover:bg-[#16A66A] hover:text-white transition-all cursor-pointer"
+                className="p-1 rounded-md bg-[#E6F6EF] text-[#16A66A] hover:bg-[#16A66A] hover:text-white transition-all cursor-pointer scale-75"
               >
                 <Plus className="w-3 h-3" />
               </button>
             </div>
-            <div className="flex items-baseline gap-3">
-              <span className="text-2xl font-bold text-[#16A66A] font-display">{formatCurrency(totalReceitas)}</span>
-              <span className="text-[11px] font-bold text-[#5E6963] dark:text-[#95A39B] bg-[#EAF3EE] dark:bg-[#181B1A] px-2 py-0.5 rounded-md">
+            <div className="flex items-baseline gap-2">
+              <span className="text-xl font-bold text-[#16A66A] font-display">{formatCurrency(totalReceitas)}</span>
+              <span className="text-[9px] font-bold text-[#5E6963] dark:text-[#95A39B]">
                 {entriesSummary.count} receitas
               </span>
             </div>
           </div>
           
           <div className="flex flex-col">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-[#5E6963] dark:text-[#95A39B]">Despesas</span>
-              <div className="h-px flex-1 bg-[#D2DDD6] dark:bg-[#28322C] opacity-50" />
-              <div className="p-1 text-rose-500">
-                <ArrowDownRight className="w-3 h-3" />
-              </div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-[9px] font-bold uppercase tracking-widest text-[#5E6963] dark:text-[#95A39B]">Despesas</span>
             </div>
-            <div className="flex items-baseline gap-3">
-              <span className="text-2xl font-bold text-rose-600 dark:text-rose-400 font-display">{formatCurrency(totalDespesas)}</span>
-              <span className="text-[11px] font-bold text-[#5E6963] dark:text-[#95A39B] bg-[#FEE2E2] dark:bg-rose-950/30 px-2 py-0.5 rounded-md text-rose-600 dark:text-rose-400">
+            <div className="flex items-baseline gap-2">
+              <span className="text-xl font-bold text-rose-600 dark:text-rose-400 font-display">{formatCurrency(totalDespesas)}</span>
+              <span className="text-[9px] font-bold text-[#5E6963] dark:text-[#95A39B]">
                 {checklistResult?.stats.totalCount || 0} lançamentos
               </span>
             </div>
           </div>
           
           <div className="flex flex-col">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-[#5E6963] dark:text-[#95A39B]">A Pagar</span>
-              <div className="h-px flex-1 bg-[#D2DDD6] dark:bg-[#28322C] opacity-50" />
-              <div className="p-1 text-amber-500">
-                <Clock className="w-3 h-3" />
-              </div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-[9px] font-bold uppercase tracking-widest text-[#5E6963] dark:text-[#95A39B]">A Pagar</span>
             </div>
-            <div className="flex items-baseline gap-3">
-              <span className="text-2xl font-bold text-amber-600 font-display">{formatCurrency(totalPendente)}</span>
-              <span className="text-[11px] font-bold text-[#5E6963] dark:text-[#95A39B] bg-amber-50 dark:bg-amber-950/30 px-2 py-0.5 rounded-md text-amber-600">
+            <div className="flex items-baseline gap-2">
+              <span className="text-xl font-bold text-amber-600 font-display">{formatCurrency(totalPendente)}</span>
+              <span className="text-[9px] font-bold text-[#5E6963] dark:text-[#95A39B]">
                 {checklistResult?.stats.pendingCount || 0} pendentes
               </span>
             </div>
           </div>
         </div>
+
 
       </section>
 
