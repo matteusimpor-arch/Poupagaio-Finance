@@ -24,6 +24,7 @@ export const emptyReservesSummary: ReservesSummary = {
   freeBalance: 0,
   totalAllocated: 0,
   totalSpentFromReserves: 0,
+  contasAPagar: 0,
   count: 0,
 };
 
@@ -136,6 +137,7 @@ export const reservesService = {
 
       // Saldo Livre oficial = Saldo Total - Total Reservado
       const freeBalance = Math.max(0, totalBalance - totalReserved);
+      const contasAPagar = checklistRes.stats ? checklistRes.stats.pendingAmount : 0;
 
       return {
         reserves,
@@ -145,6 +147,7 @@ export const reservesService = {
           freeBalance,
           totalAllocated,
           totalSpentFromReserves,
+          contasAPagar,
           count: reserves.length,
         },
         isTableMissing,

@@ -1003,114 +1003,76 @@ export function DashboardHome({
         </div>
 
         {/* 4 Summary Cards Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           
-          {/* Card 1: Saldo do Mês (Deep Green #02402E) */}
-          <div className="bg-[#02402E] text-white rounded-2xl p-5 shadow-sm space-y-3 relative overflow-hidden flex flex-col justify-between border border-[#02402E]">
+          {/* Card 1: Dinheiro Disponível */}
+          <div className="col-span-2 lg:col-span-1 bg-[#02402E] text-white rounded-2xl p-4 shadow-sm space-y-2 border border-[#02402E]">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-[#A1D9BD] font-display">
-                Saldo Total
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#A1D9BD] font-display">
+                Dinheiro Disponível
               </span>
-              <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center text-[#F2B807]">
-                <Wallet className="w-4 h-4" />
-              </div>
+              <Wallet className="w-3.5 h-3.5 text-[#F2B807]" />
             </div>
-
-            <div>
-              <div className="text-2xl sm:text-3xl font-extrabold tracking-tight font-display">
-                {formatCurrency(saldoConsolidado)}
+            <div className="text-xl font-extrabold font-display">
+              {formatCurrency(reservesSummary.totalBalance)}
+            </div>
+            <div className="flex items-center gap-2 pt-2 border-t border-white/10 text-[10px]">
+              <span className="text-[#C0E3D3]">Livre: <strong className="text-white">{formatCurrency(reservesSummary.freeBalance)}</strong></span>
+              <span className="text-[#C0E3D3]/50">•</span>
+              <span className="text-[#C0E3D3]">Res: <strong className="text-[#F2D58A]">{formatCurrency(reservesSummary.totalReserved)}</strong></span>
+            </div>
+            <div className="pt-2 border-t border-white/10 space-y-0.5 text-[10px]">
+              <div className="flex justify-between text-[#C0E3D3]">
+                <span>Contas a pagar</span>
+                <span className="font-bold text-rose-300">{formatCurrency(reservesSummary.contasAPagar)}</span>
               </div>
-              <div className="flex items-center gap-2 mt-2 pt-2 border-t border-white/15 text-[11px]">
-                <span className="text-[#C0E3D3]">
-                  Livre: <strong className="text-white font-bold">{formatCurrency(reservesSummary.freeBalance)}</strong>
-                </span>
-                <span className="text-[#C0E3D3]/50">•</span>
-                <span className="text-[#C0E3D3]">
-                  Reservado: <strong className="text-[#F2D58A] font-bold">{formatCurrency(reservesSummary.totalReserved)}</strong>
-                </span>
+              <div className="flex justify-between text-[#C0E3D3]">
+                <span>Após compromissos</span>
+                <span className="font-bold text-[#78D9A6]">{formatCurrency(Math.max(0, reservesSummary.totalBalance - reservesSummary.contasAPagar))}</span>
               </div>
             </div>
           </div>
 
           {/* Card 2: Entradas */}
-          <div className="bg-white/90 dark:bg-[#1C211E]/90 backdrop-blur-md border border-[#D2DDD6] dark:border-[#28322C] rounded-2xl p-5 shadow-2xs space-y-3 flex flex-col justify-between">
+          <div className="bg-white/90 dark:bg-[#1C211E]/90 border border-[#D2DDD6] dark:border-[#28322C] rounded-2xl p-4 shadow-2xs space-y-2 flex flex-col justify-between">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-[#5E6963] dark:text-[#95A39B] font-display">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#5E6963] dark:text-[#95A39B] font-display">
                 Entradas
               </span>
-              <button
-                type="button"
-                onClick={() => setIsEntryModalOpen(true)}
-                title="Adicionar Entrada"
-                className="w-8 h-8 rounded-xl bg-[#E6F6EF] hover:bg-[#d0ecdf] dark:bg-[#16A66A]/20 dark:hover:bg-[#16A66A]/30 flex items-center justify-center text-[#16A66A] cursor-pointer active:scale-95 transition-transform"
-              >
-                <Plus className="w-4 h-4 stroke-[2.5]" />
-              </button>
+              <button onClick={() => setIsEntryModalOpen(true)} className="p-1 rounded-lg bg-[#E6F6EF] text-[#16A66A] cursor-pointer"><Plus className="w-3.5 h-3.5" /></button>
             </div>
-
-            <div>
-              <div className="text-2xl sm:text-3xl font-bold tracking-tight text-[#02402E] dark:text-[#78D9A6] font-display">
-                {formatCurrency(totalReceitas)}
-              </div>
-              <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B] mt-1">
-                {entriesSummary.count} receita(s) registrada(s)
-              </p>
+            <div className="text-lg font-bold text-[#02402E] dark:text-[#78D9A6] font-display">
+              {formatCurrency(totalReceitas)}
             </div>
+            <p className="text-[10px] text-[#5E6963] dark:text-[#95A39B]">{entriesSummary.count} reg.</p>
           </div>
 
           {/* Card 3: Despesas */}
-          <div className="bg-white/90 dark:bg-[#1C211E]/90 backdrop-blur-md border border-[#D2DDD6] dark:border-[#28322C] rounded-2xl p-5 shadow-2xs space-y-3 flex flex-col justify-between">
+          <div className="bg-white/90 dark:bg-[#1C211E]/90 border border-[#D2DDD6] dark:border-[#28322C] rounded-2xl p-4 shadow-2xs space-y-2 flex flex-col justify-between">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-[#5E6963] dark:text-[#95A39B] font-display">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#5E6963] dark:text-[#95A39B] font-display">
                 Despesas
               </span>
-              <div className="w-8 h-8 rounded-xl bg-[#FEE2E2] dark:bg-rose-950/40 flex items-center justify-center text-rose-600 dark:text-rose-400">
-                <ArrowDownRight className="w-4 h-4" />
-              </div>
+              <ArrowDownRight className="w-3.5 h-3.5 text-rose-600" />
             </div>
-
-            <div>
-              <div className="text-2xl sm:text-3xl font-bold tracking-tight text-rose-600 dark:text-rose-400 font-display">
-                {formatCurrency(totalDespesas)}
-              </div>
-              <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B] mt-1">
-                {checklistResult?.stats.totalCount || 0} lançamento(s) no mês
-              </p>
+            <div className="text-lg font-bold text-rose-600 dark:text-rose-400 font-display">
+              {formatCurrency(totalDespesas)}
             </div>
+            <p className="text-[10px] text-[#5E6963] dark:text-[#95A39B]">{checklistResult?.stats.totalCount || 0} lanç.</p>
           </div>
 
           {/* Card 4: Situação do Mês */}
-          <div className="bg-white/90 dark:bg-[#1C211E]/90 backdrop-blur-md border border-[#D2DDD6] dark:border-[#28322C] rounded-2xl p-5 shadow-2xs space-y-3 flex flex-col justify-between">
+          <div className="bg-white/90 dark:bg-[#1C211E]/90 border border-[#D2DDD6] dark:border-[#28322C] rounded-2xl p-4 shadow-2xs space-y-2 flex flex-col justify-between">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-[#5E6963] dark:text-[#95A39B] font-display">
-                Situação do Mês
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#5E6963] dark:text-[#95A39B] font-display">
+                Situação
               </span>
-              <div className="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-950/40 flex items-center justify-center text-amber-600 dark:text-amber-400">
-                <Clock className="w-4 h-4" />
-              </div>
+              <Clock className="w-3.5 h-3.5 text-amber-600" />
             </div>
-
-            <div className="space-y-1.5 text-xs">
-              <div className="flex justify-between items-center">
-                <span className="text-[#5E6963] dark:text-[#95A39B] flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-full bg-[#16A66A]" /> Quitado:
-                </span>
-                <span className="font-bold text-[#16A66A]">{formatCurrency(totalPago)}</span>
-              </div>
-
-              <div className="flex justify-between items-center">
-                <span className="text-[#5E6963] dark:text-[#95A39B] flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-full bg-amber-500" /> Próximos:
-                </span>
-                <span className="font-bold text-amber-600 dark:text-amber-400">{formatCurrency(totalProximo)}</span>
-              </div>
-
-              <div className="flex justify-between items-center">
-                <span className="text-[#5E6963] dark:text-[#95A39B] flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-full bg-rose-500" /> Atrasado / Hoje:
-                </span>
-                <span className="font-bold text-rose-600 dark:text-rose-400">{formatCurrency(totalAtrasado)}</span>
-              </div>
+            <div className="space-y-0.5 text-[10px]">
+              <div className="flex justify-between"><span className="text-[#5E6963]">Quitado:</span><span className="font-bold text-[#16A66A]">{formatCurrency(totalPago)}</span></div>
+              <div className="flex justify-between"><span className="text-[#5E6963]">Próximos:</span><span className="font-bold text-amber-600">{formatCurrency(totalProximo)}</span></div>
+              <div className="flex justify-between"><span className="text-[#5E6963]">Atrasado:</span><span className="font-bold text-rose-600">{formatCurrency(totalAtrasado)}</span></div>
             </div>
           </div>
 

@@ -44,6 +44,7 @@ export function InstallmentPurchaseModal({
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteOption, setDeleteOption] = useState<'only_installment' | 'full_purchase'>('only_installment');
+  const [inputType, setInputType] = useState<'total' | 'parcela'>('total');
 
   const isEditing = Boolean(purchaseToEdit);
   const hasPaidInstallments = (purchaseToEdit?.paidCount || 0) > 0;

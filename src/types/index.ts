@@ -636,6 +636,7 @@ export interface ReservesSummary {
   freeBalance: number;               // Saldo Livre = Saldo Total - Total Reservado
   totalAllocated: number;            // Total inicialmente alocado nas reservas da competência
   totalSpentFromReserves: number;    // Total gasto a partir das reservas
+  contasAPagar: number;              // Contas a pagar pendentes
   count: number;
 }
 

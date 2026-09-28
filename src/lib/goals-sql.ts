@@ -147,6 +147,9 @@ CREATE TABLE IF NOT EXISTS public.goal_contributions (
     created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
     amount NUMERIC(12, 2) NOT NULL CHECK (amount > 0),
     contribution_date DATE NOT NULL,
+    origin_type TEXT NOT NULL DEFAULT 'free_balance' CHECK (origin_type IN ('free_balance', 'reserve')),
+    reserve_id UUID REFERENCES public.reserves(id) ON DELETE SET NULL,
+    reserve_name TEXT,
     notes TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
@@ -156,11 +159,17 @@ CREATE TABLE IF NOT EXISTS public.goal_contributions (
         ON DELETE CASCADE
 );
 
+-- Suporte retroativo caso a tabela já exista sem as colunas
+ALTER TABLE public.goal_contributions ADD COLUMN IF NOT EXISTS origin_type TEXT DEFAULT 'free_balance';
+ALTER TABLE public.goal_contributions ADD COLUMN IF NOT EXISTS reserve_id UUID REFERENCES public.reserves(id) ON DELETE SET NULL;
+ALTER TABLE public.goal_contributions ADD COLUMN IF NOT EXISTS reserve_name TEXT;
+
 CREATE INDEX IF NOT EXISTS idx_goal_contributions_space_id ON public.goal_contributions(space_id);
 CREATE INDEX IF NOT EXISTS idx_goal_contributions_goal_id ON public.goal_contributions(goal_id);
 CREATE INDEX IF NOT EXISTS idx_goal_contributions_date ON public.goal_contributions(contribution_date);
 CREATE INDEX IF NOT EXISTS idx_goal_contributions_space_date ON public.goal_contributions(space_id, contribution_date);
 CREATE INDEX IF NOT EXISTS idx_goal_contributions_created_by ON public.goal_contributions(created_by);
+CREATE INDEX IF NOT EXISTS idx_goal_contributions_origin ON public.goal_contributions(origin_type);
 
 CREATE OR REPLACE FUNCTION public.handle_goal_contributions_updated_at()
 RETURNS TRIGGER LANGUAGE plpgsql SET search_path = public, pg_temp AS $$

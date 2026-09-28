@@ -251,7 +251,7 @@ export function ReservesScreen({
         <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#18211D] border border-[#E2E8E4] dark:border-[#24312B] shadow-xs space-y-1.5">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-[#5E6963] dark:text-[#95A39B]">
-              Saldo Total
+              Dinheiro Disponível
             </span>
             <div className="w-7 h-7 rounded-lg bg-[#02402E]/10 dark:bg-[#16A66A]/20 text-[#02402E] dark:text-[#78D9A6] flex items-center justify-center">
               <Layers className="w-3.5 h-3.5" />

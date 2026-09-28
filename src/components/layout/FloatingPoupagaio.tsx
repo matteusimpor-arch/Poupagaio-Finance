@@ -565,12 +565,12 @@ export function FloatingPoupagaio({
             : 'cursor-grab active:cursor-grabbing hover:scale-105'
         }`}
       >
-        <div className="w-[52px] h-[52px] sm:w-[72px] sm:h-[72px] rounded-full relative flex items-center justify-center filter drop-shadow-md group-hover:drop-shadow-xl transition-all duration-300 border border-[#D2DDD6] dark:border-[#28322C] shadow-md">
+        <div className="w-[52px] h-[52px] sm:w-[72px] sm:h-[72px] rounded-full relative flex items-center justify-center transition-all duration-300">
           <img
             src={POUPAGAIO_ASSISTANTE_URL}
             alt="Poupagaio Assistente - Acesso Rápido"
             referrerPolicy="no-referrer"
-            className="w-[85%] h-[85%] object-contain pointer-events-none"
+            className="w-full h-full object-contain pointer-events-none"
           />
         </div>
       </button>

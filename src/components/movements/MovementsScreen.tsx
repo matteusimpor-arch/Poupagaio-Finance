@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
 import { entriesService } from '../../lib/services/entries';
 import { checklistService, NormalizedChecklistExpense } from '../../lib/services/checklist';
-import { formatCurrency, getMonthNameBR, getMonthYearLabel } from '../../lib/formatters';
+import { formatCurrency, getMonthNameBR, getMonthYearLabel, getISODateToday } from '../../lib/formatters';
 import { EntryModal } from '../entries/EntryModal';
 import { VariableExpenseModal } from '../variable-expenses/VariableExpenseModal';
 import { FixedExpenseModal } from '../fixed-expenses/FixedExpenseModal';
@@ -100,6 +101,7 @@ export function MovementsScreen({
   const [editingMovement, setEditingMovement] = useState<ConsolidatedMovement | null>(null);
   const [freshEditingRecord, setFreshEditingRecord] = useState<any | null>(null);
   const [isFetchingFreshRecord, setIsFetchingFreshRecord] = useState<boolean>(false);
+  const [entryToUndoAutoReceive, setEntryToUndoAutoReceive] = useState<ConsolidatedMovement | null>(null);
 
   // Month navigation
   const handlePrevMonth = () => {
@@ -443,6 +445,11 @@ export function MovementsScreen({
     if (!currentSpace?.id) return;
     if (item.sourceType === 'entry') {
       const currentStatus = item.status === 'received' ? 'received' : 'pending';
+      const entryRecord = item.originalRecord as Entry | undefined;
+      if (currentStatus === 'received' && entryRecord?.auto_receive && item.date <= getISODateToday()) {
+        setEntryToUndoAutoReceive(item);
+        return;
+      }
       await entriesService.toggleStatus(item.sourceId, currentStatus);
       loadMovementsData();
     } else if (item.originalRecord) {
@@ -451,8 +458,16 @@ export function MovementsScreen({
     }
   };
 
+  const handleConfirmUndoAutoReceive = async () => {
+    if (!entryToUndoAutoReceive) return;
+    const item = entryToUndoAutoReceive;
+    setEntryToUndoAutoReceive(null);
+    await entriesService.toggleStatus(item.sourceId, 'received', true);
+    loadMovementsData();
+  };
+
   return (
-    <div className="space-y-4 pb-4 max-w-[1280px] mx-auto px-3 sm:px-6">
+    <div className="space-y-4 pb-24 sm:pb-12 max-w-[1280px] mx-auto px-3 sm:px-6">
       {/* HEADER & MONTH NAVIGATION */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-[#D2DDD6] dark:border-[#28322C]">
         <div className="flex items-center gap-2">

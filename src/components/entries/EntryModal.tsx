@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Entry, EntryStatus, CreateEntryInput, UpdateEntryInput } from '../../types';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
-import { ModalPortal } from '../ui/ModalPortal';
 import { X, DollarSign, Calendar, Tag, FileText, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
 import { getISODateToday, parseCurrencyInput, formatCurrency, getDefaultDateForBillingCycle } from '../../lib/formatters';
 
@@ -44,12 +44,14 @@ export function EntryModal({
   const [category, setCategory] = useState('Salário');
   const [customCategory, setCustomCategory] = useState('');
   const [status, setStatus] = useState<EntryStatus>('received');
+  const [autoReceive, setAutoReceive] = useState(false);
   const [notes, setNotes] = useState('');
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showUndoAutoReceiveModal, setShowUndoAutoReceiveModal] = useState(false);
   const [generalError, setGeneralError] = useState<string | null>(null);
 
   const isEditing = Boolean(editingEntry);
@@ -68,6 +70,7 @@ export function EntryModal({
         setCustomCategory(editingEntry.category);
       }
       setStatus(editingEntry.status);
+      setAutoReceive(Boolean(editingEntry.auto_receive));
       setNotes(editingEntry.notes || '');
     } else {
       setDescription('');
@@ -76,13 +79,24 @@ export function EntryModal({
       setCategory('Salário');
       setCustomCategory('');
       setStatus('received');
+      setAutoReceive(false);
       setNotes('');
     }
     setErrors({});
     setGeneralError(null);
     setShowDeleteConfirm(false);
+    setShowUndoAutoReceiveModal(false);
     setIsDeleting(false);
   }, [editingEntry, isOpen, selectedYear, selectedMonth]);
+
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -144,6 +158,7 @@ export function EntryModal({
           category: finalCategory,
           status,
           notes: notes.trim() || null,
+          auto_receive: status === 'pending' ? autoReceive : false,
         };
         const success = await onSave(payload);
         if (success) {
@@ -158,6 +173,7 @@ export function EntryModal({
           category: finalCategory,
           status,
           notes: notes.trim() || null,
+          auto_receive: status === 'pending' ? autoReceive : false,
         };
         const success = await onSave(payload);
         if (success) {
@@ -169,6 +185,26 @@ export function EntryModal({
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleSelectPending = () => {
+    // Se estiver editando uma entrada que estava como 'received' e tinha auto_receive=true e a data já passou ou é hoje:
+    if (
+      isEditing &&
+      editingEntry?.status === 'received' &&
+      editingEntry?.auto_receive &&
+      date <= getISODateToday()
+    ) {
+      setShowUndoAutoReceiveModal(true);
+      return;
+    }
+    setStatus('pending');
+  };
+
+  const handleConfirmUndoAutoReceive = () => {
+    setStatus('pending');
+    setAutoReceive(false);
+    setShowUndoAutoReceiveModal(false);
   };
 
   const handleDeleteConfirm = async () => {
@@ -190,10 +226,15 @@ export function EntryModal({
     }
   };
 
-  return (
-    <ModalPortal isOpen={isOpen} onClose={onClose}>
+  return createPortal(
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="entry-modal-title"
+      className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-hidden animate-in fade-in duration-150"
+    >
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-[10000] animate-in fade-in duration-200">
           <div className="bg-white dark:bg-[#1C211E] border border-[#D2DDD6] dark:border-[#28322C] rounded-3xl p-5 max-w-sm w-full space-y-4 shadow-xl">
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 rounded-full bg-rose-100 dark:bg-rose-950/50 flex items-center justify-center text-rose-600 shrink-0">
@@ -231,7 +272,46 @@ export function EntryModal({
           </div>
         </div>
       )}
-      <div className="w-[calc(100vw-24px)] sm:w-full max-w-lg rounded-3xl bg-white dark:bg-[#18211D] border border-[#E8E4D5] dark:border-[#24312B] shadow-2xl overflow-hidden flex flex-col my-auto mx-auto box-border animate-in zoom-in-95 duration-150">
+
+      {showUndoAutoReceiveModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-[10000] animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-[#1C211E] border border-[#D2DDD6] dark:border-[#28322C] rounded-3xl p-5 max-w-sm w-full space-y-4 shadow-xl">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-950/50 flex items-center justify-center text-amber-600 shrink-0">
+                <AlertCircle className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-[#02402E] dark:text-[#78D9A6]">
+                  Desfazer baixa automática?
+                </h3>
+                <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B] mt-1 leading-relaxed">
+                  Esta entrada possui baixa automática. Deseja desativar a baixa automática e retornar para &quot;A receber&quot;?
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowUndoAutoReceiveModal(false)}
+                className="cursor-pointer text-xs"
+              >
+                Cancelar
+              </Button>
+              <button
+                type="button"
+                onClick={handleConfirmUndoAutoReceive}
+                className="px-3 py-2 rounded-xl bg-[#075C45] hover:bg-[#075C45]/90 text-white font-bold cursor-pointer text-xs transition-colors flex items-center justify-center"
+              >
+                Confirmar e Desativar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      <div className="w-[calc(100vw-24px)] sm:w-full max-w-lg max-h-[92vh] sm:max-h-[85vh] rounded-3xl bg-white dark:bg-[#18211D] border border-[#E8E4D5] dark:border-[#24312B] shadow-2xl overflow-hidden flex flex-col my-auto mx-auto box-border animate-in zoom-in-95 duration-150">
         {/* Header do Modal */}
         <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-[#E8E4D5] dark:border-[#24312B] bg-[#F7F4EA]/40 dark:bg-[#121915]">
           <div className="flex items-center gap-2.5">
@@ -260,7 +340,7 @@ export function EntryModal({
         </div>
 
         {/* Formulário */}
-        <form onSubmit={handleSubmit} className="p-5 sm:p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4">
           {generalError && (
             <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 flex items-center gap-2 text-xs text-red-700 dark:text-red-300">
               <AlertCircle className="w-4 h-4 shrink-0" />
@@ -408,7 +488,7 @@ export function EntryModal({
               <button
                 type="button"
                 id="status-pending-btn"
-                onClick={() => setStatus('pending')}
+                onClick={handleSelectPending}
                 disabled={isSubmitting}
                 className={`p-3 rounded-2xl border flex items-center justify-center gap-2 text-xs font-bold transition-all cursor-pointer ${
                   status === 'pending'
@@ -421,6 +501,33 @@ export function EntryModal({
               </button>
             </div>
           </div>
+
+          {/* Opção de Baixa Automática (Apenas se status 'A receber') */}
+          {status === 'pending' && (
+            <div className="pt-1 animate-in fade-in duration-150">
+              <label
+                htmlFor="entry-auto-receive-checkbox"
+                className="flex items-start gap-3 p-3.5 rounded-2xl bg-[#F7F4EA]/80 dark:bg-[#1C2320] border border-[#E8E4D5] dark:border-[#28322C] hover:border-[#16A66A]/40 transition-colors cursor-pointer select-none"
+              >
+                <input
+                  id="entry-auto-receive-checkbox"
+                  type="checkbox"
+                  checked={autoReceive}
+                  onChange={(e) => setAutoReceive(e.target.checked)}
+                  disabled={isSubmitting}
+                  className="mt-0.5 w-4 h-4 rounded border-[#D2DDD6] text-[#075C45] focus:ring-[#16A66A] dark:bg-[#222226] dark:border-white/20 cursor-pointer shrink-0"
+                />
+                <div className="space-y-0.5">
+                  <span className="text-xs font-bold text-[#202724] dark:text-[#F7F4EA] block">
+                    Baixa automática na data
+                  </span>
+                  <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B] leading-tight">
+                    Quando ativado, esta entrada será marcada automaticamente como recebida na data informada.
+                  </p>
+                </div>
+              </label>
+            </div>
+          )}
 
           {/* Observação (Opcional) */}
           <div className="space-y-1.5">
@@ -442,7 +549,7 @@ export function EntryModal({
           </div>
 
           {/* Rodapé / Ações */}
-          <div className="pt-4 flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 sm:gap-2.5 border-t border-[#E8E4D5] dark:border-[#24312B] w-full">
+          <div className="pt-4 flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 sm:gap-2.5 border-t border-[#E8E4D5] dark:border-[#24312B] w-full mt-auto">
             {isEditing && (
               <button
                 type="button"
@@ -479,6 +586,7 @@ export function EntryModal({
           </div>
         </form>
       </div>
-    </ModalPortal>
+    </div>,
+    document.body
   );
 }
