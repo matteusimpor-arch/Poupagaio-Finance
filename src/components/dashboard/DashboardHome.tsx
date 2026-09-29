@@ -951,7 +951,7 @@ export function DashboardHome({
       {/* ==================================================
           B. DESKTOP LAYOUT ONLY (>= 768px)
           ================================================== */}
-      <div className="hidden md:block space-y-6 sm:space-y-8">
+      <div className="hidden md:block space-y-6">
       {/* ==================================================
           SEÇÃO 1: CABEÇALHO & 4 CARDS DE RESUMO FINANCEIRO
           ================================================== */}
@@ -1099,11 +1099,11 @@ export function DashboardHome({
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={() => setIsQuickAddMenuOpen(true)}
-              className="px-4 py-2 rounded-xl bg-[#02402E] text-white dark:bg-[#78D9A6] dark:text-[#101614] text-sm font-bold hover:bg-[#16A66A] dark:hover:bg-[#5ECB93] transition-all cursor-pointer flex items-center gap-2 shadow-sm active:scale-95"
+              className="h-8 px-3 rounded-lg bg-[#02402E] text-white dark:bg-[#78D9A6] dark:text-[#101614] text-xs font-bold hover:bg-[#16A66A] dark:hover:bg-[#5ECB93] transition-colors cursor-pointer inline-flex items-center justify-center gap-1.5 shrink-0"
             >
               <Plus className="w-4 h-4 stroke-[2.5]" />
               <span>Nova Conta</span>
@@ -1113,7 +1113,7 @@ export function DashboardHome({
               <button
                 type="button"
                 onClick={() => setChecklistFilter('pending')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                className={`h-8 px-3 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
                   checklistFilter === 'pending'
                     ? 'bg-[#02402E] text-white dark:bg-[#16A66A] dark:text-[#101614] shadow-sm'
                     : 'text-[#5E6963] dark:text-[#95A39B] hover:bg-black/5 dark:hover:bg-white/5'
@@ -1124,7 +1124,7 @@ export function DashboardHome({
               <button
                 type="button"
                 onClick={() => setChecklistFilter('paid')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                className={`h-8 px-3 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
                   checklistFilter === 'paid'
                     ? 'bg-[#02402E] text-white dark:bg-[#16A66A] dark:text-[#101614] shadow-sm'
                     : 'text-[#5E6963] dark:text-[#95A39B] hover:bg-black/5 dark:hover:bg-white/5'
@@ -1135,7 +1135,7 @@ export function DashboardHome({
               <button
                 type="button"
                 onClick={() => setChecklistFilter('all')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                className={`h-8 px-3 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
                   checklistFilter === 'all'
                     ? 'bg-[#02402E] text-white dark:bg-[#16A66A] dark:text-[#101614] shadow-sm'
                     : 'text-[#5E6963] dark:text-[#95A39B] hover:bg-black/5 dark:hover:bg-white/5'
@@ -1151,7 +1151,7 @@ export function DashboardHome({
         {/* List items */}
         <div className="bg-white/90 dark:bg-[#1C211E]/90 backdrop-blur-md border border-[#D2DDD6] dark:border-[#28322C] rounded-2xl p-4 sm:p-5 shadow-2xs divide-y divide-[#E2ECE6] dark:divide-[#28322C]">
           {filteredChecklistItems.length === 0 ? (
-            <div className="py-5 text-center space-y-1">
+            <div className="py-3 text-center space-y-1">
               <CheckCircle2 className="w-6 h-6 text-[#16A66A] mx-auto opacity-75" />
               <p className="text-xs font-bold text-[#02402E] dark:text-[#78D9A6]">
                 Nenhuma conta nesta categoria.
@@ -1305,7 +1305,7 @@ export function DashboardHome({
 
           <div className="bg-white/90 dark:bg-[#1C211E]/90 backdrop-blur-md border border-[#D2DDD6] dark:border-[#28322C] rounded-2xl p-5 shadow-2xs space-y-4">
             {!activeMarketList ? (
-              <div className="py-4 text-center space-y-2">
+              <div className="py-2 text-center space-y-2">
                 <ShoppingBag className="w-7 h-7 text-[#16A66A] mx-auto opacity-60" />
                 <p className="text-xs font-bold text-[#02402E] dark:text-[#78D9A6]">
                   Nenhuma lista de mercado ativa no momento.
