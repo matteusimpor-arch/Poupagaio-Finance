@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { DashboardOverview, DashboardAccountsToolbar } from './DashboardOverview';
 import { useAuth } from '../../hooks/useAuth';
 import { useTheme } from '../../hooks/useTheme';
 import { entriesService } from '../../lib/services/entries';
@@ -146,7 +147,7 @@ export function DashboardHome({
   const [activeMarketList, setActiveMarketList] = useState<ShoppingListWithItems | null>(null);
   const [activeMarketTotals, setActiveMarketTotals] = useState<ShoppingListTotals | null>(null);
   const [reservesSummary, setReservesSummary] = useState<ReservesSummary>(emptyReservesSummary);
-  
+
   // Interactive Modal & View States
   const [confirmPaymentItem, setConfirmPaymentItem] = useState<NormalizedChecklistExpense | null>(null);
   const [showAllChecklistMobile, setShowAllChecklistMobile] = useState<boolean>(false);
@@ -201,7 +202,7 @@ export function DashboardHome({
       setActiveGoals((goalsRes.goals || []).slice(0, 3));
       setActiveInstallments((installmentsRes.purchases || []).slice(0, 3));
       setReservesSummary(reservesRes.summary);
-      
+
       // Store primary active market list and compute arithmetic totals
       const activeList = marketListsRes.lists?.[0] || null;
       setActiveMarketList(activeList);
@@ -409,8 +410,8 @@ export function DashboardHome({
   const miniSelectedDayItems = itemsByDate[selectedMiniDateStr] || [];
 
   return (
-    <div className="w-full max-w-[1480px] mx-auto space-y-6 sm:space-y-8 pb-28 sm:pb-16 px-3 sm:px-6 animate-in fade-in duration-300">
-      
+    <div className="w-full max-w-[1240px] mx-auto space-y-6 sm:space-y-8 pb-28 sm:pb-16 px-3 sm:px-6 animate-in fade-in duration-300">
+
       {/* Action error banner */}
       {actionError && (
         <div className="p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 rounded-xl text-xs text-red-700 dark:text-red-300 flex items-center justify-between">
@@ -436,161 +437,32 @@ export function DashboardHome({
         />
       )}
 
+      <DashboardOverview
+        monthLabel={`${MONTH_NAMES[currentMonth - 1]} ${currentYear}`}
+        balance={reservesSummary.totalBalance}
+        income={totalReceitas}
+        expenses={totalDespesas}
+        free={reservesSummary.freeBalance}
+        reserved={reservesSummary.totalReserved}
+        afterCommitments={Math.max(0, reservesSummary.totalBalance - reservesSummary.contasAPagar)}
+        onPrevious={handlePrevMonth}
+        onNext={handleNextMonth}
+        onAddIncome={() => setIsEntryModalOpen(true)}
+      />
+
       {/* ==================================================
           A. MOBILE LAYOUT ONLY (< 768px) - REORGANIZED OPERATIONAL FLOW
           ================================================== */}
       <div className="block md:hidden space-y-4">
-        {/* 1. Competência Compacta no Mobile */}
-        <div className="flex items-center justify-between gap-2 bg-white/80 dark:bg-[#1C211E]/80 backdrop-blur-md border border-[#D2DDD6] dark:border-[#28322C] rounded-2xl p-2.5 px-3.5 shadow-2xs">
-          <span className="text-xs font-bold text-[#02402E] dark:text-[#78D9A6] font-display">
-            Competência
-          </span>
-          <div className="flex items-center gap-1 bg-[#EAF3EE] dark:bg-[#181B1A] p-1 rounded-xl border border-[#CDE0D5] dark:border-[#2B322F]">
-            <button
-              type="button"
-              onClick={handlePrevMonth}
-              className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-[#5E6963] dark:text-[#95A39B] cursor-pointer"
-              aria-label="Mês anterior"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <span className="text-xs font-bold min-w-[90px] text-center font-display text-[#02402E] dark:text-[#78D9A6]">
-              {MONTH_NAMES[currentMonth - 1]} {currentYear}
-            </span>
-            <button
-              type="button"
-              onClick={handleNextMonth}
-              className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-[#5E6963] dark:text-[#95A39B] cursor-pointer"
-              aria-label="Próximo mês"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-
-        {/* 2. Resumo Financeiro COMPACTO (Dinheiro Disponível, Reservas, Saldo Livre, Compromissos) */}
-        <div className="bg-[#02402E] text-white rounded-2xl p-3 shadow-2xs space-y-1.5 border border-[#02402E]">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[#A1D9BD]">
-              DINHEIRO DISPONÍVEL
-            </span>
-            <span className="text-sm font-extrabold font-display">
-              {formatCurrency(reservesSummary.totalBalance)}
-            </span>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-x-2 pt-1 border-t border-white/10 text-[10px]">
-            <span className="text-[#C0E3D3]">Livre: <strong className="text-white font-bold">{formatCurrency(reservesSummary.freeBalance)}</strong></span>
-            <span className="text-[#C0E3D3]/50">•</span>
-            <span className="text-[#C0E3D3]">Reservado: <strong className="text-[#F2D58A] font-bold">{formatCurrency(reservesSummary.totalReserved)}</strong></span>
-          </div>
-
-          <div className="pt-1 border-t border-white/10 space-y-0.5 text-[10px]">
-            <div className="flex justify-between items-center text-[#C0E3D3]">
-              <span>Contas a pagar</span>
-              <span className="font-bold text-rose-300">{formatCurrency(reservesSummary.contasAPagar)}</span>
-            </div>
-            <div className="flex justify-between items-center text-[#C0E3D3]">
-              <span>Após compromissos</span>
-              <span className="font-bold text-[#78D9A6]">{formatCurrency(Math.max(0, reservesSummary.totalBalance - reservesSummary.contasAPagar))}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Entradas e Despesas Mobile */}
-        <div className="grid grid-cols-2 gap-2">
-          {/* Entradas */}
-          <div className="bg-white/90 dark:bg-[#1C211E]/90 border border-[#D2DDD6] dark:border-[#28322C] rounded-2xl p-3 shadow-2xs space-y-1 min-w-0">
-            <div className="flex items-center justify-between gap-1">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[#5E6963] dark:text-[#95A39B] font-display truncate">
-                ENTRADAS
-              </span>
-              <button
-                type="button"
-                onClick={() => setIsEntryModalOpen(true)}
-                title="Adicionar Entrada"
-                className="w-5 h-5 rounded-md bg-[#E6F6EF] hover:bg-[#d0ecdf] dark:bg-[#16A66A]/20 dark:hover:bg-[#16A66A]/30 flex items-center justify-center text-[#16A66A] shrink-0 cursor-pointer active:scale-90 transition-transform"
-              >
-                <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-              </button>
-            </div>
-            <div className="text-sm sm:text-base font-extrabold tracking-tight text-[#02402E] dark:text-[#78D9A6] font-display truncate">
-              {formatCurrency(totalReceitas)}
-            </div>
-          </div>
-
-          {/* Despesas */}
-          <div className="bg-white/90 dark:bg-[#1C211E]/90 border border-[#D2DDD6] dark:border-[#28322C] rounded-2xl p-3 shadow-2xs space-y-1 min-w-0">
-            <div className="flex items-center justify-between gap-1">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[#5E6963] dark:text-[#95A39B] font-display truncate">
-                DESPESAS
-              </span>
-              <div className="w-5 h-5 rounded-md bg-[#FEE2E2] dark:bg-rose-950/40 flex items-center justify-center text-rose-600 dark:text-rose-400 shrink-0">
-                <ArrowDownRight className="w-3 h-3" />
-              </div>
-            </div>
-            <div className="text-sm sm:text-base font-extrabold tracking-tight text-rose-600 dark:text-rose-400 font-display truncate">
-              {formatCurrency(totalDespesas)}
-            </div>
-          </div>
-        </div>
-
         {/* 3. CONTAS PREVISTAS PARA PAGAR (Prioritário no mobile) */}
         <div className="bg-white/90 dark:bg-[#1C211E]/90 border border-[#D2DDD6] dark:border-[#28322C] rounded-2xl p-4 shadow-2xs space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-base font-bold font-display text-[#02402E] dark:text-[#78D9A6] flex items-center gap-1.5">
-              <CalendarCheck className="w-4 h-4 text-[#16A66A]" />
-              Contas Previstas
-            </h2>
-
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setIsQuickAddMenuOpen(true)}
-                className="px-3 py-1.5 rounded-xl bg-[#02402E] text-white dark:bg-[#78D9A6] dark:text-[#101614] text-xs font-bold hover:bg-[#16A66A] dark:hover:bg-[#5ECB93] transition-all cursor-pointer flex items-center gap-1.5 shrink-0 shadow-2xs active:scale-95"
-              >
-                <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-                <span>Nova Conta</span>
-              </button>
-
-              {/* Filtros simples e compactos */}
-              <div className="flex items-center gap-0.5 bg-[#EAF3EE] dark:bg-[#181B1A] p-0.5 rounded-xl border border-[#CDE0D5] dark:border-[#2B322F]">
-                <button
-                  type="button"
-                  onClick={() => setChecklistFilter('pending')}
-                  className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
-                    checklistFilter === 'pending'
-                      ? 'bg-[#02402E] text-white dark:bg-[#16A66A] dark:text-[#101614]'
-                      : 'text-[#5E6963] dark:text-[#95A39B]'
-                  }`}
-                >
-                  Pendentes
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setChecklistFilter('paid')}
-                  className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
-                    checklistFilter === 'paid'
-                      ? 'bg-[#02402E] text-white dark:bg-[#16A66A] dark:text-[#101614]'
-                      : 'text-[#5E6963] dark:text-[#95A39B]'
-                  }`}
-                >
-                  Pagas
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setChecklistFilter('all')}
-                  className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
-                    checklistFilter === 'all'
-                      ? 'bg-[#02402E] text-white dark:bg-[#16A66A] dark:text-[#101614]'
-                      : 'text-[#5E6963] dark:text-[#95A39B]'
-                  }`}
-                >
-                  Todas
-                </button>
-              </div>
-            </div>
-          </div>
+          <DashboardAccountsToolbar
+            filter={checklistFilter}
+            onFilter={setChecklistFilter}
+            onAdd={() => setIsQuickAddMenuOpen(true)}
+            pending={checklistResult?.stats.pendingCount || 0}
+            amount={totalPendente}
+          />
 
           {/* Cards individuais de contas */}
           <div className="space-y-2">
@@ -598,7 +470,7 @@ export function DashboardHome({
               <div className="py-4 text-center space-y-1">
                 <CheckCircle2 className="w-5 h-5 text-[#16A66A] mx-auto opacity-75" />
                 <p className="text-xs font-bold text-[#02402E] dark:text-[#78D9A6]">
-                  Nenhuma conta nesta categoria.
+                  {checklistFilter === 'pending' ? 'Tudo em dia por aqui.' : checklistFilter === 'paid' ? 'Nenhuma conta paga neste mês.' : 'Nenhuma conta cadastrada neste mês.'}
                 </p>
               </div>
             ) : (
@@ -807,12 +679,8 @@ export function DashboardHome({
         )}
 
         {/* 6. Análises e Gráficos */}
-        <div className="space-y-3 pt-1">
-          <h2 className="text-base font-bold font-display text-[#02402E] dark:text-[#78D9A6] flex items-center gap-1.5">
-            <BarChart3 className="w-4 h-4 text-[#16A66A]" />
-            Análise Financeira
-          </h2>
-
+        <details className="rounded-2xl border border-[#D2DDD6] dark:border-[#28322C] bg-white dark:bg-[#1C211E] p-4 space-y-3">
+          <summary className="cursor-pointer text-sm font-semibold text-[#02402E] dark:text-[#78D9A6]">Análise financeira</summary>
           {/* Gráfico 1: Composição das Despesas */}
           <div className="bg-white/90 dark:bg-[#1C211E]/90 border border-[#D2DDD6] dark:border-[#28322C] rounded-2xl p-4 shadow-2xs space-y-3">
             <h3 className="text-xs font-bold text-[#02402E] dark:text-[#78D9A6] font-display">
@@ -877,7 +745,7 @@ export function DashboardHome({
               </ResponsiveContainer>
             </div>
           </div>
-        </div>
+        </details>
 
         {/* 7. Calendário & Metas */}
         <div className="space-y-3 pt-1">
@@ -951,210 +819,31 @@ export function DashboardHome({
       {/* ==================================================
           B. DESKTOP LAYOUT ONLY (>= 768px)
           ================================================== */}
-      <div className="hidden md:block space-y-6 sm:space-y-8">
+      <div className="hidden md:block space-y-6">
       {/* ==================================================
           SEÇÃO 1: CABEÇALHO & 4 CARDS DE RESUMO FINANCEIRO
           ================================================== */}
-      <section className="space-y-4">
-        <div className="flex items-center justify-between mb-2">
-          <h1 className="text-[10px] font-bold uppercase tracking-[0.25em] text-[#5E6963] dark:text-[#95A39B] font-display flex items-center gap-2">
-            <BarChart3 className="w-3.5 h-3.5 text-[#16A66A]" />
-            Resumo Financeiro
-          </h1>
 
-          <div className="flex items-center gap-1.5 bg-[#EAF3EE] dark:bg-[#181B1A] p-1 rounded-xl border border-[#CDE0D5] dark:border-[#2B322F] shadow-2xs scale-90 origin-right">
-            <button
-              type="button"
-              onClick={handlePrevMonth}
-              className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-[#5E6963] dark:text-[#95A39B] cursor-pointer transition-colors"
-              aria-label="Mês anterior"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <span className="text-xs font-bold min-w-[110px] text-center font-display text-[#02402E] dark:text-[#78D9A6]">
-              {MONTH_NAMES[currentMonth - 1]} {currentYear}
-            </span>
-            <button
-              type="button"
-              onClick={handleNextMonth}
-              className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-[#5E6963] dark:text-[#95A39B] cursor-pointer transition-colors"
-              aria-label="Próximo mês"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-
-
-        {/* 2. Painel Principal Refinado (Horizontal e Compacto) */}
-        <div className="bg-white/40 dark:bg-[#1C211E]/40 border border-[#D2DDD6] dark:border-[#28322C] rounded-2xl p-5 px-8 shadow-2xs">
-          <div className="flex items-center justify-between">
-            {/* Dinheiro Disponível */}
-            <div className="flex-1">
-              <span className="text-[9px] font-bold uppercase tracking-[0.15em] text-[#5E6963] dark:text-[#95A39B] block mb-0.5">Dinheiro Disponível</span>
-              <div className="text-2xl font-extrabold text-[#02402E] dark:text-[#78D9A6] font-display tracking-tight">
-                {formatCurrency(reservesSummary.totalBalance)}
-              </div>
-            </div>
-          
-            <div className="h-8 w-px bg-[#D2DDD6] dark:bg-[#28322C] mx-8 opacity-40" />
-
-            {/* Livre */}
-            <div className="flex-1">
-              <span className="text-[9px] font-bold uppercase tracking-[0.15em] text-[#5E6963] dark:text-[#95A39B] block mb-0.5">Livre</span>
-              <div className="text-lg font-bold text-[#02402E] dark:text-[#78D9A6] font-display">
-                {formatCurrency(reservesSummary.freeBalance)}
-              </div>
-            </div>
-
-            <div className="h-8 w-px bg-[#D2DDD6] dark:bg-[#28322C] mx-8 opacity-40" />
-
-            {/* Reservado */}
-            <div className="flex-1">
-              <span className="text-[9px] font-bold uppercase tracking-[0.15em] text-[#5E6963] dark:text-[#95A39B] block mb-0.5">Reservado</span>
-              <div className="text-lg font-bold text-[#F2B807] font-display">
-                {formatCurrency(reservesSummary.totalReserved)}
-              </div>
-            </div>
-
-            <div className="h-8 w-px bg-[#D2DDD6] dark:bg-[#28322C] mx-8 opacity-40" />
-
-            {/* Após compromissos */}
-            <div className="flex-1">
-              <span className="text-[9px] font-bold uppercase tracking-[0.15em] text-[#5E6963] dark:text-[#95A39B] block mb-0.5">Após compromissos</span>
-              <div className="text-lg font-bold text-[#16A66A] font-display">
-                {formatCurrency(Math.max(0, reservesSummary.totalBalance - reservesSummary.contasAPagar))}
-              </div>
-            </div>
-          </div>
-        </div>
-
-
-        {/* 3. Faixa de Indicadores Secundários (Ajustada para proximidade) */}
-        <div className="grid grid-cols-3 gap-8 px-4 pt-2 pb-1 border-b border-[#D2DDD6]/30 dark:border-[#28322C]/30">
-          <div className="flex flex-col">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-[9px] font-bold uppercase tracking-widest text-[#5E6963] dark:text-[#95A39B]">Entradas</span>
-              <button 
-                onClick={() => setIsEntryModalOpen(true)}
-                className="p-1 rounded-md bg-[#E6F6EF] text-[#16A66A] hover:bg-[#16A66A] hover:text-white transition-all cursor-pointer scale-75"
-              >
-                <Plus className="w-3 h-3" />
-              </button>
-            </div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-xl font-bold text-[#16A66A] font-display">{formatCurrency(totalReceitas)}</span>
-              <span className="text-[9px] font-bold text-[#5E6963] dark:text-[#95A39B]">
-                {entriesSummary.count} receitas
-              </span>
-            </div>
-          </div>
-          
-          <div className="flex flex-col">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-[9px] font-bold uppercase tracking-widest text-[#5E6963] dark:text-[#95A39B]">Despesas</span>
-            </div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-xl font-bold text-rose-600 dark:text-rose-400 font-display">{formatCurrency(totalDespesas)}</span>
-              <span className="text-[9px] font-bold text-[#5E6963] dark:text-[#95A39B]">
-                {checklistResult?.stats.totalCount || 0} lançamentos
-              </span>
-            </div>
-          </div>
-          
-          <div className="flex flex-col">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-[9px] font-bold uppercase tracking-widest text-[#5E6963] dark:text-[#95A39B]">A Pagar</span>
-            </div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-xl font-bold text-amber-600 font-display">{formatCurrency(totalPendente)}</span>
-              <span className="text-[9px] font-bold text-[#5E6963] dark:text-[#95A39B]">
-                {checklistResult?.stats.pendingCount || 0} pendentes
-              </span>
-            </div>
-          </div>
-        </div>
-
-
-      </section>
 
       {/* ==================================================
           SEÇÃO 2: CONTAS PREVISTAS (CHECKLIST COMPACTO)
           ================================================== */}
       <section className="space-y-4">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-[#D2DDD6] dark:border-[#28322C]">
-          <div className="flex items-center gap-4">
-            <h2 className="text-xl font-bold font-display text-[#02402E] dark:text-[#78D9A6] flex items-center gap-2.5">
-              <CalendarCheck className="w-6 h-6 text-[#16A66A]" />
-              Contas Previstas
-            </h2>
-            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-[#EAF3EE] dark:bg-[#181B1A] rounded-full border border-[#CDE0D5] dark:border-[#2B322F] shadow-2xs">
-              <span className="text-[11px] font-bold text-[#02402E] dark:text-[#78D9A6]">
-                {checklistResult?.stats.pendingCount || 0} pendentes
-              </span>
-              <span className="text-[#D2DDD6] dark:text-[#28322C]">•</span>
-              <span className="text-[11px] font-extrabold text-[#16A66A]">
-                {formatCurrency(totalPendente)}
-              </span>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setIsQuickAddMenuOpen(true)}
-              className="px-4 py-2 rounded-xl bg-[#02402E] text-white dark:bg-[#78D9A6] dark:text-[#101614] text-sm font-bold hover:bg-[#16A66A] dark:hover:bg-[#5ECB93] transition-all cursor-pointer flex items-center gap-2 shadow-sm active:scale-95"
-            >
-              <Plus className="w-4 h-4 stroke-[2.5]" />
-              <span>Nova Conta</span>
-            </button>
-
-            <div className="flex items-center gap-1 bg-[#EAF3EE] dark:bg-[#181B1A] p-1 rounded-xl border border-[#CDE0D5] dark:border-[#2B322F] shadow-2xs">
-              <button
-                type="button"
-                onClick={() => setChecklistFilter('pending')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  checklistFilter === 'pending'
-                    ? 'bg-[#02402E] text-white dark:bg-[#16A66A] dark:text-[#101614] shadow-sm'
-                    : 'text-[#5E6963] dark:text-[#95A39B] hover:bg-black/5 dark:hover:bg-white/5'
-                }`}
-              >
-                Pendentes
-              </button>
-              <button
-                type="button"
-                onClick={() => setChecklistFilter('paid')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  checklistFilter === 'paid'
-                    ? 'bg-[#02402E] text-white dark:bg-[#16A66A] dark:text-[#101614] shadow-sm'
-                    : 'text-[#5E6963] dark:text-[#95A39B] hover:bg-black/5 dark:hover:bg-white/5'
-                }`}
-              >
-                Pagas
-              </button>
-              <button
-                type="button"
-                onClick={() => setChecklistFilter('all')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  checklistFilter === 'all'
-                    ? 'bg-[#02402E] text-white dark:bg-[#16A66A] dark:text-[#101614] shadow-sm'
-                    : 'text-[#5E6963] dark:text-[#95A39B] hover:bg-black/5 dark:hover:bg-white/5'
-                }`}
-              >
-                Todas
-              </button>
-            </div>
-          </div>
-        </div>
-
+          <DashboardAccountsToolbar
+            filter={checklistFilter}
+            onFilter={setChecklistFilter}
+            onAdd={() => setIsQuickAddMenuOpen(true)}
+            pending={checklistResult?.stats.pendingCount || 0}
+            amount={totalPendente}
+          />
 
         {/* List items */}
         <div className="bg-white/90 dark:bg-[#1C211E]/90 backdrop-blur-md border border-[#D2DDD6] dark:border-[#28322C] rounded-2xl p-4 sm:p-5 shadow-2xs divide-y divide-[#E2ECE6] dark:divide-[#28322C]">
           {filteredChecklistItems.length === 0 ? (
-            <div className="py-5 text-center space-y-1">
+            <div className="py-2 text-center space-y-1">
               <CheckCircle2 className="w-6 h-6 text-[#16A66A] mx-auto opacity-75" />
               <p className="text-xs font-bold text-[#02402E] dark:text-[#78D9A6]">
-                Nenhuma conta nesta categoria.
+                {checklistFilter === 'pending' ? 'Tudo em dia por aqui.' : checklistFilter === 'paid' ? 'Nenhuma conta paga neste mês.' : 'Nenhuma conta cadastrada neste mês.'}
               </p>
               <p className="text-[11px] text-[#5E6963] dark:text-[#95A39B]">
                 Suas despesas fixas, variáveis e parceladas para {MONTH_NAMES[currentMonth - 1]} aparecerão aqui.
@@ -1163,7 +852,7 @@ export function DashboardHome({
           ) : (
             (showAllChecklistMobile ? filteredChecklistItems : filteredChecklistItems.slice(0, 5)).map((item) => {
               const isPaid = item.status === 'paid';
-              
+
               const typeLabel =
                 item.sourceType === 'fixed'
                   ? 'Gasto Fixo'
@@ -1176,7 +865,7 @@ export function DashboardHome({
               // Visual Status badge
               let statusBadgeBg = 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-400';
               let statusText = 'Vence hoje';
-              
+
               if (isPaid) {
                 statusBadgeBg = 'bg-[#E6F6EF] text-[#16A66A] dark:bg-[#16A66A]/20 dark:text-[#78D9A6]';
                 statusText = 'Paga ✓';
@@ -1205,7 +894,7 @@ export function DashboardHome({
                         <span className={`text-xs sm:text-sm font-bold truncate ${isPaid ? 'line-through text-[#8A9690] dark:text-[#6A7870]' : 'text-[#202724] dark:text-[#F4F4F5]'}`}>
                           {item.title}
                         </span>
-                        
+
                         {/* Type badge */}
                         <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold shrink-0 ${
                           item.sourceType === 'fixed'
@@ -1287,8 +976,8 @@ export function DashboardHome({
       {/* ==================================================
           SEÇÃO 3: MERCADO E MINHAS RESERVAS
           ================================================== */}
-      <section className="space-y-6">
-        <div className="space-y-4">
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+        <div className="rounded-2xl border border-[#D2DDD6] dark:border-[#28322C] bg-white dark:bg-[#1C211E] p-5 space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-bold font-display text-[#02402E] dark:text-[#78D9A6] flex items-center gap-2">
               <ShoppingBag className="w-5 h-5 text-[#16A66A]" />
@@ -1303,20 +992,20 @@ export function DashboardHome({
             </button>
           </div>
 
-          <div className="bg-white/90 dark:bg-[#1C211E]/90 backdrop-blur-md border border-[#D2DDD6] dark:border-[#28322C] rounded-2xl p-5 shadow-2xs space-y-4">
+          <div className="space-y-4">
             {!activeMarketList ? (
-              <div className="py-4 text-center space-y-2">
-                <ShoppingBag className="w-7 h-7 text-[#16A66A] mx-auto opacity-60" />
+              <div className="py-1 flex flex-wrap items-center justify-between gap-3">
+
                 <p className="text-xs font-bold text-[#02402E] dark:text-[#78D9A6]">
-                  Nenhuma lista de mercado ativa no momento.
+                  Sua próxima compra começa aqui.
                 </p>
                 <button
                   type="button"
                   onClick={() => onSelectTab('market')}
-                  className="px-4 py-2 rounded-xl bg-[#02402E] text-white dark:bg-[#78D9A6] dark:text-[#101614] text-xs font-bold cursor-pointer hover:bg-[#16A66A] transition-all inline-flex items-center gap-1.5 shadow-2xs active:scale-95"
+                  className="h-10 px-3 rounded-lg bg-[#02402E] text-white dark:bg-[#78D9A6] dark:text-[#101614] text-xs font-bold cursor-pointer hover:bg-[#16A66A] transition-all inline-flex items-center gap-1.5 shadow-2xs active:scale-95"
                 >
                   <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-                  <span>Criar Lista de Mercado</span>
+                  <span>Criar lista</span>
                 </button>
               </div>
             ) : (
@@ -1335,7 +1024,7 @@ export function DashboardHome({
                     <span>
                       <strong>{activeMarketTotals?.totalItems || 0}</strong> itens • <strong>{activeMarketTotals?.checkedItems || 0}</strong> comprados
                     </span>
-                    
+
                     {activeMarketList.budget_amount ? (
                       <span>Orçamento: <strong className="text-[#02402E] dark:text-[#78D9A6]">{formatCurrency(activeMarketList.budget_amount)}</strong></span>
                     ) : null}
@@ -1369,7 +1058,7 @@ export function DashboardHome({
                   <button
                     type="button"
                     onClick={() => onSelectTab('market')}
-                    className="w-full md:w-auto px-4 py-2.5 rounded-xl bg-[#02402E] text-white hover:bg-[#16A66A] dark:bg-[#78D9A6] dark:text-[#101614] text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 shadow-2xs"
+                    className="w-full md:w-auto h-10 px-3 rounded-lg bg-[#02402E] text-white hover:bg-[#16A66A] dark:bg-[#78D9A6] dark:text-[#101614] text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 shadow-2xs"
                   >
                     <ShoppingBag className="w-4 h-4" />
                     <span>Continuar compras →</span>
@@ -1393,17 +1082,9 @@ export function DashboardHome({
       {/* ==================================================
           SEÇÃO 4: ANÁLISE E EVOLUÇÃO FINANCEIRA (CHARTS)
           ================================================== */}
-      <section className="space-y-4">
-        <div>
-          <h2 className="text-lg font-bold font-display text-[#02402E] dark:text-[#78D9A6] flex items-center gap-2">
-            <BarChart3 className="w-5 h-5 text-[#16A66A]" />
-            Análise e Evolução Financeira
-          </h2>
-          <p className="text-xs text-[#5E6963] dark:text-[#95A39B]">
-            Gráficos de composição de despesas e evolução mensal das suas contas.
-          </p>
-        </div>
-
+      <details className="rounded-2xl border border-[#D2DDD6] dark:border-[#28322C] bg-white dark:bg-[#1C211E] p-5">
+        <summary className="cursor-pointer text-sm font-semibold text-[#02402E] dark:text-[#78D9A6]">Análise e evolução financeira</summary>
+        <div className="pt-5">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 min-w-0">
           {/* Chart 1: Composição das Despesas (Donut) */}
           <div className="lg:col-span-5 bg-white/90 dark:bg-[#1C211E]/90 backdrop-blur-md border border-[#D2DDD6] dark:border-[#28322C] rounded-2xl p-5 shadow-2xs space-y-4 flex flex-col justify-between min-w-0">
@@ -1454,7 +1135,7 @@ export function DashboardHome({
                       </PieChart>
                     </ResponsiveContainer>
                   )}
-                  
+
                   {/* Donut Center Label */}
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center">
                     <span className="text-[10px] uppercase font-bold text-[#5E6963] dark:text-[#95A39B]">
@@ -1549,7 +1230,8 @@ export function DashboardHome({
             </div>
           </div>
         </div>
-      </section>
+        </div>
+      </details>
 
       {/* ==================================================
           SEÇÃO 5: ORGANIZAÇÃO E DESTAQUES (METAS & CALENDÁRIO)
@@ -1566,7 +1248,7 @@ export function DashboardHome({
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          
+
           {/* Card 1: Metas de Economia */}
           <div className="bg-white/90 dark:bg-[#1C211E]/90 backdrop-blur-md border border-[#D2DDD6] dark:border-[#28322C] rounded-2xl p-5 shadow-2xs space-y-3 flex flex-col justify-between">
             <div className="flex items-center justify-between pb-2 border-b border-[#E2ECE6] dark:border-[#28322C]">
